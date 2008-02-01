@@ -1,0 +1,554 @@
+\documentclass[10pt]{article}
+
+\usepackage{graphicx}
+
+\newcommand{\mysection}[1]{\section{#1}\label{#1}}
+\newcommand{\mysubsection}[1]{\subsection{#1}\label{#1}}
+\newcommand{\mysubsubsection}[1]{\subsubsection{#1}\label{#1}}
+\newcommand{\remark}[1]{[\emph{#1}]}
+
+\begin{document}
+
+\title{The Satin Divide-and-Conquer System}
+
+\author{The Ibis Group}
+
+\maketitle
+
+\section{Introduction}
+
+Satin is a parallel programming environment for divide-and-conquer
+parallelization, and master-worker parallelization. Satin extends Java
+with two simple primitives for divide-and-conquer programming: \texttt{spawn}
+and \texttt{sync}. The Satin byte-code rewriter and runtime system cooperate to
+implement these primitives efficiently on top of the IPL.  
+
+\mysection{Satin jobs}
+
+To use Satin, the programmer must label one or more methods in his
+class as Satin jobs. This is done by defining an interface that
+extends the Satin interface ibis.satin.Spawnable. For example:
+
+{\small
+\begin{quote}
+\begin{verbatim}
+interface Searcher extends ibis.satin.Spawnable {
+   public int search(int a[], int from, int to, int val);
+}
+\end{verbatim}
+\end{quote}
+}
+\noindent
+
+All methods that implement Searcher.search() will be Satin jobs, they
+are marked as spawnable.  In general such a marker interface may
+contain an arbitrary number of methods.  When a Satin program is
+compiled with the Satin compiler, methods marked as spawnable may be
+executed in parallel. A class that has spawnable methods 
+must extend the special class ibis.satin.SatinObject.
+The result of a Satin job can only be
+used after the invocation of the sync method, which lives in
+ibis.satin.SatinObject. The sync method is guaranteed to only
+terminate after the earlier job invocations have terminated.  Satin
+imposes one restriction on the type of parameters and return type of a
+Satin job: they must be of a basic type or must be serializable.
+Since a SatinObject is serializable, all its subclasses are
+serializable as well. This restriction ensures that a Satin job can be
+stored and moved from one processor to another. Note that this means that
+all fields of a Satin object must be either serializable or transient.
+
+\begin{figure}[t!]
+{\small
+\begin{verbatim}
+import ibis.satin.SatinObject;
+
+class SearchImpl1 extends SatinObject implements Searcher {
+   public int search(int a[], int from, int to, int val) {
+      for(int i = from; i < to; i++) {
+         if (a[i] == val) return i;
+      }
+      return -1;
+   }
+
+   public static void main(String[] args) {
+      SearchImpl1 s = new SearchImpl1();
+      int a[] = new int[200];
+
+      // Fill the array with random values between 0 and 100.
+      for(int i=0; i<200; i++) {
+         a[i] = (int) (Math.random() * 100);
+      }
+
+      // Search for 42 in two sub-domains of the array.
+      // Because the search method is marked as spawnable,
+      // Satin can run these methods in parallel.
+      int res1 = s.search(a, 0, 100, 42);
+      int res2 = s.search(a, 100, 200, 42);
+
+      // Wait for results of the two invocations above.
+      s.sync();
+
+      // Now compute an overall result.
+      int res = (res1 >= 0) ? res1 : res2;
+
+      if(res >= 0) {
+         System.out.println("found at pos: " + res);
+      } else {
+         System.out.println("element not found");
+      }
+   }
+}
+\end{verbatim}
+}
+\caption{Parallel search with Satin.}
+\label{satin-search-fig}
+\end{figure}
+
+As an example, Figure~\ref{satin-search-fig} shows an implementation of the search
+method. It just looks at a range of elements of the passed array, and
+tries if one of the elements equals val. If so, it returns the index
+of the element. If no matching element was found, -1 is returned.
+Now, we can invoke search as is shown in the main method of Figure~\ref{satin-search-fig}.
+In this case, we call search twice, once for the first half of the
+array, and once for the second half. If we compile the program with
+javac, the two search invocations will be done sequentially. The sync
+method in SatinObject does nothing. So we can run the program normally
+on any JVM.  If we modify the class files using the Satin bytecode
+rewriter, however, the program will be converted to a parallel
+program.  The two calls to search in the main class of Figure~\ref{satin-search-fig} will
+be executed in parallel if two JVMs are available. To run the code on
+more JVMs, the array can be split into more chunks. In general, an
+arbitrary number of invocations to Satin job methods may be done.
+
+\begin{figure}[t!]
+{\small
+\begin{verbatim}
+import ibis.satin.SatinObject;
+
+class SearchImpl2 extends SatinObject implements Searcher {
+   public int search(int a[], int from, int to, int val) {
+      if (from == to) { // The complete array has been searched.
+          return -1;    // The element was not found.
+      }
+      if (to - from == 1) { // Only one element left.
+          return (a[from] == val) ? from : -1; // It might be the one.
+      }
+
+      // Now, split the array in two parts and search them in parallel.
+      int mid = (from + to) / 2;
+      int res1 = search(a, from, mid, val);
+      int res2 = search(a, mid, to, val);
+      sync();
+      return (res1 >= 0) ? res1 : res2;
+   }
+
+   // main method as in previous figure
+}
+\end{verbatim}
+}
+\caption{Divide-and-conquer parallel search with Satin.}
+\label{satin-par-search-fig}
+\end{figure}
+
+It is also allowed to recursively invoke job methods from job methods,
+as is shown in Figure~\ref{satin-par-search-fig}. Here the search is recursively divided into
+smaller problems until a problem remains that is trivially
+handled. This model of programming is called divide-and-conquer. Satin
+has special grid-aware load-balancing algorithms built-in to run such
+programs efficiently on the grid, on any number of machines. This way,
+the entire search can be done in parallel on a large number of
+machines. The example shows how easy it is to write a real parallel
+grid application using Satin.  
+
+\mysection{Exceptions and abort}
+
+A Satin job may
+throw exceptions in the usual way. This can be used to rapidly
+terminate a large set of jobs, e.g., when a search result was
+found. Terminating jobs that are no longer useful can be done with the
+abort method from the SatinObject class.  Satin has its own exception
+type: \texttt{ibis.satin.Inlet}.  By extending the \texttt{Inlet} class,
+the programmer can inhibit the generation of a stack trace,
+which is an expensive operation.
+The stack trace is usually not useful in the Satin context,
+because the exception is not an error, it is used to steer the
+search. Extending \texttt{Inlet} is optional, regular exceptions can also be
+used. Figures~\ref{satin-spec-search-fig1} and~\ref{satin-spec-search-fig2} change the search algorithm we used in the previous
+examples to use exceptions.
+
+\begin{figure}[t!]
+{\small
+\begin{verbatim}
+import ibis.satin.SatinObject;
+import ibis.satin.Inlet;
+
+class SearchResultFound extends Inlet {
+   int pos;
+
+   SearchResultFound(int pos) {
+      this.pos = pos;
+   }
+}
+
+interface Searcher3 extends ibis.satin.Spawnable {
+   public void search(int a[], int from, int to, int val)
+      throws SearchResultFound;
+}
+
+class SearchImpl3 extends SatinObject implements Searcher3 {
+   public void search(int a[], int from, int to, int val)
+         throws SearchResultFound {
+
+      if (from == to) { // The complete array has been searched.
+         return;        // The element was not found.
+      }
+      if (to - from == 1) {    // Only one element left.
+         if (a[from] == val) { // Found it!
+            throw new SearchResultFound(from);
+         } else {
+            return; // The element was not found.
+         }
+      }
+
+      // Now, split the array in two parts and search them in parallel.
+      int mid = (from + to) / 2;
+      search(a, from, mid, val);
+      search(a, mid, to, val);
+      sync();
+   }
+
+   ...
+\end{verbatim}
+}
+\caption{Speculative parallel search with Satin.}
+\label{satin-spec-search-fig1}
+\end{figure}
+
+\begin{figure}[t!]
+{\small
+\begin{verbatim}
+   ...
+
+   public static void main(String[] args) {
+      SearchImpl3 s = new SearchImpl3();
+      int a[] = new int[200];
+      int res = -1;
+
+      // Fill the array with random values between 0 and 100.
+      for(int i=0; i<200; i++) {
+         a[i] = (int) (Math.random() * 100);
+      }
+
+      // Search for 42 in two sub-domains of the array.
+      // Because the search method is marked as spawnable,
+      // Satin can run these methods in parallel.
+      try {
+         s.search(a, 0, 100, 42);
+         s.search(a, 100, 200, 42);
+
+         // Wait for results of the invocations above.
+         s.sync();
+      } catch (SearchResultFound x) {
+         // We come here only if one of the two jobs found a result.
+         s.abort(); // kill the other job that might still be running.
+         res = x.pos;
+         return; // return needed because inlet is handled in separate thread.
+      }
+
+      if(res >= 0) {
+         System.out.println("found at pos: " + res);
+      } else {
+         System.out.println("element not found");
+      }
+   }
+}
+\end{verbatim}
+}
+\caption{Speculative parallel search with Satin.}
+\label{satin-spec-search-fig2}
+\end{figure}
+
+Note that in this version the search method doesn't return a value. It
+will throw a SearchResultFound object containing the result if the
+element was found, or it will terminate without throwing an exception
+if no result is found. This is also the reason the search method
+implements the Searcher3 interface instead of the Seacher
+interface. The declaration of the exception in the throws clause and
+the return type are the only differences.  At the top level this
+exception is caught, and the other search jobs can then be
+terminated. They have become useless, because the element has already
+been found in the array. The parallel search can thus be stopped. We
+call the catch block in the main method that handles the result of the
+search an inlet.  The way of searching in Figures~\ref{satin-spec-search-fig1} and~\ref{satin-spec-search-fig2} is called
+speculative parallelism: the search speculatively starts on both two
+parts of the array simultaneously, even though we know from the start
+that a part of the search may be terminated as soon as the element is
+found. We might thus do more work than a sequential search. On the
+other hand, we might also do less work than the sequential version,
+for instance if the element is in the beginning of the second part of
+the array.  The inlet in main contains a return statement. This must
+be there, because the inlet runs in a new thread. The original main
+thread is still blocked in the sync statement. When the inlet returns,
+the main thread is unblocked, because both search jobs have finished:
+one threw an exception, the other has been aborted.  
+
+\mysection{Satin job scheduling}
+
+Satin offers a choice of three different job scheduling strategies:
+\begin{description}
+\item{Random work-stealing}.
+When looking for work, each Satin instance
+first examines its own job queue. When this job queue is empty,
+it randomly selects another Satin instance and takes the first job on its job queue.
+If that job queue is empty, it randomly selects another Satin instance, et cetera,
+et cetera.  This strategy is the default, and has in the past been proven
+to be optimal, although that might seem counter-intuitive.
+
+\item{Cluster-aware random work-stealing}.
+The word ``cluster'' refers to a group of computers that are connected
+to each other by means of a fast local network.
+In turn, clusters can be connected to each other, but usually the
+network between clusters is much slower, and/or has a much higher latency.
+The cluster-aware random work-stealing strategy
+is very similar to random work-stealing, except that
+each participant first tries to steal jobs from other participants in its
+own cluster (thus using the fast local network).
+It will only go to participants from other clusters if no participant on the
+same cluster has work.
+To determine to which cluster a participant belongs, the cluster name
+is used.
+As described in Section \ref{Running an Ibis Application},
+the \texttt{ibis.pool.cluster} system property can be used to
+specify a cluster name to the Ibis instance.
+
+\item{Master-worker}
+This strategy is suitable for applications where all Satin jobs are
+generated on a single participant, the ``master''. All other participants
+are ``workers'', they obtain jobs from the master and execute them.
+\end{description}
+
+Making sure that all participants always can find work to do may need
+some tuning. Jobs must not be too small, because otherwise the mechanism
+for obtaining jobs, which may involve network traffic, is too expensive.
+On the other hand, there must be enough jobs to keep everybody busy.
+The \texttt{SatinObject} class has a boolean method \texttt{needMoreJobs()},
+which indicates whether it would be useful to generate more jobs.
+
+\mysection{Other SatinObject methods}
+
+The \texttt{pause()} method pauses Satin's operation. When the application
+contains a large sequential part, this method can be called to temporarily
+pause Satin's internal load distribution strategies to avoid communication
+overhead during the execution of sequential code.
+To resume Satin's operation, the \texttt{resume()} method must be used.
+
+\mysection{Satin program arguments}
+
+The Satin system accepts the following parameters, which are
+passed to java as system property values.
+\begin{description}
+\item{\texttt{-Dsatin.closed}}
+Only use the initial set of hosts for the computation; do not allow
+further hosts to join the computation later on.
+\item{\texttt{-Dsatin.stats}}
+Display some statistics at the end of the Satin run. This is the default.
+\item{\texttt{-Dsatin.stats=false}}
+Don't display statistics.
+\item{\texttt{-Dsatin.detailedStats}}
+Display detailed statistics for every member at the end of the Satin run.
+\item{\texttt{-Dsatin.alg}=\emph{algorithm}}
+Specify the load-balancing algorithm to use. The possible values for
+\emph{algorithm} are: RS for random work-stealing, CRS for cluster-aware
+random-work stealing, and MW for master-worker.
+\end{description}
+
+\mysection{Satin Shared Objects}
+
+The divide-and-conquer model operates by subdividing the problem into
+subproblems (subtasks) and solving them recursively.
+The only way of sharing data between tasks is by passing parameters
+and returning results.
+Therefore, a task can share data with its subtasks and the
+other way round, but the subtasks cannot share data with each other.
+Therefore, we have extended the model, and in the process renamed it
+"divide-and-share".
+
+In the divide-and-share model, tasks can share data using
+\textit{shared objects}.
+Updates performed on a shared object are visible to all tasks.
+Operations on shared objects are executed \textit{atomically}.
+Satin guarantees that shared object operations do not run concurrently with
+each other. Satin also guarantees that the shared object operations do not
+run concurrently with divide-and-conquer tasks. An operation performed
+by a task becomes visible to other tasks only when the system reaches a
+so-called \textit{safe point}: when a task is creating (spawning)
+subtasks, when a task is waiting for its subtasks to finish, or when a
+task completes. Tasks can also explicitly poll for shared object
+updates. This makes the model clean and easy to use, as the programmer
+does not need to use locks and semaphores to synchronize access to
+shared data.
+
+Shared objects are replicated on every
+processor taking part in the computation. Replication is implemented using
+an update protocol with function shipping: \textit{write methods},
+that is, methods that modify
+the state of the object, are forwarded to all processors
+which apply them on their local replicas. \textit{Read methods}, that
+is, methods that do not change the state of the objects, are
+executed locally. 
+
+A shared object type must be marked as such by extending the special class
+\texttt{ibis.satin.SharedObject}.
+This class exports a single method
+{\small
+\begin{quote}
+\begin{verbatim}
+    public void exportObject();
+\end{verbatim}
+\end{quote}
+}
+which may optionally be invoked to inform Satin that it might be useful to
+broadcast the object to all participants in the run. 
+
+Write methods must be marked as such, by specifying them in an interface
+that extends the marker interface \texttt{ibis.satin.WriteMethodsInterface}.
+Note that it is up to the user to specify which methods are write methods.
+Here is a small example:
+
+{\small
+\begin{quote}
+\begin{verbatim}
+interface MinInterface extends ibis.satin.WriteMethodsInterface {
+    public void set(int val);
+}
+
+final class Min extends ibis.satin.SharedObject
+        implements MinInterface {
+    private int val = Integer.MAX_VALUE;
+    public void set(int newVal) {
+        if (newVal< val) val = newVal;
+    }
+    public int get() { return val; }
+}
+
+\end{verbatim}
+\end{quote}
+}
+
+Our shared object model provides a relaxed consistency model called
+\textit{guard consistency}.
+Under guard consistency, the user can define the application consistency
+requirements using \textit{guard functions}. Guard functions are
+associated with divide-and-conquer tasks. Conceptually, a guard
+function is executed before each divide-and-conquer task.
+A guard checks the state of the shared objects accessed by the task and
+returns \textit{true} if those objects are in a correct state,
+or \textit{false} otherwise.
+Satin allows replicas to become inconsistent as long as
+guards are satisfied: the updates are propagated to remote replicas on a
+best effort basis.
+Satin does not guarantee that the updates will not be lost or duplicated.
+Updates may be applied in different order on different replicas.
+When a guard is unsatisfied, Satin invalidates the local replica of a shared
+object and fetches a consistent replica from another processor.
+
+For each spawnable method, the programmer may define a boolean guard
+method which specifies what the state of shared object parameters should
+be before actually executing the spawned method.
+Such a guard function must be defined in the same class as the spawnable
+method it guards.
+The name of the guard function is
+\texttt{guard\_}\textit{spawnable\_function}.
+It must have exactly the same parameter list as the spawnable method
+and return a boolean value.
+Therefore, it will have access to exactly the same shared
+objects and it can check their consistency.
+It will also have access to other parameters of the Satin task on which the
+consistency state of the objects may depend. 
+Satin takes care of invoking this method at the right moment.
+Here is a small example:
+
+{\small
+\begin{quote}
+\begin{verbatim}
+    /* A spawnable method. */
+    public Result compute(int iteration, Data data) {
+        ...
+    }
+
+    /* Guard: make sure that data represents the right iteration. */
+    public boolean guard_compute(int iteration, Data data) {
+        return data.iteration == iteration-1;
+    }
+\end{verbatim}
+\end{quote}
+}
+
+\mysection{Compiling and running a Satin program}
+
+Before running a Satin application it must be compiled.
+Using \emph{ant}, this is quite easy. Here is a build.xml file for
+our example program:
+
+{\small
+\begin{quote}
+\begin{verbatim}
+<project
+    name="Search"
+    default="build"
+    basedir=".">
+
+    <description>
+    Satin application build.
+    </description>
+
+    <property environment="env" />
+    <property name="ibis"   value="${env.IBIS_HOME}" />
+
+    <property name="satin-classes" value="Search"/>
+
+    <property name="build"  location="build"/>
+
+    <import file="${ibis}/build-files/apps/build-satin-app.xml"/>
+</project>
+\end{verbatim}
+\end{quote}
+}
+
+Again, we assume that the environment variable \texttt{IBIS\_HOME} reflects
+the location of your Ibis installation.
+Also note that the Satin bytecode rewriter needs to know the
+classes in your application that must be rewritten.
+Those classes are: the main class, any class that implements a shared object,
+and all classes that invoke spawns or syncs.
+The names of these classes are specified in the \texttt{satin-classes} property,
+as a comma-separated list.
+
+Invoking \emph{ant clean compile} compiles a sequential version
+of the application, 
+leaving the class files in a directory called \texttt{build}.
+
+Invoking \emph{ant clean build} compiles the application for parallel
+runs.
+
+If, for some reason, it is not convenient to use \emph{ant} to compile
+your application, or you have only class files or jar files available
+for parts of your application, it is also possible to first compile
+your application to class files or jar files, and then process those
+using the \emph{ibisc} script. This script can be found in the Ibis
+bin directory. It takes either directories, class files, or jar files
+as parameter, and processes those, possibly rewriting them. In case
+of a directory, all class files and jar files in that directory or
+its subdirectories are processed.
+To process a Satin application, \emph{ibisc} needs to know which
+classes to process for Satin. This can be accomplished by passing
+flags to \emph{ibisc}:
+
+\texttt{-satin} \emph{comma-separated list of class names}
+
+where the comma-separated list of class names consists of the main class,
+any class that implements a shared object, and all classes that invoke
+spawns or syncs.
+
+Running a Satin program is very much like running an Ibis application.
+See Section \ref{Compiling and Running an Ibis Application} for details.
