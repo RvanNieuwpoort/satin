@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ -z "$SATIN_HOME" ];  then
+    echo "please set SATIN_HOME to the location of your Ibis installation" 1>&2
+    exit 1
+fi
+
+
+# deal with classpath
+LIBCLASSPATH=""
+add_to_libclasspath () {
+    JARFILES=`cd "$1" && ls *.jar 2>/dev/null`
+    for i in ${JARFILES} ; do
+	if [ -z "$LIBCLASSPATH" ] ; then
+	    LIBCLASSPATH="$1/$i"
+	else
+	    LIBCLASSPATH="$LIBCLASSPATH:$1/$i"
+	fi
+    done
+}
+
+
+# Add the following dirs to the classpath 
+add_to_libclasspath "${SATIN_HOME}"/lib
+
+JAVACLASSPATH="$CLASSPATH:$LIBCLASSPATH"
+
+
+java -classpath "$JAVACLASSPATH" ibis.satin.impl.rewriter.SyncRewriter "$@"
