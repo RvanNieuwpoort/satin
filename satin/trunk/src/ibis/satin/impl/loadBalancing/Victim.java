@@ -72,6 +72,10 @@ public final class Victim implements Config {
         return ident.hashCode();
     }
 
+    public String toString() {
+        return ident.toString();
+    }
+    
     public boolean isConnected() {
         return connected;
     }
