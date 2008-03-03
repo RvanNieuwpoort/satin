@@ -39,7 +39,7 @@ public final class VictimTable implements Config {
 
         if (victims.contains(v)) {
             commLogger.info("SATIN '" + satin.ident
-                    + "': victim was already added");
+                    + "': victim " + v + " was already added");
             return;
         }
         victims.add(v);
