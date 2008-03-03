@@ -571,7 +571,7 @@ public final class Satin implements Config {
         } else {
             if (stealLogger.isInfoEnabled()) {
                 stealLogger.info("SATIN '" + ident
-                        + "': REMOTE CODE WAS ABORTED!");
+                        + "': REMOTE CODE WAS ABORTED! Exception = " + r.eek);
             }
         }
     }
