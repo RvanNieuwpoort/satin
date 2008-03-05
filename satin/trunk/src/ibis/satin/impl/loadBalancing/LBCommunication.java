@@ -132,13 +132,15 @@ final class LBCommunication implements Config, Protocol {
             return;
         }
 
-        if (stealLogger.isInfoEnabled() && eek != null) {
-            stealLogger.info("SATIN '" + s.ident
-                + "': handleJobResult: exception result: " + eek
-                + ", stamp = " + stamp, eek);
-        } else {
-            stealLogger.info("SATIN '" + s.ident
-                + "': handleJobResult: normal result, stamp = " + stamp);
+        if (stealLogger.isInfoEnabled()) {
+            if (eek != null) {
+                stealLogger.info("SATIN '" + s.ident
+                    + "': handleJobResult: exception result: " + eek
+                    + ", stamp = " + stamp, eek);
+            } else {
+                stealLogger.info("SATIN '" + s.ident
+                    + "': handleJobResult: normal result, stamp = " + stamp);
+            }
         }
 
         lb.addJobResult(rr, eek, stamp);
