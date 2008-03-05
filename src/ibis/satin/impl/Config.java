@@ -113,7 +113,7 @@ public interface Config {
      * Fault tolerance with restarting crashed jobs, but without the global
      * result table.
      */
-    static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive, false);
+    static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive, true);
 
     /** Enable or disable an optimization for handling delayed messages. */
     static final boolean HANDLE_MESSAGES_IN_LATENCY = properties.getBooleanProperty(
