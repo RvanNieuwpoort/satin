@@ -406,13 +406,16 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
      * Attach a child to its parent's finished children list.
      */
     public final void jobFinished() {
-        if (parent != null) {
-            finishedSibling = parent.finishedChild;
-            parent.finishedChild = this;
-        }
+        if (! FT_NAIVE) {
+            // Only needed if the GRT is used.
+            if (parent != null) {
+                finishedSibling = parent.finishedChild;
+                parent.finishedChild = this;
+            }
 
-        //remove the job's children list
-        finishedChild = null;
+            //remove the job's children list
+            finishedChild = null;
+        }
     }
 
     public final void spawn(IbisIdentifier ident, InvocationRecord parent) {
