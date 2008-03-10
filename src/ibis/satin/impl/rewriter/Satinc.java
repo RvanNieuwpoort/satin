@@ -3184,7 +3184,7 @@ public final class Satinc extends IbiscComponent {
         boolean verbose = false;
         boolean keep = false;
         boolean local = true;
-        boolean invocationRecordCache = true;
+        boolean invocationRecordCache = false;
         boolean inletOpt = true;
         boolean spawnCounterOpt = true;
         ArrayList<String> list = new ArrayList<String>();
