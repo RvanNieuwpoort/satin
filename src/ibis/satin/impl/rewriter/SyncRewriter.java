@@ -16,6 +16,9 @@ import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionTargeter;
 import org.apache.bcel.generic.Instruction;
+import org.apache.bcel.generic.LocalVariableInstruction;
+import org.apache.bcel.generic.StoreInstruction;
+import org.apache.bcel.generic.LoadInstruction;
 import org.apache.bcel.generic.Type;
 import org.apache.bcel.generic.StackConsumer;
 import org.apache.bcel.generic.StackProducer;
@@ -165,7 +168,7 @@ class SyncRewriter {
 		while (count != 0) {
 			ih = ih.getPrev();
 			Instruction instruction = ih.getInstruction();
-		//	out.println(instruction);
+			//	out.println(instruction);
 			if (instruction instanceof StackProducer) {
 				count -= instruction.produceStack(constantPoolGen);
 			}
@@ -191,7 +194,8 @@ class SyncRewriter {
 	void evaluateMethod(Method method, Method spawnableMethod, 
 			JavaClass spawnableClass, ConstantPoolGen constantPoolGen) {
 
-		//out.println(method.getCode());
+		out.println(method.getCode());
+		//		out.println(constantPoolGen);
 
 		MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
 				spawnableClass.getClassName(), constantPoolGen);
@@ -207,24 +211,45 @@ class SyncRewriter {
 
 		InstructionList instructionList = methodGen.getInstructionList();
 
-		InstructionHandle objectReferenceLoad;
 		InstructionHandle ih = instructionList.getStart();
 		do {
-	//		out.println(ih);
 			if (ih.getInstruction().equals
 					(new INVOKEVIRTUAL(indexSpawnableMethod))) {
-				//out.println("HIERBOVEN");
-				objectReferenceLoad = getObjectReferenceLoadInstruction(
-						ih, nrArgumentsSpawnableMethod, constantPoolGen);
-				//out.println(objectReferenceLoad);
+				InstructionHandle objectReferenceLoad = 
+					getObjectReferenceLoadInstruction(
+							ih, nrArgumentsSpawnableMethod, constantPoolGen);
+
+				ih = ih.getNext();
+				try {
+					StoreInstruction storeInstruction = 
+						(StoreInstruction) (ih.getInstruction());
+					int index = storeInstruction.getIndex();
+
+					InstructionHandle ih2 = ih;
+					while ((ih2 = ih2.getNext()) != null) {
+						try {
+							LoadInstruction loadInstruction = 
+								(LoadInstruction) (ih2.getInstruction());
+							if (loadInstruction.getIndex() == index) {
+								out.println(ih2);
+							}
+						}
+						catch (ClassCastException e) {
+						}
+					}
 
 
 
-				// ok, we zijn bij de invoke instructie
-				// zoek op welke object reference aangeroepen wordt
-				//  hoeveel argumenten op de stack
-				// zoek op hoe en waar het resultaat wordt opgeslagen
-				// zoek op waar het resultaat weer wordt gebruikt
+
+
+
+				}
+				catch (ClassCastException e) {
+					out.printf("He, hier gaat het niet goed: %s\n", e);
+				}
+
+
+
 					}
 
 		} while((ih = ih.getNext()) != null);
@@ -245,8 +270,6 @@ class SyncRewriter {
 		ConstantPoolGen constantPoolGen = 
 			new ConstantPoolGen(spawnableClass.getConstantPool());
 
-		//out.println(constantPoolGen);
-
 		for (Method method : methods) {
 			if (debug) {
 				printDebug(3, "evaluating %s\n", method);
@@ -257,9 +280,6 @@ class SyncRewriter {
 		}
 	}
 
-	// find invocations of the method
-	// find the result
-	// find where the result is placed
 
 	void rewriteSpawnableClass(JavaClass spawnableClass) {
 		if (debug) printDebug(0, 
@@ -267,6 +287,8 @@ class SyncRewriter {
 				spawnableClass.getClassName());
 
 		Method[] spawnableMethods = getSpawnableMethods(spawnableClass);
+
+		//out.println(spawnableClass.getConstantPool());
 
 		for (Method spawnableMethod : spawnableMethods) {
 			if (debug) printDebug(1, "spawnable method: %s\n", 
@@ -298,14 +320,12 @@ class SyncRewriter {
 		if (javaClass.isClass() && isSpawnable(javaClass)) {
 			if (debug) printDebug(1, "%s is a spawnable class\n", className);
 			rewriteSpawnableClass(javaClass);
+			if (debug) out.println();
 		}
 		else {
 			// nothing
 			if (debug) printDebug(1, 
-					"%s not a spawnable class, not rewritten\n", className);
-		}
-		if (debug) {
-			out.println();
+					"%s not a spawnable class, not rewritten\n\n", className);
 		}
 	}
 
