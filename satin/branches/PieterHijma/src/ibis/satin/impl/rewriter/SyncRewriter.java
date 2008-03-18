@@ -14,11 +14,17 @@ import org.apache.bcel.generic.MethodGen;
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.InstructionTargeter;
 import org.apache.bcel.generic.Instruction;
+import org.apache.bcel.generic.Type;
+import org.apache.bcel.generic.StackConsumer;
+import org.apache.bcel.generic.StackProducer;
 
 
 class SyncRewriter {
 
+
+	public static final int NR_CHARS_ON_LINE = 80;
 
 	PrintStream out;
 
@@ -54,17 +60,28 @@ class SyncRewriter {
 
 
 	void printDebug(int level, String debugMessage, Object... arguments) {
-		out.print("DEBUG: ");
 		if (level < 0) throw new Error("printDebug(), level < 0");
-		for (int i = 0; i < level; i++) out.print("  ");
-		out.printf(debugMessage, arguments);
+
+		StringBuilder sb = new StringBuilder("DEBUG: ");
+		for (int i = 0; i < level; i++) sb.append("  ");
+		sb.append(debugMessage);
+
+		String completeMessage = String.format(sb.toString(), arguments);
+		if (completeMessage.length() > NR_CHARS_ON_LINE) {
+			out.print(completeMessage.substring(0, NR_CHARS_ON_LINE));
+			printDebug(level + 1, completeMessage.substring(NR_CHARS_ON_LINE, 
+						completeMessage.length()));
+		}
+		else {
+			out.print(completeMessage);
+		}
 	}
 
 
-	Method[] getSpawnableMethods(JavaClass javaClass) {
+	Method[] getSpawnableMethods(JavaClass spawnableClass) {
 		Method[] spawnableMethods = null;/*new Method[0];*/
 
-		JavaClass[] interfaces = javaClass.getInterfaces();
+		JavaClass[] interfaces = spawnableClass.getInterfaces();
 		for (JavaClass javaInterface : interfaces) {
 			if (isSpawnable(javaInterface)) {
 				spawnableMethods = javaInterface.getMethods();
@@ -74,7 +91,7 @@ class SyncRewriter {
 
 		if (spawnableMethods == null) {
 			throw new Error("no methods specified in " +
-					javaClass.getClassName());
+					spawnableClass.getClassName());
 		}
 
 		return spawnableMethods;
@@ -116,7 +133,7 @@ class SyncRewriter {
 
 
 	ArrayList<Method> getInvocatingMethods (Method invocatedMethod, 
-		JavaClass javaClass) {
+			JavaClass javaClass) {
 
 		ArrayList<Method> invocatingMethodsList = new ArrayList<Method>();
 		Method[] methods = javaClass.getMethods();
@@ -130,39 +147,132 @@ class SyncRewriter {
 	}
 
 
-	void rewriteClass(JavaClass javaClass) {
-		if (debug) printDebug(0, "rewriting %s\n", javaClass.getClassName());
+	int getIndexMethod(Method method, JavaClass javaClass, 
+			ConstantPoolGen constantPoolGen) {
+		MethodGen methodGen = new MethodGen(method, javaClass.getClassName(), 
+				constantPoolGen);
+		return constantPoolGen.lookupMethodref(methodGen);
+	}
+
+	int getNrArguments(MethodGen methodGen) {
+		return methodGen.getArgumentTypes().length;
+	}
+
+
+	InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
+			int nrArguments, ConstantPoolGen constantPoolGen) {
+		int count = nrArguments + 1;
+		while (count != 0) {
+			ih = ih.getPrev();
+			Instruction instruction = ih.getInstruction();
+		//	out.println(instruction);
+			if (instruction instanceof StackProducer) {
+				count -= instruction.produceStack(constantPoolGen);
+			}
+			if (instruction instanceof StackConsumer) {
+				count += instruction.consumeStack(constantPoolGen);
+			}
+		}
+		return ih;
+	}
+
+	/* *************************************************************************
+	 * De problemen:
+	 *
+	 * de sync moet worden uitgevoerd met dezelfde parameter als de spawnable
+	 * method call
+	 *
+	 * dit lijkt de aload te doen: wat doet deze precies?
+	 *
+	 * Het resultaat wordt opgeslagen, waar wordt het teruggehaald. De store
+	 * gebeurt precies na de invokevirtual
+	 */
+
+	void evaluateMethod(Method method, Method spawnableMethod, 
+			JavaClass spawnableClass, ConstantPoolGen constantPoolGen) {
+
+		//out.println(method.getCode());
+
+		MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
+				spawnableClass.getClassName(), constantPoolGen);
+		int nrArgumentsSpawnableMethod = getNrArguments(spawnableMethodGen);
+		int indexSpawnableMethod = 
+			constantPoolGen.lookupMethodref(spawnableMethodGen);
+
+
+
+
+		MethodGen methodGen = new MethodGen(method, 
+				spawnableClass.getClassName(), constantPoolGen);
+
+		InstructionList instructionList = methodGen.getInstructionList();
+
+		InstructionHandle objectReferenceLoad;
+		InstructionHandle ih = instructionList.getStart();
+		do {
+	//		out.println(ih);
+			if (ih.getInstruction().equals
+					(new INVOKEVIRTUAL(indexSpawnableMethod))) {
+				//out.println("HIERBOVEN");
+				objectReferenceLoad = getObjectReferenceLoadInstruction(
+						ih, nrArgumentsSpawnableMethod, constantPoolGen);
+				//out.println(objectReferenceLoad);
+
+
+
+				// ok, we zijn bij de invoke instructie
+				// zoek op welke object reference aangeroepen wordt
+				//  hoeveel argumenten op de stack
+				// zoek op hoe en waar het resultaat wordt opgeslagen
+				// zoek op waar het resultaat weer wordt gebruikt
+					}
+
+		} while((ih = ih.getNext()) != null);
+	}
+
+
+	/** Rewrite the methods that invocate spawnableMethod.
+	*/
+	void evaluateMethods(Method spawnableMethod, 
+			JavaClass spawnableClass) {
 
 		/*
-		if (debug) printDebug(1, "\n\n\nconstantPool: \n%s\n\n\n", 
-				javaClass.getConstantPool());
-				*/
+		   ArrayList<Method> invocatingMethods = 
+		   getInvocatingMethods(spawnableMethod, spawnableClass);
+		   */
 
-		Method[] spawnableMethods = getSpawnableMethods(javaClass);
+		Method[] methods = spawnableClass.getMethods();
+		ConstantPoolGen constantPoolGen = 
+			new ConstantPoolGen(spawnableClass.getConstantPool());
 
+		//out.println(constantPoolGen);
 
-		for (Method spawnableMethod : spawnableMethods) {
-			if (debug) printDebug(1, "spawnableMethod: %s\n", 
-					spawnableMethod);
-
-			   ArrayList<Method> invocatingMethods = 
-			   getInvocatingMethods(spawnableMethod, javaClass);
-			   /*
-			Method[] invocatingMethods = javaClass.getMethods();
-			*/
-
-			for (Method invocatingMethod : invocatingMethods) {
-				if (debug) {
-					printDebug(2, "methods that invocate this method: %s\n", 
-							invocatingMethod);
-			//		printDebug(3, "code: \n%s\n\n", 
-			//				invocatingMethod.getCode().toString(true));
-				}
+		for (Method method : methods) {
+			if (debug) {
+				printDebug(3, "evaluating %s\n", method);
 			}
 
-			// find invocations of the method
-			// find the result
-			// find where the result is placed
+			evaluateMethod(method, spawnableMethod, spawnableClass, 
+					constantPoolGen);
+		}
+	}
+
+	// find invocations of the method
+	// find the result
+	// find where the result is placed
+
+	void rewriteSpawnableClass(JavaClass spawnableClass) {
+		if (debug) printDebug(0, 
+				"rewriting spawnable class %s\n", 
+				spawnableClass.getClassName());
+
+		Method[] spawnableMethods = getSpawnableMethods(spawnableClass);
+
+		for (Method spawnableMethod : spawnableMethods) {
+			if (debug) printDebug(1, "spawnable method: %s\n", 
+					spawnableMethod);
+
+			evaluateMethods(spawnableMethod, spawnableClass);
 		}
 	}
 
@@ -186,17 +296,14 @@ class SyncRewriter {
 		JavaClass javaClass = getClassFromName(className);
 
 		if (javaClass.isClass() && isSpawnable(javaClass)) {
-			printDebug(1, "%s is a Spawnable class\n", className);
-			rewriteClass(javaClass);
-		}
-		else if (debug) {
-			printDebug(1, "%s not a Spawnable class, not rewritten\n", 
-					className);
+			if (debug) printDebug(1, "%s is a spawnable class\n", className);
+			rewriteSpawnableClass(javaClass);
 		}
 		else {
 			// nothing
+			if (debug) printDebug(1, 
+					"%s not a spawnable class, not rewritten\n", className);
 		}
-
 		if (debug) {
 			out.println();
 		}
