@@ -22,6 +22,7 @@ import org.apache.bcel.generic.LoadInstruction;
 import org.apache.bcel.generic.Type;
 import org.apache.bcel.generic.StackConsumer;
 import org.apache.bcel.generic.StackProducer;
+import org.apache.bcel.generic.ClassGen;
 
 
 class SyncRewriter {
@@ -40,7 +41,7 @@ class SyncRewriter {
 	}
 
 
-	private JavaClass getClassFromName(String className) {
+	JavaClass getClassFromName(String className) {
 		JavaClass javaClass = Repository.lookupClass(className);
 
 		if (javaClass == null) {
@@ -72,7 +73,7 @@ class SyncRewriter {
 		String completeMessage = String.format(sb.toString(), arguments);
 		if (completeMessage.length() > NR_CHARS_ON_LINE) {
 			out.print(completeMessage.substring(0, NR_CHARS_ON_LINE));
-			printDebug(level + 1, completeMessage.substring(NR_CHARS_ON_LINE, 
+			printDebug(level + 2, completeMessage.substring(NR_CHARS_ON_LINE, 
 						completeMessage.length()));
 		}
 		else {
@@ -101,62 +102,6 @@ class SyncRewriter {
 	}
 
 
-	boolean invocates(Method method, Method invocatedMethod, 
-			JavaClass javaClass) {
-
-		ConstantPoolGen constantPoolGen = 
-			new ConstantPoolGen(javaClass.getConstantPool());
-		MethodGen invocatedMethodGen = new MethodGen(invocatedMethod, 
-				javaClass.getClassName(), constantPoolGen);
-		int indexInvocatedMethod = 
-			constantPoolGen.lookupMethodref(invocatedMethodGen);
-
-		MethodGen methodGen = new MethodGen(method, 
-				javaClass.getClassName(), constantPoolGen);
-		Instruction[] instructionsMethod = 
-			methodGen.getInstructionList().getInstructions();
-
-		return contains (instructionsMethod, 
-				new INVOKEVIRTUAL(indexInvocatedMethod));
-	}
-
-
-	/*
-	 * InstructionList.contains(Instruction) doesn't work...
-	 */
-	boolean contains(Instruction[] instructions, 
-			Instruction searchedInstruction) {
-		for (Instruction instruction : instructions) {
-			if (instruction.equals(searchedInstruction)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-
-	ArrayList<Method> getInvocatingMethods (Method invocatedMethod, 
-			JavaClass javaClass) {
-
-		ArrayList<Method> invocatingMethodsList = new ArrayList<Method>();
-		Method[] methods = javaClass.getMethods();
-
-		for (Method method : methods) {
-			if (invocates(method, invocatedMethod, javaClass)) {
-				invocatingMethodsList.add(method);
-			}
-		}
-		return invocatingMethodsList;
-	}
-
-
-	int getIndexMethod(Method method, JavaClass javaClass, 
-			ConstantPoolGen constantPoolGen) {
-		MethodGen methodGen = new MethodGen(method, javaClass.getClassName(), 
-				constantPoolGen);
-		return constantPoolGen.lookupMethodref(methodGen);
-	}
-
 	int getNrArguments(MethodGen methodGen) {
 		return methodGen.getArgumentTypes().length;
 	}
@@ -179,124 +124,176 @@ class SyncRewriter {
 		return ih;
 	}
 
-	/* *************************************************************************
-	 * De problemen:
-	 *
-	 * de sync moet worden uitgevoerd met dezelfde parameter als de spawnable
-	 * method call
-	 *
-	 * dit lijkt de aload te doen: wat doet deze precies?
-	 *
-	 * Het resultaat wordt opgeslagen, waar wordt het teruggehaald. De store
-	 * gebeurt precies na de invokevirtual
-	 */
 
-	void evaluateMethod(Method method, Method spawnableMethod, 
-			JavaClass spawnableClass, ConstantPoolGen constantPoolGen) {
+	void insertSync(InstructionHandle storeInstruction, int index, 
+			InstructionHandle objectReferenceLoad, int indexSync, 
+			InstructionList instructionList) {
 
-		out.println(method.getCode());
-		//		out.println(constantPoolGen);
+		InstructionHandle ih = storeInstruction;
+		while ((ih = ih.getNext()) != null) {
+			try {
+				LoadInstruction loadInstruction = 
+					(LoadInstruction) (ih.getInstruction());
+				if (loadInstruction.getIndex() == index) {
+					InstructionHandle syncInvocation = 
+						instructionList.insert(ih, 
+								new INVOKEVIRTUAL(indexSync));
+
+					instructionList.insert(syncInvocation, 
+							objectReferenceLoad.getInstruction());
+
+					if (debug) printDebug(6, "inserted a sync statement\n");
+				}
+			}
+			catch (ClassCastException e) {
+			}
+		}
+	}
+
+
+	void rewriteInstructions(InstructionHandle spawnableMethodInvocation, 
+			ConstantPoolGen constantPoolGen, int nrArgumentsSpawnableMethod, 
+			int indexSync, InstructionList instructionList) {
+
+		InstructionHandle objectReferenceLoad = 
+			getObjectReferenceLoadInstruction(spawnableMethodInvocation, 
+					nrArgumentsSpawnableMethod, constantPoolGen);
+
+		InstructionHandle storeInstructionHandle = 
+			spawnableMethodInvocation.getNext();
+
+		try {
+			StoreInstruction storeInstruction = (StoreInstruction) 
+				(storeInstructionHandle.getInstruction());
+			int indexResultSpawnableMethod = storeInstruction.getIndex();
+
+
+			insertSync(storeInstructionHandle, indexResultSpawnableMethod, 
+					objectReferenceLoad, indexSync, instructionList);
+		}
+
+		catch (ClassCastException e) {
+			out.printf("He, hier gaat het niet goed: %s\n", e);
+		}
+	}
+
+
+	Method rewriteMethod(Method method, Method spawnableMethod, 
+			ClassGen newSpawnableClass, int indexSync) {
+		if (debug) {
+			printDebug(4, "rewriting %s\n", method);
+		}
+
+		ConstantPoolGen constantPoolGen = newSpawnableClass.getConstantPool();
 
 		MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
-				spawnableClass.getClassName(), constantPoolGen);
+				newSpawnableClass.getClassName(), constantPoolGen);
+
 		int nrArgumentsSpawnableMethod = getNrArguments(spawnableMethodGen);
 		int indexSpawnableMethod = 
 			constantPoolGen.lookupMethodref(spawnableMethodGen);
 
 
-
-
 		MethodGen methodGen = new MethodGen(method, 
-				spawnableClass.getClassName(), constantPoolGen);
+				newSpawnableClass.getClassName(), constantPoolGen);
+		INVOKEVIRTUAL spawnableInvocation = 
+			new INVOKEVIRTUAL(indexSpawnableMethod);
+
 
 		InstructionList instructionList = methodGen.getInstructionList();
 
 		InstructionHandle ih = instructionList.getStart();
 		do {
-			if (ih.getInstruction().equals
-					(new INVOKEVIRTUAL(indexSpawnableMethod))) {
-				InstructionHandle objectReferenceLoad = 
-					getObjectReferenceLoadInstruction(
-							ih, nrArgumentsSpawnableMethod, constantPoolGen);
-
-				ih = ih.getNext();
-				try {
-					StoreInstruction storeInstruction = 
-						(StoreInstruction) (ih.getInstruction());
-					int index = storeInstruction.getIndex();
-
-					InstructionHandle ih2 = ih;
-					while ((ih2 = ih2.getNext()) != null) {
-						try {
-							LoadInstruction loadInstruction = 
-								(LoadInstruction) (ih2.getInstruction());
-							if (loadInstruction.getIndex() == index) {
-								out.println(ih2);
-							}
-						}
-						catch (ClassCastException e) {
-						}
-					}
-
-
-
-
-
-
-				}
-				catch (ClassCastException e) {
-					out.printf("He, hier gaat het niet goed: %s\n", e);
-				}
-
-
-
-					}
-
+			if (ih.getInstruction().equals(spawnableInvocation)) {
+				if (debug) printDebug(5, "the spawnable method is invoked\n");
+				rewriteInstructions(ih, constantPoolGen, 
+						nrArgumentsSpawnableMethod, indexSync, instructionList); 
+			}
 		} while((ih = ih.getNext()) != null);
+
+		return methodGen.getMethod();
 	}
 
 
 	/** Rewrite the methods that invocate spawnableMethod.
 	*/
-	void evaluateMethods(Method spawnableMethod, 
-			JavaClass spawnableClass) {
+	void rewriteForSpawnableMethod(Method spawnableMethod, 
+			ClassGen newSpawnableClass, int indexSync) {
 
-		/*
-		   ArrayList<Method> invocatingMethods = 
-		   getInvocatingMethods(spawnableMethod, spawnableClass);
-		   */
-
-		Method[] methods = spawnableClass.getMethods();
-		ConstantPoolGen constantPoolGen = 
-			new ConstantPoolGen(spawnableClass.getConstantPool());
+		Method[] methods = newSpawnableClass.getMethods();
 
 		for (Method method : methods) {
-			if (debug) {
-				printDebug(3, "evaluating %s\n", method);
-			}
-
-			evaluateMethod(method, spawnableMethod, spawnableClass, 
-					constantPoolGen);
+			Method rewrittenMethod = rewriteMethod(method, spawnableMethod, 
+					newSpawnableClass, indexSync);
+			newSpawnableClass.removeMethod(method);
+			newSpawnableClass.addMethod(rewrittenMethod);
 		}
+	}
+
+
+	void dumpNewSpawnableClass(ClassGen newSpawnableClass) {
+		JavaClass c = newSpawnableClass.getJavaClass();
+		//c.setConstantPool
+		//	(newSpawnableClass.getConstantPool().getFinalConstantPool());
+		dump(c, c.getClassName() + "_.class");
+		if (debug) printDebug(3, "spawnable class dumped in %s_.class\n", 
+				c.getClassName());
+	}
+
+
+	void dump(JavaClass javaClass, String name) {
+		try {
+			javaClass.dump(name);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	void backup(JavaClass javaClass) {
+		String name = javaClass.getClassName() + ".class";// hier _ 
+		//dump(javaClass, name);
+		if (debug) printDebug(3, "class %s backed up in %s\n", 
+				javaClass.getClassName(), name);
 	}
 
 
 	void rewriteSpawnableClass(JavaClass spawnableClass) {
-		if (debug) printDebug(0, 
+		if (debug) printDebug(2, 
 				"rewriting spawnable class %s\n", 
 				spawnableClass.getClassName());
 
+		backup(spawnableClass);
+
+		//CONSTANTPOOL///////////////////////////////////////////////////////// 
+		//out.println(spawnableClass.getConstantPool());
+		////////////////////////////////////////////////////////////////////////
+
+
+
+		ClassGen newSpawnableClass = new ClassGen(spawnableClass);
+
+
+		ConstantPoolGen constantPoolGen = newSpawnableClass.getConstantPool();
+		int indexSync = constantPoolGen.addMethodref(
+				spawnableClass.getClassName(), "sync", "()V");
+
 		Method[] spawnableMethods = getSpawnableMethods(spawnableClass);
 
-		//out.println(spawnableClass.getConstantPool());
 
 		for (Method spawnableMethod : spawnableMethods) {
-			if (debug) printDebug(1, "spawnable method: %s\n", 
+			if (debug) printDebug(3, "spawnable method for which %s %s\n", 
+					"methods will be rewritten: ", 
 					spawnableMethod);
 
-			evaluateMethods(spawnableMethod, spawnableClass);
+			rewriteForSpawnableMethod(spawnableMethod, newSpawnableClass, 
+					indexSync);
 		}
+
+		dumpNewSpawnableClass(newSpawnableClass);
 	}
+
 
 
 	boolean isSpawnable(JavaClass javaClass) {
