@@ -23,6 +23,9 @@ import org.apache.bcel.generic.Type;
 import org.apache.bcel.generic.StackConsumer;
 import org.apache.bcel.generic.StackProducer;
 import org.apache.bcel.generic.ClassGen;
+import org.apache.bcel.generic.ArrayInstruction;
+import org.apache.bcel.generic.DASTORE;
+import org.apache.bcel.generic.ALOAD;
 
 
 class SyncRewriter {
@@ -104,18 +107,67 @@ class SyncRewriter {
 	}
 
 
-	int getNrArguments(MethodGen methodGen) {
-		return methodGen.getArgumentTypes().length;
+	int getNrWordsArguments(MethodGen methodGen) {
+		int nrWords = 0;
+		for (Type type : methodGen.getArgumentTypes()) {
+			nrWords += type.getSize();
+		}
+		return nrWords;
+	}
+
+
+	InstructionHandle getArrayReferenceLoadInstruction(InstructionHandle ih,
+			int nrWords, ConstantPoolGen constantPoolGen) {
+		int count = 10;
+		while (count != 0) {
+			ih = ih.getPrev();
+			Instruction instruction = ih.getInstruction();
+			out.println("instructie " + instruction);
+			if (instruction instanceof StackProducer) {
+				out.printf("produceert %d op de stack\n", 
+						instruction.produceStack(constantPoolGen));
+			}
+			if (instruction instanceof StackConsumer) {
+				out.printf("consumeert %d op de stack\n", 
+						instruction.consumeStack(constantPoolGen));
+			}
+			out.println();
+			count--;
+		}
+		return ih;
 	}
 
 
 	InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
-			int nrArguments, ConstantPoolGen constantPoolGen) {
-		int count = nrArguments + 1;
+			ConstantPoolGen constantPoolGen) {
+		Instruction instruction = ih.getInstruction();
+		int stackConsumation = instruction.consumeStack(constantPoolGen);
+		//stackConsumation--; // we're interested in the first one
+
+		while (stackConsumation != 0) {
+			ih = ih.getPrev();
+			Instruction previousInstruction = ih.getInstruction();
+			//out.println(instruction);
+			//if (instruction instanceof StackProducer) {
+			stackConsumation -= 
+				previousInstruction.produceStack(constantPoolGen);
+			//}
+			//if (instruction instanceof StackConsumer) {
+			stackConsumation += 
+				previousInstruction.consumeStack(constantPoolGen);
+			//}
+		}
+		return ih;
+	}
+
+
+	InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
+			int nrWords, ConstantPoolGen constantPoolGen) {
+		int count = nrWords + 1;
 		while (count != 0) {
 			ih = ih.getPrev();
 			Instruction instruction = ih.getInstruction();
-			//	out.println(instruction);
+			//out.println(instruction);
 			if (instruction instanceof StackProducer) {
 				count -= instruction.produceStack(constantPoolGen);
 			}
@@ -153,6 +205,7 @@ class SyncRewriter {
 	}
 
 
+	/*
 	void insertSync(InstructionHandle storeInstruction, 
 			InstructionList instructionList, int indexLocalVariable, 
 			InstructionHandle objectReferenceLoad, int indexSync) {
@@ -181,11 +234,11 @@ class SyncRewriter {
 
 	void rewriteInstructions(InstructionHandle spawnableMethodInvocation, 
 			InstructionList instructionList, ConstantPoolGen constantPoolGen, 
-			int nrArgumentsSpawnableMethod, int indexSync) {
+			int nrWordsSpawnableMethod, int indexSync) {
 
 		InstructionHandle objectReferenceLoad = 
 			getObjectReferenceLoadInstruction(spawnableMethodInvocation, 
-					nrArgumentsSpawnableMethod, constantPoolGen);
+					nrWordsSpawnableMethod, constantPoolGen);
 
 		InstructionHandle storeInstructionHandle = 
 			spawnableMethodInvocation.getNext();
@@ -204,6 +257,7 @@ class SyncRewriter {
 			out.printf("He, hier gaat het niet goed: %s\n", e);
 		}
 	}
+	*/
 
 
 	int getLocalVariableIndexResult(InstructionHandle spawnableMethodInvocation,
@@ -218,9 +272,19 @@ class SyncRewriter {
 			return storeInstruction.getIndex();
 		}
 		catch (ClassCastException e) {
-			out.printf("He, hier gaat het niet goed: %s\n", e);
-			throw new Error();
 		}
+		try {
+			ArrayInstruction arrayStoreInstruction = (ArrayInstruction)
+				((StackConsumer)(storeInstructionHandle.getInstruction()));
+			InstructionHandle ih  = getObjectReferenceLoadInstruction
+				(storeInstructionHandle, constantPoolGen);
+			ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
+			return objectLoadInstruction.getIndex();
+		}
+		catch (ClassCastException e) {
+		}
+		out.printf("He, hier gaat het niet goed: %s\n");
+		throw new Error();
 	}
 
 
@@ -237,7 +301,7 @@ class SyncRewriter {
 
 		MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
 				newSpawnableClass.getClassName(), constantPoolGen);
-		int nrArgumentsSpawnableMethod = getNrArguments(spawnableMethodGen);
+		int nrWordsSpawnableMethod = getNrWordsArguments(spawnableMethodGen);
 		int indexSpawnableMethod = 
 			constantPoolGen.lookupMethodref(spawnableMethodGen);
 		INVOKEVIRTUAL spawnableInvocation = 
@@ -256,12 +320,9 @@ class SyncRewriter {
 						"the spawnable method is invoked, rewriting\n");
 
 				objectReferenceLoad = getObjectReferenceLoadInstruction(ih, 
-						nrArgumentsSpawnableMethod, constantPoolGen);
+						constantPoolGen);
 				localVariableIndeces.add(getLocalVariableIndexResult(ih, 
 							instructionList, constantPoolGen));
-
-				//   rewriteInstructions(ih, instructionList, constantPoolGen, 
-				//		nrArgumentsSpawnableMethod, indexSync); 
 			}
 		} while((ih = ih.getNext()) != null);
 
@@ -269,6 +330,7 @@ class SyncRewriter {
 			insertSync(instructionList, objectReferenceLoad, 
 					localVariableIndeces, indexSync);
 		}
+		/*
 		else {
 			if (debug) printDebug(5, "nothing to be done\n");
 		}
@@ -276,6 +338,7 @@ class SyncRewriter {
 		if (debug) {
 			printDebug(4, "method %s evaluated\n", method);
 		}
+		*/
 
 		return methodGen.getMethod();
 	}
