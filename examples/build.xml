@@ -1,0 +1,77 @@
+<project
+    name="search"
+    default="jar"
+    basedir=".">
+
+    <description>
+	Ibis satin application build
+    </description>
+
+    <!-- satin classes, must be passed on to Satin rewriter. -->
+    <property name="satin-classes" value="SearchImpl1,SearchImpl2,SearchImpl3"/>
+
+    <property environment="env"/>
+    <property name="satin"       location=".."/>
+
+    <property name="tmp"         value="tmp"/>
+    <property name="lib"         value="lib"/>
+
+    <target name="init">
+        <tstamp />
+        <mkdir dir="${tmp}" />
+        <mkdir dir="${lib}" />
+	<path id="default.classpath">
+	    <pathelement path="${tmp}"/>
+	    <fileset dir="${satin}/lib">
+		<include name="*.jar"/>
+	    </fileset>
+	</path>
+	<echo	message="Now set default.classpath to ${default.classpath}"
+		level="verbose"/>
+    </target>
+
+    <target name="compile" depends="clean,init"
+	    description="Compile application without any bytecode rewriting">
+	<javac destdir="${tmp}" debug="true" srcdir="src" source="1.5"
+target="1.5">
+	    <classpath refid="default.classpath" />
+            <include name="**/*.java" />
+        </javac>
+    </target>
+
+    <target name="satinc">
+	<java	classname="ibis.compile.Ibisc"
+		taskname="Ibisc"
+		dir="${tmp}"
+		failonerror="true"
+		maxmemory="512M"
+		fork="true">
+		<arg line="-satin &quot;${satin-classes}&quot; ."/>
+		<classpath refid="default.classpath"/>
+	</java>
+    </target>
+
+    <target name="build"
+	description="Compile Satin application for parallel execution"
+	depends="compile,satinc"/>
+
+    <target name="jar" depends="build"
+	    description="Build a Jar file for an application">
+	<jar destfile="${lib}/search-satin.jar" basedir="${tmp}"
+		includes="**/*.class"/>
+        <delete dir="${tmp}" />
+    </target>
+
+    <target name="compile-jar" depends="compile"
+	    description="Build a Jar file for an application">
+	<jar destfile="${lib}/search.jar" basedir="${tmp}"
+		includes="**/*.class"/>
+        <delete dir="${tmp}" />
+    </target>
+
+    <target name="clean" description="Clean up the build">
+        <delete dir="${tmp}" />
+        <delete dir="${lib}" />
+    </target>
+
+</project>
