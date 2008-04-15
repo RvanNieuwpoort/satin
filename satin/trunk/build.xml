@@ -3,14 +3,9 @@
 	Build file for Satin
     </description>
 
-    <property name="version" value="-2.0" />
+    <property name="version" value="-2.1" />
 
     <property name="dist-name" value="${ant.project.name}${version}" />
-
-    <!-- Import environment properties -->
-
-    <property environment="env" />
-    <property name="ibis" location="${env.IBIS_HOME}" />
 
     <target name="build"
             description="Build with included Ibis"
@@ -39,24 +34,23 @@
     <!-- copy external dependancies to lib, includig Ibis 
          specified by $IBIS_HOME -->
     <target name="copy-external-ibis">
+	<!-- Import environment properties -->
+	<property environment="env" />
+	<property name="ibis" location="${env.IPL_HOME}" />
         <mkdir dir="${lib}" />
-
         <copy todir="${lib}">
             <fileset dir="${ibis}/lib" />
         </copy>
-
     </target>
 
     <!-- Compile -->
     <target name="compile">
         <mkdir dir="${tmp}" />
         <mkdir dir="${lib}" />
-
         <!-- copy jars in external directory to lib -->
         <copy todir="${lib}">
             <fileset dir="${external}" includes="*.jar" />
         </copy>
-
         <path id="default.classpath">
             <fileset dir="${lib}">
                 <include name="*.jar" />
