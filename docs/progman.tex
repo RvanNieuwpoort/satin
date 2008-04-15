@@ -1,15 +1,19 @@
 \documentclass[10pt]{article}
 
+\usepackage{url}
 \usepackage{graphicx}
-
-\newcommand{\mysection}[1]{\section{#1}\label{#1}}
-\newcommand{\mysubsection}[1]{\subsection{#1}\label{#1}}
-\newcommand{\mysubsubsection}[1]{\subsubsection{#1}\label{#1}}
-\newcommand{\remark}[1]{[\emph{#1}]}
+\usepackage{times}
+\usepackage{color}
+\usepackage{floatpag}
+\newcommand{\todo}[1]{\textbf{\textcolor{red}{[TODO: #1]}}}
+\usepackage{listings}
+\usepackage{courier} % For a richer set of \tt fonts (for listings)
+\lstset{columns=fullflexible,showstringspaces=false,numberstyle=\tiny,basicstyle=\footnotesize,breaklines=false}
+%\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,showstringspaces=false,numberstyle=\tiny,breaklines=false}
 
 \begin{document}
 
-\title{The Satin Divide-and-Conquer System}
+\title{The Satin Divide-and-Conquer System Programmer's Manual}
 
 \author{The Ibis Group}
 
@@ -23,7 +27,12 @@ with two simple primitives for divide-and-conquer programming: \texttt{spawn}
 and \texttt{sync}. The Satin byte-code rewriter and runtime system cooperate to
 implement these primitives efficiently on top of the IPL.  
 
-\mysection{Satin jobs}
+This manual explains how to program applications using Satin.
+For information on how to run applications using Satin, see the Satin
+user's manual, available in the Satin distribution in the
+\texttt{docs} directory.
+
+\section{Satin jobs}
 
 To use Satin, the programmer must label one or more methods in his
 class as Satin jobs. This is done by defining an interface that
@@ -32,6 +41,8 @@ extends the Satin interface ibis.satin.Spawnable. For example:
 {\small
 \begin{quote}
 \begin{verbatim}
+package search;
+
 interface Searcher extends ibis.satin.Spawnable {
    public int search(int a[], int from, int to, int val);
 }
@@ -60,6 +71,8 @@ all fields of a Satin object must be either serializable or transient.
 \begin{figure}[t!]
 {\small
 \begin{verbatim}
+package search;
+
 import ibis.satin.SatinObject;
 
 class SearchImpl1 extends SatinObject implements Searcher {
@@ -160,7 +173,7 @@ the entire search can be done in parallel on a large number of
 machines. The example shows how easy it is to write a real parallel
 grid application using Satin.  
 
-\mysection{Exceptions and abort}
+\section{Exceptions and abort}
 
 A Satin job may
 throw exceptions in the usual way. This can be used to rapidly
@@ -179,6 +192,8 @@ examples to use exceptions.
 \begin{figure}[t!]
 {\small
 \begin{verbatim}
+package search;
+
 import ibis.satin.SatinObject;
 import ibis.satin.Inlet;
 
@@ -279,20 +294,24 @@ exception is caught, and the other search jobs can then be
 terminated. They have become useless, because the element has already
 been found in the array. The parallel search can thus be stopped. We
 call the catch block in the main method that handles the result of the
-search an inlet.  The way of searching in Figures~\ref{satin-spec-search-fig1} and~\ref{satin-spec-search-fig2} is called
+search an inlet.
+
+The way of searching in Figures~\ref{satin-spec-search-fig1} and~\ref{satin-spec-search-fig2} is called
 speculative parallelism: the search speculatively starts on both two
 parts of the array simultaneously, even though we know from the start
 that a part of the search may be terminated as soon as the element is
 found. We might thus do more work than a sequential search. On the
 other hand, we might also do less work than the sequential version,
 for instance if the element is in the beginning of the second part of
-the array.  The inlet in main contains a return statement. This must
+the array.
+
+The inlet in main contains a return statement. This must
 be there, because the inlet runs in a new thread. The original main
 thread is still blocked in the sync statement. When the inlet returns,
 the main thread is unblocked, because both search jobs have finished:
 one threw an exception, the other has been aborted.  
 
-\mysection{Satin job scheduling}
+\section{Satin job scheduling}
 
 Satin offers a choice of three different job scheduling strategies:
 \begin{description}
@@ -315,11 +334,11 @@ each participant first tries to steal jobs from other participants in its
 own cluster (thus using the fast local network).
 It will only go to participants from other clusters if no participant on the
 same cluster has work.
-To determine to which cluster a participant belongs, the cluster name
-is used.
-As described in Section \ref{Running an Ibis Application},
-the \texttt{ibis.pool.cluster} system property can be used to
-specify a cluster name to the Ibis instance.
+
+To determine to which cluster a participant belongs, Satin uses the
+parent of the location as obtained from the underlying Ibis IPL.
+The default for this is the domain part of the hostname. However,
+the location can be set using the \texttt{ibis.location} property.
 
 \item{Master-worker}
 This strategy is suitable for applications where all Satin jobs are
@@ -334,7 +353,7 @@ On the other hand, there must be enough jobs to keep everybody busy.
 The \texttt{SatinObject} class has a boolean method \texttt{needMoreJobs()},
 which indicates whether it would be useful to generate more jobs.
 
-\mysection{Other SatinObject methods}
+\section{Other SatinObject methods}
 
 The \texttt{pause()} method pauses Satin's operation. When the application
 contains a large sequential part, this method can be called to temporarily
@@ -342,7 +361,7 @@ pause Satin's internal load distribution strategies to avoid communication
 overhead during the execution of sequential code.
 To resume Satin's operation, the \texttt{resume()} method must be used.
 
-\mysection{Satin program arguments}
+\section{Satin program arguments}
 
 The Satin system accepts the following parameters, which are
 passed to java as system property values.
@@ -362,7 +381,7 @@ Specify the load-balancing algorithm to use. The possible values for
 random-work stealing, and MW for master-worker.
 \end{description}
 
-\mysection{Satin Shared Objects}
+\section{Satin Shared Objects}
 
 The divide-and-conquer model operates by subdividing the problem into
 subproblems (subtasks) and solving them recursively.
@@ -482,73 +501,18 @@ Here is a small example:
     }
 \end{verbatim}
 \end{quote}
-}
 
-\mysection{Compiling and running a Satin program}
+\section{Further Reading}
 
-Before running a Satin application it must be compiled.
-Using \emph{ant}, this is quite easy. Here is a build.xml file for
-our example program:
+The Javadoc included in the \texttt{javadoc} directory has detailed
+information on all classes and their methods.
 
-{\small
-\begin{quote}
-\begin{verbatim}
-<project
-    name="Search"
-    default="build"
-    basedir=".">
+The Ibis web page \url{http://www.cs.vu.nl/ibis} lists all
+the documentation and software available for Ibis, including papers, and
+slides of presentations.
 
-    <description>
-    Satin application build.
-    </description>
+For detailed information on running a Satin application see the
+User's Manual, available in the docs directory of the Satin
+distribution.
 
-    <property environment="env" />
-    <property name="ibis"   value="${env.IBIS_HOME}" />
-
-    <property name="satin-classes" value="Search"/>
-
-    <property name="build"  location="build"/>
-
-    <import file="${ibis}/build-files/apps/build-satin-app.xml"/>
-</project>
-\end{verbatim}
-\end{quote}
-}
-
-Again, we assume that the environment variable \texttt{IBIS\_HOME} reflects
-the location of your Ibis installation.
-Also note that the Satin bytecode rewriter needs to know the
-classes in your application that must be rewritten.
-Those classes are: the main class, any class that implements a shared object,
-and all classes that invoke spawns or syncs.
-The names of these classes are specified in the \texttt{satin-classes} property,
-as a comma-separated list.
-
-Invoking \emph{ant clean compile} compiles a sequential version
-of the application, 
-leaving the class files in a directory called \texttt{build}.
-
-Invoking \emph{ant clean build} compiles the application for parallel
-runs.
-
-If, for some reason, it is not convenient to use \emph{ant} to compile
-your application, or you have only class files or jar files available
-for parts of your application, it is also possible to first compile
-your application to class files or jar files, and then process those
-using the \emph{ibisc} script. This script can be found in the Ibis
-bin directory. It takes either directories, class files, or jar files
-as parameter, and processes those, possibly rewriting them. In case
-of a directory, all class files and jar files in that directory or
-its subdirectories are processed.
-To process a Satin application, \emph{ibisc} needs to know which
-classes to process for Satin. This can be accomplished by passing
-flags to \emph{ibisc}:
-
-\texttt{-satin} \emph{comma-separated list of class names}
-
-where the comma-separated list of class names consists of the main class,
-any class that implements a shared object, and all classes that invoke
-spawns or syncs.
-
-Running a Satin program is very much like running an Ibis application.
-See Section \ref{Compiling and Running an Ibis Application} for details.
+\end{document}

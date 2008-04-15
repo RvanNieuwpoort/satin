@@ -1,0 +1,71 @@
+\documentclass[a4paper,10pt]{article}
+
+%\usepackage{graphicx}
+\usepackage{url}
+\usepackage{times}
+
+\begin{document}
+
+\title{Satin Divide-and-Conquer System User's Guide}
+
+\author{http://www.cs.vu.nl/ibis}
+
+\maketitle
+
+\section{Introduction}
+
+This manual describes the steps required to run an application that
+uses the Satin Divide-and-Conquer System. How to create such an application
+is described in the Satin Divide-and-Conquer Programmer's Manual.
+Here, we will discuss how to compile and run the example that is described
+in the Programmer's Manual.
+
+\section{Compiling the example}
+
+The example application for the Satin Divide-and-Conquer System is
+provided with the Satin distribution, in the \texttt{examples} directory.
+For convenience, the application is already compiled.
+
+If you change the example, you will need to recompile it. This
+requires the build system \texttt{ant}\footnote{\url{http://ant.apache.org}}.
+Running \texttt{ant} in the examples directory compiles the example.
+
+Invoking \emph{ant clean compile} compiles a sequential version
+of the application, 
+leaving the class files in a directory called \texttt{tmp}.
+
+If, for some reason, it is not convenient to use \emph{ant} to compile
+your application, or you have only class files or jar files available
+for parts of your application, it is also possible to first compile
+your application to class files or jar files, and then process those
+using the \emph{satinc} script. This script can be found in the Satin
+bin directory. It takes either directories, class files, or jar files
+as parameter, and processes those, possibly rewriting them. In case
+of a directory, all class files and jar files in that directory or
+its subdirectories are processed.  The command sequence
+
+\begin{verbatim}
+$ cd $SATIN_HOME/examples
+$ mkdir tmp
+$ javac -d tmp -g \
+     -classpath ../lib/satin-2.1.jar:../lib/ibis-io-2.1.jar \
+     src/search/*.java
+$ ../bin/satinc -cp tmp \
+     -satin "search.SearchImpl1 search.SearchImpl2 search.SearchImpl3" \
+     tmp
+\end{verbatim}
+
+creates a \texttt{tmp} directory and stores the resulting class files there.
+The \texttt{SATIN\_HOME} environment variable must be set to the location of
+the Satin installation.
+
+Note that the Satin bytecode rewriter \texttt{satinc} needs to know the
+classes in your application that must be rewritten.
+Those classes are: the main class, any class that implements a shared object,
+and all classes that invoke spawns or syncs.
+When using the \texttt{satinc} script, these classes must be provided as
+a comma-separated list, with the \texttt{-satin} option. In
+\texttt{build.xml} they are provided as the \texttt{satin-classes} property.
+
+TODO running a satin application
+\end{document}
