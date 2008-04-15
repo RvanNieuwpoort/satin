@@ -32,5 +32,4 @@ add_to_libclasspath () {
 add_to_libclasspath "${SATIN_HOME}"/lib
 
 JAVACLASSPATH="$CLASSPATH:$LIBCLASSPATH"
-echo $JAVACLASSPATH
 java -classpath "$JAVACLASSPATH" ibis.compile.Ibisc "$@"
