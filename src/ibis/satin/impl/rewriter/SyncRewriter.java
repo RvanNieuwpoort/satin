@@ -38,6 +38,23 @@ class SyncRewriter {
 	private boolean debug;
 
 
+	private class SpawnableMethodCall {
+
+
+		private InstructionHandle ih;
+		private InstructionHandle objectReference;
+		private int resultIndex;
+
+
+		private SpawnableMethodCall(InstructionHandle ih, 
+				InstructionHandle objectReference, int resultIndex) {
+			this.ih = ih;
+			this.objectReference = objectReference;
+			this.resultIndex = resultIndex;
+		}
+	}
+
+
 	SyncRewriter() {
 		out = System.out;
 		debug = /*false*/ true;
@@ -161,103 +178,155 @@ class SyncRewriter {
 	}
 
 
-	InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
-			int nrWords, ConstantPoolGen constantPoolGen) {
-		int count = nrWords + 1;
-		while (count != 0) {
-			ih = ih.getPrev();
-			Instruction instruction = ih.getInstruction();
-			//out.println(instruction);
-			if (instruction instanceof StackProducer) {
-				count -= instruction.produceStack(constantPoolGen);
-			}
-			if (instruction instanceof StackConsumer) {
-				count += instruction.consumeStack(constantPoolGen);
-			}
-		}
-		return ih;
-	}
-
-	void insertSync(InstructionList instructionList, 
-			InstructionHandle objectReferenceLoad, 
-			ArrayList<Integer> localVariableIndeces, int indexSync) {
-		if (debug) printDebug(5, "trying to insert a sync statement\n");
-
-		InstructionHandle ih = instructionList.getStart();
-		do {
-			try {
-				LoadInstruction loadInstruction = 
-					(LoadInstruction) (ih.getInstruction());
-				if (localVariableIndeces.contains(loadInstruction.getIndex())) {
-					InstructionHandle syncInvocation = 
-						instructionList.insert(ih, 
-								new INVOKEVIRTUAL(indexSync));
-					instructionList.insert(syncInvocation, 
-							objectReferenceLoad.getInstruction());
-					if (debug) printDebug(6, "sync statement inserted\n");
-					return;
-				}
-			}
-			catch (ClassCastException e) {
-			}
-		}
-		while ((ih = ih.getNext()) != null);
-	}
+	/*
+	   InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
+	   int nrWords, ConstantPoolGen constantPoolGen) {
+	   int count = nrWords + 1;
+	   while (count != 0) {
+	   ih = ih.getPrev();
+	   Instruction instruction = ih.getInstruction();
+	   out.println(instruction);
+	   if (instruction instanceof StackProducer) {
+	   count -= instruction.produceStack(constantPoolGen);
+	   }
+	   if (instruction instanceof StackConsumer) {
+	   count += instruction.consumeStack(constantPoolGen);
+	   }
+	   }
+	   return ih;
+	   }
+	   */
 
 
 	/*
-	void insertSync(InstructionHandle storeInstruction, 
-			InstructionList instructionList, int indexLocalVariable, 
-			InstructionHandle objectReferenceLoad, int indexSync) {
+	   void insertSync(InstructionList instructionList, 
+	   InstructionHandle objectReferenceLoad, 
+	   ArrayList<Integer> localVariableIndeces, int indexSync) {
+	   if (debug) printDebug(5, "trying to insert a sync statement\n");
 
-		InstructionHandle ih = storeInstruction;
+	   InstructionHandle ih = instructionList.getStart();
+	   do {
+	   try {
+	   LoadInstruction loadInstruction = 
+	   (LoadInstruction) (ih.getInstruction());
+	   if (localVariableIndeces.contains(loadInstruction.getIndex())) {
+	   InstructionHandle syncInvocation = 
+	   instructionList.insert(ih, 
+	   new INVOKEVIRTUAL(indexSync));
+	   instructionList.insert(syncInvocation, 
+	   objectReferenceLoad.getInstruction());
+	   if (debug) printDebug(6, "sync statement inserted\n");
+	   return;
+	   }
+	   }
+	   catch (ClassCastException e) {
+	   }
+	   }
+	   while ((ih = ih.getNext()) != null);
+	   }
+	   */
+
+
+	InstructionHandle getLoadInstruction(InstructionList il, 
+			SpawnableMethodCall spawnableCall) {
+
+		InstructionHandle ih = spawnableCall.ih;
 		while ((ih = ih.getNext()) != null) {
 			try {
 				LoadInstruction loadInstruction = 
 					(LoadInstruction) (ih.getInstruction());
-				if (loadInstruction.getIndex() == indexLocalVariable) {
-					InstructionHandle syncInvocation = 
-						instructionList.insert(ih, 
-								new INVOKEVIRTUAL(indexSync));
-
-					instructionList.insert(syncInvocation, 
-							objectReferenceLoad.getInstruction());
-
-					if (debug) printDebug(6, "inserted a sync statement\n");
+				if (loadInstruction.getIndex() == spawnableCall.resultIndex) {
+					return ih;
 				}
 			}
 			catch (ClassCastException e) {
 			}
 		}
+		throw new Error("Result of spawnable method never read\n");
 	}
 
 
-	void rewriteInstructions(InstructionHandle spawnableMethodInvocation, 
-			InstructionList instructionList, ConstantPoolGen constantPoolGen, 
-			int nrWordsSpawnableMethod, int indexSync) {
+	void insertSync(InstructionList instructionList, 
+			ArrayList<SpawnableMethodCall> spawnableCalls, int indexSync) {
 
-		InstructionHandle objectReferenceLoad = 
-			getObjectReferenceLoadInstruction(spawnableMethodInvocation, 
-					nrWordsSpawnableMethod, constantPoolGen);
+		if (debug) printDebug(5, "trying to insert a sync statement\n");
 
-		InstructionHandle storeInstructionHandle = 
-			spawnableMethodInvocation.getNext();
-
-		try {
-			StoreInstruction storeInstruction = (StoreInstruction) 
-				(storeInstructionHandle.getInstruction());
-			int indexLocalVariable = storeInstruction.getIndex();
-
-
-			insertSync(storeInstructionHandle, instructionList, 
-					indexLocalVariable, objectReferenceLoad, indexSync);
+		InstructionHandle earliestLoadInstruction = null;
+		for (SpawnableMethodCall spawnableCall : spawnableCalls) {
+			InstructionHandle loadInstruction = 
+				getLoadInstruction(instructionList, spawnableCall);
+			if (earliestLoadInstruction == null || 
+					loadInstruction.getPosition() < 
+					earliestLoadInstruction.getPosition()) {
+				earliestLoadInstruction = loadInstruction;
+					}
 		}
 
-		catch (ClassCastException e) {
-			out.printf("He, hier gaat het niet goed: %s\n", e);
-		}
+		InstructionHandle syncInvocation = 
+			instructionList.insert(earliestLoadInstruction, 
+					new INVOKEVIRTUAL(indexSync));
+		instructionList.insert(syncInvocation, 
+				spawnableCalls.get(0).objectReference.getInstruction());
+		if (debug) printDebug(6, "sync statement inserted\n");
 	}
-	*/
+
+
+
+
+
+	/*
+	   void insertSync(InstructionHandle storeInstruction, 
+	   InstructionList instructionList, int indexLocalVariable, 
+	   InstructionHandle objectReferenceLoad, int indexSync) {
+
+	   InstructionHandle ih = storeInstruction;
+	   while ((ih = ih.getNext()) != null) {
+	   try {
+	   LoadInstruction loadInstruction = 
+	   (LoadInstruction) (ih.getInstruction());
+	   if (loadInstruction.getIndex() == indexLocalVariable) {
+	   InstructionHandle syncInvocation = 
+	   instructionList.insert(ih, 
+	   new INVOKEVIRTUAL(indexSync));
+
+	   instructionList.insert(syncInvocation, 
+	   objectReferenceLoad.getInstruction());
+
+	   if (debug) printDebug(6, "inserted a sync statement\n");
+	   }
+	   }
+	   catch (ClassCastException e) {
+	   }
+	   }
+	   }
+
+
+	   void rewriteInstructions(InstructionHandle spawnableMethodInvocation, 
+	   InstructionList instructionList, ConstantPoolGen constantPoolGen, 
+	   int nrWordsSpawnableMethod, int indexSync) {
+
+	   InstructionHandle objectReferenceLoad = 
+	   getObjectReferenceLoadInstruction(spawnableMethodInvocation, 
+	   nrWordsSpawnableMethod, constantPoolGen);
+
+	   InstructionHandle storeInstructionHandle = 
+	   spawnableMethodInvocation.getNext();
+
+	   try {
+	   StoreInstruction storeInstruction = (StoreInstruction) 
+	   (storeInstructionHandle.getInstruction());
+	   int indexLocalVariable = storeInstruction.getIndex();
+
+
+	   insertSync(storeInstructionHandle, instructionList, 
+	   indexLocalVariable, objectReferenceLoad, indexSync);
+	   }
+
+	   catch (ClassCastException e) {
+	   out.printf("He, hier gaat het niet goed: %s\n", e);
+	   }
+	   }
+	   */
 
 
 	int getLocalVariableIndexResult(InstructionHandle spawnableMethodInvocation,
@@ -283,8 +352,8 @@ class SyncRewriter {
 		}
 		catch (ClassCastException e) {
 		}
-		out.printf("He, hier gaat het niet goed: %s\n");
-		throw new Error();
+		//out.printf("He, hier gaat het niet goed: %s\n");
+		throw new Error("He, hier gaat het niet goed\n");
 	}
 
 
@@ -309,8 +378,8 @@ class SyncRewriter {
 
 
 
-		ArrayList<Integer> localVariableIndeces = new ArrayList<Integer>();
-		InstructionHandle objectReferenceLoad = null;
+		ArrayList<SpawnableMethodCall> spawnableCalls = 
+			new ArrayList<SpawnableMethodCall>();
 
 		InstructionList instructionList = methodGen.getInstructionList();
 		InstructionHandle ih = instructionList.getStart();
@@ -319,29 +388,94 @@ class SyncRewriter {
 				if (debug) printDebug(5, 
 						"the spawnable method is invoked, rewriting\n");
 
-				objectReferenceLoad = getObjectReferenceLoadInstruction(ih, 
-						constantPoolGen);
-				localVariableIndeces.add(getLocalVariableIndexResult(ih, 
-							instructionList, constantPoolGen));
+				SpawnableMethodCall spawnableCall = new SpawnableMethodCall(ih, 
+						getObjectReferenceLoadInstruction(ih, constantPoolGen), 
+						getLocalVariableIndexResult(ih, instructionList, 
+							constantPoolGen));
+				spawnableCalls.add(spawnableCall);
+				/*
+				   objectReferenceLoad = getObjectReferenceLoadInstruction(ih, 
+				   constantPoolGen);
+				   localVariableIndeces.add(getLocalVariableIndexResult(ih, 
+				   instructionList, constantPoolGen));
+				   */
 			}
 		} while((ih = ih.getNext()) != null);
 
-		if (localVariableIndeces.size() > 0) {
-			insertSync(instructionList, objectReferenceLoad, 
-					localVariableIndeces, indexSync);
+		if (spawnableCalls.size() > 0) {
+			insertSync(instructionList, spawnableCalls, indexSync);
 		}
 		/*
-		else {
-			if (debug) printDebug(5, "nothing to be done\n");
-		}
+		   else {
+		   if (debug) printDebug(5, "nothing to be done\n");
+		   }
 
-		if (debug) {
-			printDebug(4, "method %s evaluated\n", method);
-		}
-		*/
+		   if (debug) {
+		   printDebug(4, "method %s evaluated\n", method);
+		   }
+		   */
 
 		return methodGen.getMethod();
 	}
+
+
+
+	/*
+	   Method evaluateMethod(Method method, Method spawnableMethod, 
+	   ClassGen newSpawnableClass, int indexSync) {
+	   if (debug) {
+	   printDebug(4, "evaluating method %s\n", method);
+	   }
+
+	   ConstantPoolGen constantPoolGen = newSpawnableClass.getConstantPool();
+	   MethodGen methodGen = new MethodGen(method, 
+	   newSpawnableClass.getClassName(), constantPoolGen);
+
+
+	   MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
+	   newSpawnableClass.getClassName(), constantPoolGen);
+	   int nrWordsSpawnableMethod = getNrWordsArguments(spawnableMethodGen);
+	   int indexSpawnableMethod = 
+	   constantPoolGen.lookupMethodref(spawnableMethodGen);
+	   INVOKEVIRTUAL spawnableInvocation = 
+	   new INVOKEVIRTUAL(indexSpawnableMethod);
+
+
+
+	   ArrayList<Integer> localVariableIndeces = new ArrayList<Integer>();
+	   InstructionHandle objectReferenceLoad = null;
+
+	   InstructionList instructionList = methodGen.getInstructionList();
+	   InstructionHandle ih = instructionList.getStart();
+	   do {
+	   if (ih.getInstruction().equals(spawnableInvocation)) {
+	   if (debug) printDebug(5, 
+	   "the spawnable method is invoked, rewriting\n");
+
+	   objectReferenceLoad = getObjectReferenceLoadInstruction(ih, 
+	   constantPoolGen);
+	   localVariableIndeces.add(getLocalVariableIndexResult(ih, 
+	   instructionList, constantPoolGen));
+	   }
+	   } while((ih = ih.getNext()) != null);
+
+	   if (localVariableIndeces.size() > 0) {
+	   insertSync(instructionList, objectReferenceLoad, 
+	   localVariableIndeces, indexSync);
+	   }
+	/*
+	else {
+	if (debug) printDebug(5, "nothing to be done\n");
+	}
+
+	if (debug) {
+	printDebug(4, "method %s evaluated\n", method);
+	}
+	*/
+	/*
+	   return methodGen.getMethod();
+	   }
+	   */
 
 
 	/** Rewrite the methods that invocate spawnableMethod.
