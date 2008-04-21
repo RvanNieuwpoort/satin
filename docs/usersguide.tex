@@ -48,10 +48,10 @@ its subdirectories are processed.  The command sequence
 $ cd $SATIN_HOME/examples
 $ mkdir tmp
 $ javac -d tmp -g \
-     -classpath ../lib/satin-2.1.jar:../lib/ibis-io-2.1.jar \
+     -classpath ../lib/satin-2.1.jar \
      src/search/*.java
 $ ../bin/satinc -cp tmp \
-     -satin "search.SearchImpl1 search.SearchImpl2 search.SearchImpl3" \
+     -satin "search.SearchImpl1,search.SearchImpl2,search.SearchImpl3" \
      tmp
 \end{verbatim}
 
@@ -67,5 +67,61 @@ When using the \texttt{satinc} script, these classes must be provided as
 a comma-separated list, with the \texttt{-satin} option. In
 \texttt{build.xml} they are provided as the \texttt{satin-classes} property.
 
-TODO running a satin application
+\section{Running a Satin application}
+
+Before discussing
+the running of a Satin application, we will discuss services that are
+needed by the Ibis communication library, on which Satin is built.
+
+\subsection{The pool}
+
+A central concept in Ibis is the \emph{Pool}. A pool consists of one or
+more Ibis instances, usually running on different machines. Each pool is
+generally made up of Ibises running a single distributed application.
+Ibises in a pool can communicate with each other, and, using the
+registry mechanism present in Ibis, can search for other Ibises in the
+same pool, get notified of Ibises joining the pool, etc. To
+coordinate Ibis pools a so-called \emph{Ibis server} is used.
+
+\subsection{The Ibis Server}
+
+The Ibis server is the Swiss-army-knife server of the Ibis project.
+Services can be dynamically added to the server. By default, the Ibis
+communication library comes with a registry service. This registry
+service manages pools, possibly multiple pools at the same time.
+
+In addition to the registry service, the server also allows
+Ibises to route traffic over the server if no direct connection is
+possible between two instances due to firewalls or NAT boxes. This is
+done using the Smartsockets library of the Ibis project.
+
+The Ibis server is started with the \texttt{satin-server} script which is
+located in the \texttt{bin} directory of the Satin distribution.  Before
+starting a Satin application, an Ibis server needs to be running on a
+machine that is accessible from all nodes participating in the Satin run.
+The server listens to a TCP port. The port number can be specified using
+the \texttt{--port} command line option to the \texttt{ipl-server}
+script.  For a complete list of all options, use the \texttt{--help}
+option of the script. One useful option is the  \texttt{--events}
+option, which makes the registry print out events (such as Satin instances
+joining a pool).
+
+\subsubsection{Hubs}
+\label{hubs}
+
+The Ibis server is a single point which needs to be reachable from every
+Ibis instance. Since sometimes this is not possible due to firewalls,
+additional \emph{hubs} can be started to route traffic, creating a
+routing infrastructure for the Satin instances. These hubs can be started
+by using satin-server script with the \texttt{--hub-only} option. In
+addition, each hub needs to know the location of as many of the other
+hubs as possible. This information can be provided by using the
+\texttt{--hub-addresses} option. See the \texttt{--help} option of the
+satin-server script for more information.
+
+\subsection{Running the example}
+
+When the Ibis server is running, the Satin application itself can be
+started. 
+
 \end{document}
