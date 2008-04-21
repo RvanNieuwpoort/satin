@@ -79,6 +79,15 @@
             <classpath refid="default.classpath" />
         </java>
 
+	<!-- Extract ibis.io.Serializable, so that applications don't
+	     need ibis-io-2.1.jar to compile.
+        -->
+	<unjar src="external/ibis/ibis-io-2.1.jar" dest="${tmp}">
+	    <patternset>
+		<include name="**/Serializable.class"/>
+	    </patternset>
+	</unjar>
+
         <!-- Create jar file -->
         <jar destfile="${lib}/${dist-name}.jar" basedir="${tmp}" includes="**/*.class">
 	    <manifest>
