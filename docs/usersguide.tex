@@ -20,18 +20,24 @@ is described in the Satin Divide-and-Conquer Programmer's Manual.
 Here, we will discuss how to compile and run the example that is described
 in the Programmer's Manual.
 
-\section{Compiling the example}
+Since Satin is built on top of the Ibis Portability Layer (IPL),
+the Satin release contains the Ibis communication library, which contains
+implementations of the IPL. Parts of this manual may look familiar for
+readers that are familiar with the Ibis communication library.
 
-The example application for the Satin Divide-and-Conquer System is
+\section{Compiling the Fibonacci example}
+
+The Fibonacci example application for the Satin Divide-and-Conquer System is
 provided with the Satin distribution, in the \texttt{examples} directory.
 For convenience, the application is already compiled.
 
 If you change the example, you will need to recompile it. This
 requires the build system \texttt{ant}\footnote{\url{http://ant.apache.org}}.
-Running \texttt{ant} in the examples directory compiles the example.
+Running \texttt{ant} in the examples directory compiles the example,
+and rewrites the class files for use with Satin.
 
 Invoking \emph{ant clean compile} compiles a sequential version
-of the application, 
+of the application,
 leaving the class files in a directory called \texttt{tmp}.
 
 If, for some reason, it is not convenient to use \emph{ant} to compile
@@ -49,13 +55,17 @@ $ cd $SATIN_HOME/examples
 $ mkdir tmp
 $ javac -d tmp -g \
      -classpath ../lib/satin-2.1.jar \
-     src/search/*.java
+     src/*/*.java
 $ ../bin/satinc -cp tmp \
-     -satin "search.SearchImpl1,search.SearchImpl2,search.SearchImpl3" \
+     -satin "fib.Fib,search.SearchImpl1,search.SearchImpl2,search.SearchImpl3" \
      tmp
+$ mkdir lib
+$ ( cd tmp ; jar c . ) > lib/satin-examples.jar
+$ rm -rf tmp
 \end{verbatim}
 
-creates a \texttt{tmp} directory and stores the resulting class files there.
+creates a \texttt{lib} directory and stores the resulting class files there,
+in a jar-file called \texttt{satin-examples.jar}.
 The \texttt{SATIN\_HOME} environment variable must be set to the location of
 the Satin installation.
 
@@ -67,11 +77,11 @@ When using the \texttt{satinc} script, these classes must be provided as
 a comma-separated list, with the \texttt{-satin} option. In
 \texttt{build.xml} they are provided as the \texttt{satin-classes} property.
 
-\section{Running a Satin application}
+\section{A Satin run}
 
 Before discussing
 the running of a Satin application, we will discuss services that are
-needed by the Ibis communication library, on which Satin is built.
+needed by the Ibis communication library.
 
 \subsection{The pool}
 
@@ -119,9 +129,229 @@ hubs as possible. This information can be provided by using the
 \texttt{--hub-addresses} option. See the \texttt{--help} option of the
 satin-server script for more information.
 
-\subsection{Running the example}
+\subsection{Running the example: preliminaries}
 
 When the Ibis server is running, the Satin application itself can be
-started. 
+started.  There are a number of requirements that need to be met before
+Ibis (and thus Satin) can be started correctly.
+In this section we will discuss these in detail.
+
+Several of the steps below require the usage of \emph{system properties}.
+System properties can be set in Java using the \texttt{-D} option of the
+\texttt{java} command. Be sure to use appropriate quoting for your
+command interpreter.
+
+As an alternative to using system properties, it is also possible to use
+a java properties file
+\footnote{\url{http://java.sun.com/j2se/1.5.0/docs/api/java/util/Properties.html}}.
+A properties file is a file containing one property per line, usually of
+the format \texttt{property = value}. Properties of Ibis can be set in
+such a file as if they were set on the command line directly.
+
+Ibis and Satin will look for a file named \texttt{ibis.properties} in the
+current working directory, on the class path, and at a location specified
+with the \texttt{ibis.properties.file} system property.
+
+\subsubsection{Add satin-impl.jar and ipl.jar to the class path}
+
+The Satin implementation is provided in a single jar file: satin-impl.jar,
+appended with the version of Satin, for instance \texttt{satin-impl-2.1.jar}.
+Satin interfaces to Ibis using the Ibis Portability Layer, or
+\emph{IPL}. The code for this package is provided in a single jar file:
+ipl.jar, appended with the version of ibis, for instance \texttt{ipl-2.1.jar}.
+Both these jar files need to be added to the class path of the application.
+
+\subsubsection{Provide the Ibis implementations}
+
+The IPL loads the actual Ibis implementation dynamically.
+These implementations (and their dependencies) can be provided in two
+ways:
+
+\begin{enumerate}
+\item Add the jar files of the implementations and their dependencies to
+      the class path
+\item Set the \texttt{ibis.implementation.path} system property to the
+      location of the Ibis implementations and dependencies.
+\end{enumerate}
+
+The \texttt{ibis.implementation.path} property is a list of directories,
+separated by the default path separator of your operating system. In
+Unix, this is the \texttt{:} character, in Windows it is a \texttt{;}.
+
+\subsubsection{Configure Log4j}
+
+Ibis and Satin use the Log4J library of the Apache project to print debugging
+information, warnings, and error messages. This library must be
+initialized. A configuration file can be specified using the
+\texttt{log4j.configuration} system property. For example, to use a file
+named \texttt{log4j.properties} in the current directory, use the
+following command line option:
+\texttt{-Dlog4j.configuration=file:log4j.properties} . For more info,
+see the log4j website \footnote{\url{http://logging.apache.org/log4j}}.
+
+\subsubsection{Set the location of the server and hubs}
+
+To communicate with the registry service, each Ibis instance needs the address
+of the Ibis server. This address must be specified by using the
+\texttt{ibis.server.address} system property. The full address needed is
+printed on start up of the Ibis server.
+
+For convenience, it is also possible to only provide an address, port number
+pair, e.g. \texttt{machine.domain.com:5435} or even simply a host, e.g.
+\texttt{localhost}. In this case, the default port number (8888) is implied.
+The port number provided must match the one given to the Ibis server
+with the \texttt{--port} option.
+
+When additional hubs are started (see Section \ref{hubs}), their locations
+must be provided to the Ibis instances. This can be done using
+the \texttt{ibis.hub.addresses} property. Ibis expects a comma-separated
+list of addresses of hubs. Ibis will use the first reachable hub on the
+list. The address of the Ibis server is appended to this list
+automatically. Thus, by default, the Ibis server itself is used as the
+hub.
+
+\subsubsection{Set the name and size of the pool}
+
+Each Ibis instance belongs to a pool. The name of this pool must be provided
+using the \texttt{ibis.pool.name} property. With the help of the Ibis server,
+this name is then used to locate other Ibis instances which belong to the
+same pool. Since the Ibis server can service multiple pools simultaneously,
+each pool must have a unique name.
+
+It is possible for pools to have a fixed size. In these so-called \emph{closed
+world} pools, the number of Ibises in the pool is also needed to function
+correctly. This size must be set using the \texttt{ibis.pool.size} property.
+This property is normally not needed. When it is needed, but not provided, Ibis
+will print an error. 
+
+\subsubsection{Satin system properties}
+
+Satin recognizes the following system properties, which can either
+be provided on the command line, or in a \texttt{ibis.properties} file
+as discussed above:
+\begin{description}
+\item{\texttt{satin.closed}}
+Only use the initial set of hosts for the computation; do not allow
+further hosts to join the computation later on.
+\item{\texttt{satin.stats}}
+Display some statistics at the end of the Satin run. This is the default.
+\item{\texttt{satin.stats=false}}
+Don't display statistics.
+\item{\texttt{satin.detailedStats}}
+Display detailed statistics for every member at the end of the Satin run.
+\item{\texttt{satin.alg}=\emph{algorithm}}
+Specify the load-balancing algorithm to use. The possible values for
+\emph{algorithm} are: RS for random work-stealing, CRS for cluster-aware
+random-work stealing, and MW for master-worker.
+\item{\texttt{satin.ft.naive}}
+Fault tolerance in Satin is implemented by recomputing jobs lost as a
+result of processor crashes.
+To improve the performance of the
+algorithm, a Global Result Table (GRT) may be used, in which results of
+so-called "orphan" jobs are stored, which otherwise would have to be discarded.
+The results of orphan jobs are reused while recomputing jobs lost in
+crashes. The \texttt{satin.ft.naive} property specifies that Satin is
+to use the naive version of its fault tolerance implementation, without
+a GRT. This means that sub-jobs of lost jobs will all be recomputed.
+The default is that a GRT is used.
+\end{description}
+
+\subsubsection{The satin-run script}
+
+To simplify running a Satin application, a \texttt{satin-run} script is
+provided with the distribution. This script can be
+used as follows
+
+\begin{center}
+\texttt{satin-run} \emph{java-flags class parameters}
+\end{center}
+
+The script performs the first three steps needed to run an application
+using Satin. It adds the satin-impl.jar, ipl.jar and all Ibis implementation
+jars to the class path, and configures log4j.
+It then runs \texttt{java} with any
+command line options given to it. Therefore, any additional options for
+Java, the main class and any application parameters must be provided as
+if \texttt{java} was called directly.
+
+The \texttt{satin-run} script needs the location of the Satin
+distribution. This must be provided using the SATIN\_HOME environment
+variable.
+
+\subsection{Running the example on Unix-like systems}
+
+This section is specific for Unix-like systems. In particular, the
+commands presented are for a Bourne shell or bash.
+
+We will now run the example. All code below assumes the SATIN\_HOME
+environment variable is set to the location of the Satin distribution.
+
+First, we will need an Ibis server. Start a shell and
+run the \texttt{satin-server} script:
+\noindent
+{\small
+\begin{verbatim}
+$ $SATIN_HOME/bin/satin-server --events
+\end{verbatim}
+}
+\noindent
+
+By providing the \texttt{--events} option the server
+prints information on when Ibis instances join and leave the pool.
 
 \end{document}
+
+Next, we will start the application two times. One instance will act as the
+"Satin master", the other one will be a "Satin client".
+Satin will determine who is who automatically. Therefore we can using the same
+command line for both master and client.
+Run the following command in two different shells:
+
+\noindent
+{\small
+\begin{verbatim}
+$ CLASSPATH=$SATIN_HOME/examples/lib/satin-examples.jar \
+    $SATIN_HOME/bin/satin-run \
+    -Dsatin.closed -Dibis.server.address=localhost \
+    -Dibis.pool.size=2 -Dibis.pool.name=test \
+    fib.Fib 32
+\end{verbatim}
+}
+\noindent
+
+This sets the CLASSPATH environment variable to the jar file of the
+application, and calls satin-run. You should now have two running
+instances of your application. One of them should print:
+
+\noindent
+{\small
+\begin{verbatim}
+Running Fib 32
+application time fib (32) took 10.787 s
+application result fib (32) = 2178309
+\end{verbatim}
+}
+\noindent
+
+or something similar, followed by some Satin statistics.
+
+As said, the satin-run script is only provided for convenience. To run
+the application without satin-run, the command below can be used.
+Note that this only works with java 1.6. For java 1.5, you need to
+explicitly add all jar files in \$SATIN\_HOME/lib to the classpath.
+
+\noindent
+{\small
+\begin{verbatim}
+$ java \
+    -cp \
+    $SATIN_HOME/lib/'*':$SATIN_HOME/examples/lib/satin-examples.jar \
+    -Dibis.server.address=localhost \
+    -Dibis.pool.name=test -Dibis.pool.size=2 \
+    -Dsatin.closed \
+    -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties \
+    fib.Fib 32
+\end{verbatim}
+}
+\noindent
+
