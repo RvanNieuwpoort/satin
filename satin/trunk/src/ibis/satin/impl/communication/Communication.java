@@ -61,7 +61,7 @@ public final class Communication implements Config, Protocol {
         } catch (Exception e) {
             s.assertFailed("Could not start ibis: ", e);
         }
-
+        
         IbisIdentifier ident = ibis.identifier();
 
         commLogger.debug("SATIN '" + "- " + "': init ibis DONE, "
@@ -167,14 +167,18 @@ public final class Communication implements Config, Protocol {
     public IbisCapabilities createIbisProperties() {
         String elections;
 
-        elections = IbisCapabilities.ELECTIONS_UNRELIABLE;
+        // elections = IbisCapabilities.ELECTIONS_UNRELIABLE;
+        elections = IbisCapabilities.ELECTIONS_STRICT;
         
         if (CLOSED) {
             return new IbisCapabilities(IbisCapabilities.CLOSED_WORLD,
                     IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED, elections);
         }
         //FIXME: this breaks LRMC!!!
-        return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
+        // return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
+        //         elections);
+        // Disabled this for now. --Ceriel
+        return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
                 elections);
     }
 
