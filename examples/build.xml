@@ -8,7 +8,7 @@
     </description>
 
     <!-- satin classes, must be passed on to Satin rewriter. -->
-    <property name="satin-classes" value="search.SearchImpl1,search.SearchImpl2,sear.SearchImpl3"/>
+    <property name="satin-classes" value="search.SearchImpl1,search.SearchImpl2,search.SearchImpl3,fib.Fib"/>
 
     <property environment="env"/>
     <property name="satin"       location=".."/>
@@ -57,14 +57,14 @@ target="1.5">
 
     <target name="jar" depends="build"
 	    description="Build a Jar file for an application">
-	<jar destfile="${lib}/search-satin.jar" basedir="${tmp}"
+	<jar destfile="${lib}/satin-examples.jar" basedir="${tmp}"
 		includes="**/*.class"/>
         <delete dir="${tmp}" />
     </target>
 
     <target name="compile-jar" depends="compile"
 	    description="Build a Jar file for an application">
-	<jar destfile="${lib}/search.jar" basedir="${tmp}"
+	<jar destfile="${lib}/examples.jar" basedir="${tmp}"
 		includes="**/*.class"/>
         <delete dir="${tmp}" />
     </target>

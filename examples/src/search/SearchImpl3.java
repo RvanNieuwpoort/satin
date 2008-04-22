@@ -27,20 +27,20 @@ class SearchImpl3 extends SatinObject implements Searcher3 {
 
    public static void main(String[] args) {
       SearchImpl3 s = new SearchImpl3();
-      int a[] = new int[200];
+      int a[] = new int[2000000];
       int res = -1;
 
-      // Fill the array with random values between 0 and 100.
-      for(int i=0; i<200; i++) {
-         a[i] = (int) (Math.random() * 100);
+      // Fill the array with random values between 0 and 1000000.
+      for(int i=0; i<2000000; i++) {
+         a[i] = (int) (Math.random() * 1000000);
       }
 
       // Search for 42 in two sub-domains of the array.
       // Because the search method is marked as spawnable,
       // Satin can run these methods in parallel.
       try {
-         s.search(a, 0, 100, 42);
-         s.search(a, 100, 200, 42);
+         s.search(a, 0, 1000000, 42);
+         s.search(a, 1000000, 2000000, 42);
 
          // Wait for results of the invocations above.
          s.sync();
