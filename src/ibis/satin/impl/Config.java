@@ -196,7 +196,7 @@ public interface Config {
      * When set, MAX_CONNECTIONS is ignored.
      */
     static final boolean KEEP_INTRA_CONNECTIONS = properties.getBooleanProperty(
-            s_keep_intra_connections, false); 
+            s_keep_intra_connections, true); 
 
     /** Logger for communication. */
     public static final Logger commLogger = Logger.getLogger("ibis.satin.comm");
