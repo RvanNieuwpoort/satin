@@ -8,7 +8,7 @@
     </description>
 
     <!-- satin classes, must be passed on to Satin rewriter. -->
-    <property name="satin-classes" value="SearchImpl1,SearchImpl2,SearchImpl3"/>
+    <property name="satin-classes" value="search.SearchImpl1,search.SearchImpl2,sear.SearchImpl3"/>
 
     <property environment="env"/>
     <property name="satin"       location=".."/>
