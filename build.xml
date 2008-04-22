@@ -8,12 +8,12 @@
     <property name="dist-name" value="${ant.project.name}${version}" />
 
     <target name="build"
-            description="Build with included Ibis"
-            depends="clean,copy-included-ibis,compile,javadoc" />
+            description="Build with included IPL"
+            depends="clean,copy-included-ipl,compile,javadoc" />
 
-    <target name="build-external-ibis"
-            description="Build with external Ibis"
-            depends="clean,copy-external-ibis,compile,javadoc" />
+    <target name="build-external-ipl"
+            description="Build with external IPL"
+            depends="clean,copy-external-ipl,compile,javadoc" />
 
     <property name="src" location="src" />
     <property name="tmp" location="tmp" />
@@ -22,18 +22,17 @@
     <property name="javadoc" location="javadoc" />
     <property name="sources" location="sources" />
 
-    <!-- copy external dependancies to lib, including provided Ibis -->
-    <target name="copy-included-ibis">
+    <!-- copy external dependancies to lib, including provided IPL -->
+    <target name="copy-included-ipl">
         <mkdir dir="${lib}" />
-
         <copy todir="${lib}">
             <fileset dir="${external}/ibis" />
         </copy>
     </target>
 
-    <!-- copy external dependancies to lib, includig Ibis 
-         specified by $IBIS_HOME -->
-    <target name="copy-external-ibis">
+    <!-- copy external dependancies to lib, includig IPL 
+         specified by $IPL_HOME -->
+    <target name="copy-external-ipl">
 	<!-- Import environment properties -->
 	<property environment="env" />
 	<property name="ibis" location="${env.IPL_HOME}" />
@@ -45,12 +44,16 @@
 
     <!-- Compile -->
     <target name="compile">
+
         <mkdir dir="${tmp}" />
         <mkdir dir="${lib}" />
+
         <!-- copy jars in external directory to lib -->
         <copy todir="${lib}">
             <fileset dir="${external}" includes="*.jar" />
         </copy>
+
+	<!-- classpath -->
         <path id="default.classpath">
             <fileset dir="${lib}">
                 <include name="*.jar" />
@@ -96,8 +99,6 @@
             </manifest>
         </jar>
         <delete dir="${tmp}" />
-
-        <!-- Copy external libraries to lib directory -->
     </target>
 
     <!-- Generate javadoc -->
