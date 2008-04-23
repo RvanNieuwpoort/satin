@@ -26,7 +26,7 @@
     <target name="copy-included-ipl">
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
-            <fileset dir="${external}/ibis" />
+            <fileset dir="${external}/ipl" />
         </copy>
     </target>
 
@@ -35,10 +35,10 @@
     <target name="copy-external-ipl">
 	<!-- Import environment properties -->
 	<property environment="env" />
-	<property name="ibis" location="${env.IPL_HOME}" />
+	<property name="ipl" location="${env.IPL_HOME}" />
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
-            <fileset dir="${ibis}/lib" />
+            <fileset dir="${ipl}/lib" />
         </copy>
     </target>
 
