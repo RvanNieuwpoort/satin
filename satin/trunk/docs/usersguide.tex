@@ -55,10 +55,8 @@ $ cd $SATIN_HOME/examples
 $ mkdir tmp
 $ javac -d tmp -g \
      -classpath ../lib/satin-2.1.jar \
-     src/*/*.java
-$ ../bin/satinc -cp tmp \
-     -satin "fib.Fib,search.SearchImpl1,search.SearchImpl2,search.SearchImpl3" \
-     tmp
+     src/fib/*.java
+$ ../bin/satinc -cp tmp -satin "fib.Fib" tmp
 $ mkdir lib
 $ ( cd tmp ; jar c . ) > lib/satin-examples.jar
 $ rm -rf tmp
@@ -152,31 +150,13 @@ Ibis and Satin will look for a file named \texttt{ibis.properties} in the
 current working directory, on the class path, and at a location specified
 with the \texttt{ibis.properties.file} system property.
 
-\subsubsection{Add satin-impl.jar and ipl.jar to the class path}
+\subsubsection{Add jar files to the classpath}
 
-The Satin implementation is provided in a single jar file: satin-impl.jar,
-appended with the version of Satin, for instance \texttt{satin-impl-2.1.jar}.
+The Satin implementation is provided in a single jar file: satin.jar,
+appended with the version of Satin, for instance \texttt{satin-2.1.jar}.
 Satin interfaces to Ibis using the Ibis Portability Layer, or
-\emph{IPL}. The code for this package is provided in a single jar file:
-ipl.jar, appended with the version of ibis, for instance \texttt{ipl-2.1.jar}.
-Both these jar files need to be added to the class path of the application.
-
-\subsubsection{Provide the Ibis implementations}
-
-The IPL loads the actual Ibis implementation dynamically.
-These implementations (and their dependencies) can be provided in two
-ways:
-
-\begin{enumerate}
-\item Add the jar files of the implementations and their dependencies to
-      the class path
-\item Set the \texttt{ibis.implementation.path} system property to the
-      location of the Ibis implementations and dependencies.
-\end{enumerate}
-
-The \texttt{ibis.implementation.path} property is a list of directories,
-separated by the default path separator of your operating system. In
-Unix, this is the \texttt{:} character, in Windows it is a \texttt{;}.
+\emph{IPL}. Both Satin and the IPL depend on various other libraries.
+All jar files in \$SATIN\_HOME/lib need to be on the classpath.
 
 \subsubsection{Configure Log4j}
 
@@ -186,7 +166,7 @@ initialized. A configuration file can be specified using the
 \texttt{log4j.configuration} system property. For example, to use a file
 named \texttt{log4j.properties} in the current directory, use the
 following command line option:
-\texttt{-Dlog4j.configuration=file:log4j.properties} . For more info,
+\texttt{-Dlog4j.configuration=file:log4j.properties}. For more info,
 see the log4j website \footnote{\url{http://logging.apache.org/log4j}}.
 
 \subsubsection{Set the location of the server and hubs}
@@ -266,9 +246,9 @@ used as follows
 \texttt{satin-run} \emph{java-flags class parameters}
 \end{center}
 
-The script performs the first three steps needed to run an application
-using Satin. It adds the satin-impl.jar, ipl.jar and all Ibis implementation
-jars to the class path, and configures log4j.
+The script performs the first two steps needed to run an application
+using Satin. It adds all required jar files
+to the class path, and configures log4j.
 It then runs \texttt{java} with any
 command line options given to it. Therefore, any additional options for
 Java, the main class and any application parameters must be provided as
@@ -298,8 +278,6 @@ $ $SATIN_HOME/bin/satin-server --events
 
 By providing the \texttt{--events} option the server
 prints information on when Ibis instances join and leave the pool.
-
-\end{document}
 
 Next, we will start the application two times. One instance will act as the
 "Satin master", the other one will be a "Satin client".
@@ -354,4 +332,90 @@ $ java \
 \end{verbatim}
 }
 \noindent
+
+\subsection{Running the example on Windows systems}
+
+We will now run the example on a Windows XP system.
+All code below assumes the SATIN\_HOME
+environment variable is set to the location of the Satin distribution.
+
+First, we will need an Ibis server. Start a command prompt window and
+run the \texttt{satin-server} script:
+\noindent
+{\small
+\begin{verbatim}
+C:\DOCUME~1\Temp> "%SATIN_HOME%"\bin\satin-server --events
+\end{verbatim}
+}
+\noindent
+
+Note the quoting, which is needed when SATIN\_HOME contains spaces.
+
+By providing the \texttt{--events} option the server
+prints information on when Ibis instances join and leave the pool.
+
+Next, we will start the application two times. One instance will act as the
+"Satin master", the other one will be a "Satin client".
+Satin will determine who is who automatically. Therefore we can using the same
+command line for both master and client.
+Run the following command in two different shells:
+
+\noindent
+{\small
+\begin{verbatim}
+C:\DOCUME~1\Temp> set CLASSPATH=%SATIN_HOME%\examples\lib\satin-examples.jar
+C:\DOCUME~1\Temp> "%SATIN_HOME%"\bin\satin-run
+    "-Dsatin.closed" "-Dibis.server.address=localhost"
+    "-Dibis.pool.size=2" "-Dibis.pool.name=test"
+    fib.Fib 32
+\end{verbatim}
+}
+\noindent
+
+This sets the CLASSPATH environment variable to the jar file of the
+application, and calls satin-run. You should now have two running
+instances of your application. One of them should print:
+
+\noindent
+{\small
+\begin{verbatim}
+Running Fib 32
+application time fib (32) took 10.787 s
+application result fib (32) = 2178309
+\end{verbatim}
+}
+\noindent
+
+or something similar, followed by some Satin statistics.
+
+As said, the satin-run script is only provided for convenience. To run
+the application without satin-run, the command below can be used.
+Note that this only works with java 1.6. For java 1.5, you need to
+explicitly add all jar files in \$SATIN\_HOME/lib to the classpath.
+
+\noindent
+{\small
+\begin{verbatim}
+C:\DOCUME~1\Temp> java
+    -cp "%SATIN_HOME%\lib\*";"%SATIN_HOME%"\examples\lib\satin-examples.jar
+    -Dibis.server.address=localhost
+    -Dibis.pool.name=test -Dibis.pool.size=2
+    -Dsatin.closed
+    -Dlog4j.configuration=file:"%SATIN_HOME%"\log4j.properties
+    fib.Fib 32
+\end{verbatim}
+}
+\noindent
+
+\section{Further Reading}
+
+The Ibis web page \url{http://www.cs.vu.nl/ibis} lists all
+the documentation and software available for Ibis, including papers, and
+slides of presentations.
+
+For detailed information on developing a Satin application see the
+Satin Programmers Manual, available in the docs directory of the Satin
+distribution.
+
+\end{document}
 
