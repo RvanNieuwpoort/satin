@@ -85,7 +85,7 @@
 	<!-- Extract ibis.io.Serializable, so that applications don't
 	     need ibis-io-2.1.jar to compile.
         -->
-	<unjar src="external/ibis/ibis-io-2.1.jar" dest="${tmp}">
+	<unjar src="external/ipl/ibis-io-2.1.jar" dest="${tmp}">
 	    <patternset>
 		<include name="**/Serializable.class"/>
 	    </patternset>
