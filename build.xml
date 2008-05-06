@@ -101,6 +101,10 @@
         <delete dir="${tmp}" />
     </target>
 
+    <target name="docs" description="Create manuals">
+	<ant dir="docs" inheritAll="false" />
+    </target>
+
     <!-- Generate javadoc -->
     <target name="javadoc" description="generate all javadocs">
         <javadoc destdir="${javadoc}"
@@ -120,9 +124,13 @@
         <delete dir="${tmp}" />
         <delete dir="${lib}" />
         <delete dir="${javadoc}" />
+        <delete dir="${sources}" />
+	<ant dir="examples" inheritAll="false" target="clean" />
+	<ant dir="docs" inheritAll="false" target="clean" />
     </target>
 
-    <target name="dist" depends="build">
+    <target name="dist" depends="build,docs">
+	<ant dir="examples" inheritAll="false" />
         <delete file="${dist-name}.zip" />
         <delete dir="${sources}" />
 
