@@ -92,17 +92,15 @@
 	</unjar>
 
         <!-- Create jar file -->
-        <jar destfile="${lib}/${dist-name}.jar" basedir="${tmp}" includes="**/*.class">
+        <jar destfile="lib/${dist-name}.jar">
+            <fileset dir="${tmp}" includes="**/*.class" />
+            <fileset dir="." includes="LICENSE.txt" />
 	    <manifest>
                 <attribute name="Ibisc-Component"
                     value="ibis.satin.impl.rewriter.Satinc" />
             </manifest>
         </jar>
         <delete dir="${tmp}" />
-    </target>
-
-    <target name="docs" description="Create manuals">
-	<ant dir="docs" inheritAll="false" />
     </target>
 
     <!-- Generate javadoc -->
@@ -117,6 +115,10 @@
                  bottom="The Ibis project">
             <link href="http://java.sun.com/j2se/1.5.0/docs/api/" />
         </javadoc>
+    </target>
+
+    <target name="docs" description="Create manuals">
+	<ant dir="docs" inheritAll="false" />
     </target>
 
     <!-- Clean up everything -->
