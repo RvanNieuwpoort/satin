@@ -1,0 +1,29 @@
+#!/bin/sh
+
+#ibis-satin-run script.
+#This script is a convenience script to run Ibis Satin applications.
+
+# Check setting of SATIN_HOME
+if [ -z "$SATIN_HOME" ];  then
+    echo "please set SATIN_HOME to the location of your Ibis SATIN installation" 1>&2
+    exit 1
+fi
+
+# Jar-files from library.
+LIBCLASSPATH=""
+add_to_libclasspath () {
+    JARFILES=`cd "$1" && ls *.jar 2>/dev/null`
+    for i in ${JARFILES} ; do
+	if [ -z "$LIBCLASSPATH" ] ; then
+	    LIBCLASSPATH="$1/$i"
+	else
+	    LIBCLASSPATH="$LIBCLASSPATH:$1/$i"
+	fi
+    done
+}
+
+# Add the jar files in the Ibis lib dir to the classpath.
+add_to_libclasspath "${SATIN_HOME}"/lib
+
+# And finally, run ...
+java -classpath "$CLASSPATH:$LIBCLASSPATH" -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties "$@"
