@@ -13,7 +13,7 @@ set SATIN_APP_ARGS=
 
 :setupArgs
 if ""%1""=="""" goto doneStart
-set SATIN_APP_ARGS=%SATIN_APP_ARGS% "%1"
+set SATIN_APP_ARGS=%SATIN_APP_ARGS% %1
 shift
 goto setupArgs
 
