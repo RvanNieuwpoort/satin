@@ -3,7 +3,7 @@
 	Build file for Satin
     </description>
 
-    <property name="version" value="-2.1" />
+    <property name="version" value="-2.2" />
 
     <property name="dist-name" value="${ant.project.name}${version}" />
 
@@ -68,7 +68,7 @@
                source="1.5"
                target="1.5"
                classpathref="default.classpath">
-		<compilerarg value="-Xlint:unchecked" />
+	    <compilerarg value="-Xlint:unchecked" />
 	</javac>
 
         <!-- Run Ibisc -->
@@ -83,9 +83,9 @@
         </java>
 
 	<!-- Extract ibis.io.Serializable, so that applications don't
-	     need ibis-io-2.1.1.jar to compile.
+	     need ibis-io-2.2.jar to compile.
         -->
-	<unjar src="external/ipl/ibis-io-2.1.1.jar" dest="${tmp}">
+	<unjar src="external/ipl/ibis-io-2.2.jar" dest="${tmp}">
 	    <patternset>
 		<include name="**/Serializable.class"/>
 	    </patternset>
