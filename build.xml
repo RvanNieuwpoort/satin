@@ -3,7 +3,7 @@
 	Build file for Satin
     </description>
 
-    <property name="version" value="-2.2" />
+    <property name="version" value="-2.2-DC" />
 
     <property name="dist-name" value="${ant.project.name}${version}" />
 

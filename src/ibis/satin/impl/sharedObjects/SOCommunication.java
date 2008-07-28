@@ -485,7 +485,7 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
             s.lb.setCurrentVictim(source);
             Victim v;
             synchronized (s) {
-                v = s.victims.getVictim(source);
+                v = s.victims.getVictim(source, false);
             }
             if (v == null) {
                 // hm we've got a problem here
@@ -584,12 +584,12 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
                 objid = s.so.SORequestList.getobjID(0);
                 demand = s.so.SORequestList.isDemand(0);
                 s.so.SORequestList.removeIndex(0);
-                v = s.victims.getVictim(origin);
+                v = s.victims.getVictim(origin, true);
             }
 
             if (v == null) {
                 soLogger.debug("SATIN '" + s.ident
-                    + "': vicim crached in handleSORequest");
+                    + "': vicim crashed in handleSORequest");
                 continue; // node might have crashed
             }
 

@@ -99,7 +99,8 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                         + "': sending a result request of " + r.getStamp()
                         + " to " + value.owner);
 
-                v = s.victims.getVictim(value.owner);
+                // We really want to retrieve the result here, so we also include suspected Victims. 
+                v = s.victims.getVictim(value.owner, true);
                 if (v == null)
                     return false; // victim has probably crashed
 
@@ -155,7 +156,7 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
 
         WriteMessage writeMessage = null;
         try {
-            Victim v = s.victims.getVictim(r.getStealer());
+            Victim v = s.victims.getVictim(r.getStealer(), false);
             if (v == null)
                 return; // probably crashed
 
@@ -180,13 +181,21 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         return true;
     }
 
-    // @@@ this is not correct --Rob
+    // FIXME this is not correct --Rob
+    //
+    // There is confusion here between a dead machine (declared dead by the registry) 
+    // and a machine that is suspected to be dead (because we lost a connection to it). 
+    //
+    // The behavior is pretty similar, but we shouldn't discard the peer administration 
+    // before the registry tells us to -- Jason
+    
+    /*
     private void handleLostConnection(IbisIdentifier dead) {
         Victim v = null;
         synchronized (s) {
             if (s.deadIbises.contains(dead))
                 return;
-
+            
             s.ft.crashedIbises.add(dead);
             s.deadIbises.add(dead);
             if (dead.equals(s.lb.getCurrentVictim())) {
@@ -202,14 +211,57 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             v.close();
         }
     }
+    */
 
+    // New implementation that does not immediately assume the victim is dead. 
+    // Instead, we simply reset its state to 'unconnected', allowing it to 
+    // reconnect later on. This way, Satin can recover from transient network 
+    // problems. -- Jason  
+    public boolean handleSuspectedIbis(IbisIdentifier suspect) {
+        Victim v = null;
+        
+        synchronized (s) {
+            if (s.deadIbises.contains(suspect)) { 
+            	return false;
+            }
+            		
+            if (s.ft.suspectedIbises.contains(suspect)) { 
+                return true;
+            }
+            
+            if (suspect.equals(s.lb.getCurrentVictim())) {            	
+            	// We set these values to ensure that we don't wait forever for a 
+            	// steal of shared object reply of a crashed machine. 
+                s.currentVictimCrashed = true;
+                s.lb.setCurrentVictim(null);
+            }
+            
+            v = s.victims.getVictim(suspect, true);
+            
+            if (v != null && !v.isSuspected()) {
+            	s.ft.suspectedIbises.add(suspect);
+            	s.ft.gotSuspects = true;            	
+            	s.notifyAll();
+            } 
+        }
+
+        if (v != null) {
+            v.setSuspected();
+        }
+        
+        return true;
+    }
+
+    
     private void handleCrash(IbisIdentifier dead) {
         synchronized (s) {
             s.ft.crashedIbises.add(dead);
+            
             if (dead.equals(s.lb.getCurrentVictim())) {
                 s.currentVictimCrashed = true;
                 s.lb.setCurrentVictim(null);
             }
+            
             s.ft.gotCrashes = true;
             s.notifyAll();
         }
@@ -227,7 +279,8 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         if (connectionUpcallsDisabled) {
             return;
         }
-        handleLostConnection(johnDoe.ibisIdentifier());
+        
+        handleSuspectedIbis(johnDoe.ibisIdentifier());
     }
 
     public void lostConnection(SendPort me, ReceivePortIdentifier johnDoe,
@@ -238,7 +291,8 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         if (connectionUpcallsDisabled) {
             return;
         }
-        handleLostConnection(johnDoe.ibisIdentifier());
+        
+        handleSuspectedIbis(johnDoe.ibisIdentifier());
     }
 
     /** The ibis upcall that is called whenever a node joins the computation */
@@ -388,15 +442,20 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                     System.exit(1); // Failed assertion
                 }
 
-                v = s.victims.getVictim(ident);
+                // Note: we got a message from this machine, so we include the suspected 
+                // machines in the 'get'. 
+                v = s.victims.getVictim(ident, true);
             }
+            
             if (v == null) {
                 ftLogger.debug("SATIN '" + s.ident
                         + "': the node requesting a result died");
                 return;
             }
+            
             value.result.setStamp(stamp);
             WriteMessage w = null;
+
             try {
                 w = v.newMessage();
                 w.writeByte(Protocol.JOB_RESULT_NORMAL);

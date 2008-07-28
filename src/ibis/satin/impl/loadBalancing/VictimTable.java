@@ -207,9 +207,13 @@ public final class VictimTable implements Config {
         return tmp;
     }
 
-    // retry a couple of times, then assume it will join at some point, so just
-    // add it.
+    /*
     public Victim getVictim(IbisIdentifier id) {
+    	return getVictim(id, false);
+    }
+    */
+    	     
+    public Victim getVictim(IbisIdentifier id, boolean includedSuspected) {
         Satin.assertLocked(satin);
         Victim v = null;
 
@@ -217,7 +221,12 @@ public final class VictimTable implements Config {
 
         //		do {
         v = getVictimNonBlocking(id);
+  
         if (v != null) {
+        	
+        	if (!includedSuspected && v.isSuspected()) { 
+        		return null;
+        	}
             return v;
         }
         
@@ -257,6 +266,9 @@ public final class VictimTable implements Config {
             newV = new Victim(id, p);
             add(newV);
         } else {
+        	
+        	// TODO -- what the hell is this ?? -- Jason 
+        	
             try {
                 satin.comm.ibis.registry().maybeDead(id);
             } catch (IOException e) {

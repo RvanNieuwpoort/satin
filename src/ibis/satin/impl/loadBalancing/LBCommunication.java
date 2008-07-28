@@ -173,16 +173,18 @@ final class LBCommunication implements Config, Protocol {
                     grtLogger.info("SATIN '" + s.ident
                             + "': storing an orphan");
                 }
-                s.ft.storeResult(r);
+                s.ft.storeGlobalResult(r);
             }
-            v = s.victims.getVictim(r.getOwner());
+            
+            // We really want to send the result, also to 'suspected' Ibisses
+            v = s.victims.getVictim(r.getOwner(), true);
         }
 
         if (v == null) {
             //probably crashed..
             if (!FT_NAIVE && !r.isOrphan()) {
-                synchronized (s) {
-                    s.ft.storeResult(r);
+            	synchronized (s) {
+                    s.ft.storeGlobalResult(r);
                 }
                 if (grtLogger.isInfoEnabled()) {
                     grtLogger.info("SATIN '" + s.ident
@@ -196,6 +198,7 @@ final class LBCommunication implements Config, Protocol {
         WriteMessage writeMessage = null;
         try {
             writeMessage = v.newMessage();
+            
             if (r.eek == null) {
                 writeMessage.writeByte(Protocol.JOB_RESULT_NORMAL);
                 writeMessage.writeObject(rr);
@@ -211,13 +214,19 @@ final class LBCommunication implements Config, Protocol {
             long cnt = v.finish(writeMessage);
             s.stats.returnRecordBytes += cnt;
         } catch (IOException e) {
-            if (writeMessage != null) {
+         
+        	if (writeMessage != null) {
                 writeMessage.finish(e);
             }
+            
             if (ftLogger.isInfoEnabled()) {
                 ftLogger.info("SATIN '" + s.ident
-                    + "': Got Exception while sending result of stolen job", e);
+                    + "': Got exception while sending result of stolen job, storing " +
+                    		"result for future use!", e);
             }
+
+            // We declare the Ibis 'unreachable' and store the result for later use -- Jason
+            s.ft.unreachableIbis(v.getIdent(), r);
         } finally {
             s.stats.returnRecordWriteTimer.stop();
         }
@@ -253,7 +262,10 @@ final class LBCommunication implements Config, Protocol {
             Map<Stamp, GlobalResultTableValue> table = null;
 
             synchronized (s) {
-                v = s.victims.getVictim(ident.ibisIdentifier());
+            	
+            	// We got a request from this machine, so include 'suspected' 
+            	// Ibisses in our lookup 
+                v = s.victims.getVictim(ident.ibisIdentifier(), true);
                 if (v == null || s.deadIbises.contains(ident.ibisIdentifier())) {
                     //this message arrived after the crash of its sender was
                     // detected. Is this actually possible?
@@ -287,7 +299,15 @@ final class LBCommunication implements Config, Protocol {
             }
 
             // we stole a job
-            sendStolenJobMessage(ident, opcode, v, result, table);
+            
+            // NOTE: Sending the job to the stealer may fail! If it does, this call 
+            // will return false, and we will re-insert the job into the queue. If 
+            // we don't, work will get lost when the stealer did not die but just had 
+            // some communication issues -- Jason            
+            if (!sendStolenJobMessage(ident, opcode, v, result, table)) {
+            	ftLogger.info("SATIN '" + s.ident + " returning job to local queue to prevent it from getting lost!"); 
+            	lb.returnJobToLocalQueue(result);
+            }
         } finally {
             if (QUEUE_STEALS) {
                 s.stats.handleStealTimer.stop();
@@ -436,7 +456,7 @@ final class LBCommunication implements Config, Protocol {
         }
     }
 
-    private void sendStolenJobMessage(SendPortIdentifier ident, int opcode,
+    private boolean sendStolenJobMessage(SendPortIdentifier ident, int opcode,
         Victim v, InvocationRecord result, Map<Stamp, GlobalResultTableValue> table) {
         if (ASSERTS && result.aborted) {
             stealLogger.warn("SATIN '" + s.ident
@@ -452,6 +472,7 @@ final class LBCommunication implements Config, Protocol {
         }
 
         WriteMessage m = null;
+        
         try {
             m = v.newMessage();
             if (opcode == STEAL_REQUEST || opcode == BLOCKING_STEAL_REQUEST) {
@@ -492,6 +513,8 @@ final class LBCommunication implements Config, Protocol {
             }
             stealLogger.warn("SATIN '" + s.ident
                 + "': trying to send a job back, but got exception: " + e, e);
+            
+            return false;
         }
 
         /* If we don't use fault tolerance with the global result table, 
@@ -500,5 +523,7 @@ final class LBCommunication implements Config, Protocol {
         if (FT_NAIVE) {
             result.clearParams();
         }
+        
+        return true;
     }
 }

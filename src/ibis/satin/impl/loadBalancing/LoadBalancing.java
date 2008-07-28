@@ -132,6 +132,11 @@ public final class LoadBalancing implements Config {
         s.outstandingJobs.add(r);
     }
 
+    public void removeFromOutstandingJobList(InvocationRecord r) {
+        Satin.assertLocked(s);
+        s.outstandingJobs.remove(r);
+    }
+    
     /**
      * does a synchronous steal. If blockOnServer is true, it blocks on server
      * side until work is available, or we must exit. This is used in
@@ -339,11 +344,20 @@ public final class LoadBalancing implements Config {
                 // Ignore.
             }
 
-            Victim v = s.victims.getVictim(ident.ibisIdentifier());
+            Victim v = s.victims.getVictim(ident.ibisIdentifier(), false);
             if (v == null) {
                 throw new IOException("the stealing ibis died");
             }
         }
+    }
+    
+    protected void returnJobToLocalQueue(InvocationRecord ir) {
+    	ir.setStealer(null);
+    	
+    	synchronized (s) {
+    		removeFromOutstandingJobList(ir);
+    		s.q.addToTail(ir);
+    	}
     }
 
     public void sendResult(InvocationRecord r, ReturnRecord rr) {

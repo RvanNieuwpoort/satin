@@ -40,6 +40,8 @@ public final class Victim implements Config {
 
     private int referenceCount = 0;
     
+    private long suspectedTime = 0;
+    
     public Victim(IbisIdentifier ident, SendPort s) {
         this.ident = ident;
         this.sendPort = s;
@@ -99,24 +101,64 @@ public final class Victim implements Config {
             return null;
         }
 
+        
+        
         if (!connected) {
-            r = Communication.connect(sendPort, ident, "satin port",
+   
+          	// FIXME: this is for debugging!!!
+        	//
+        	// Lets give us a 10% change of failing! 
+            
+        	//if (Math.random() < 0.1) {        		
+        	//	System.err.println("XXXXX FTTEST XXXXX -- Refusing connection to " + ident);        		        		
+        	//	return null;
+        	//}
+        	
+        	r = Communication.connect(sendPort, ident, "satin port",
                 Satin.CONNECT_TIMEOUT);
             if (r == null) {
                 commLogger.warn("SATIN '" + sendPort.identifier().ibisIdentifier()
                     + "': unable to connect to " + ident
                     + ", might have crashed");
+                
+                // ADDED: not sure if this is the most appropriate spot... -- Jason 
+                Satin.getSatin().ft.unreachableIbis(ident, null);
                 return null;
             }
+
+            // We've managed to get a connection, so we may reset the 'suspected' field 
+            // (if it was set in the first place) 
+            suspectedTime = 0;            
             connected = true;
             connectionCount++;
-        }
+
+            // ADDED: not sure if this is the most appropriate spot... -- Jason 
+            Satin.getSatin().ft.reachableIbis(ident);
+        } 
+        /*else {
+        	
+        	// FIXME: this is for debugging!!!
+        	//
+        	// Lets give the connection a 10% change of failing! 
+            
+        	if (Math.random() < 0.1) {        		
+        		System.err.println("XXXXX FTTEST XXXXX -- Dropping connection to " + ident);        		        		
+        
+        		try {
+					disconnect();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+        		return null;
+        	}
+        }*/
         
         return sendPort;
     }
 
     public WriteMessage newMessage() throws IOException {
         SendPort send;
+
         synchronized (sendPort) {
             send = getSendPort();
             if (send != null) {
@@ -126,6 +168,7 @@ public final class Victim implements Config {
                         + "': Could not connect to " + ident);
             }
         }
+        
         return send.newMessage();
     }
 
@@ -162,6 +205,36 @@ public final class Victim implements Config {
         }
     }
 
+    // This  will be called when we could not create or lost a connection. It attempts 
+    // to reset the victim to a decent state, and marks it as being 'fishy'
+    //   -- Jason
+    
+    public void setSuspected() {
+    	
+    	// Should this be locked ???
+    	suspectedTime = System.currentTimeMillis();
+
+    	try { 
+    		disconnect();
+    	} catch (IOException e) { 
+    		// ignore ?
+    	}
+    }
+
+    public boolean isSuspected() {
+    	
+    	if (suspectedTime == 0) { 
+    		return false;
+    	}
+    
+    	if (System.currentTimeMillis() - suspectedTime > MAX_SUSPICION_TIMEOUT) { 
+    		suspectedTime = 0;
+    		return false;
+    	}
+    	
+    	return true;
+    }
+    
     public void close() {
         synchronized (sendPort) {
             if (connected) {
