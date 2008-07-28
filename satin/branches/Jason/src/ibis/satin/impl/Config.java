@@ -61,12 +61,18 @@ public interface Config {
     static final String s_ft_connectTimeout
             = PROPERTY_PREFIX + "ft.connectTimeout";
 
+    static final String s_ft_exitTimeout
+    		= PROPERTY_PREFIX + "ft.exitTimeout";
+    
     static final String s_masterhost = PROPERTY_PREFIX + "masterHost";
 
     static final String s_delete_time = PROPERTY_PREFIX + "deleteTime";
 
     static final String s_steal_wait_timeout
             = PROPERTY_PREFIX + "stealWaitTimeout";
+    
+    static final String s_suspicion_timeout
+    		= PROPERTY_PREFIX + "suspicionTimeout";
     
     static final String s_delete_cluster_time = PROPERTY_PREFIX
         + "deleteClusterTime";
@@ -75,10 +81,10 @@ public interface Config {
 
     static final String[] sysprops = { s_stats, s_queue_steals,
         s_detailed_stats, s_client, s_closed, s_asserts,
-        s_ft_naive, s_ft_connectTimeout, s_masterhost, s_in_latency,
+        s_ft_naive, s_ft_connectTimeout, s_ft_exitTimeout, s_masterhost, s_in_latency,
         s_delete_time, s_delete_cluster_time, s_kill_time, s_dump, s_so_delay,
         s_so_size, s_alg, s_so_lrmc, s_close_connections, s_max_connections,
-        s_so_wait_time, s_steal_wait_timeout, s_connections_on_demand,
+        s_so_wait_time, s_steal_wait_timeout, s_suspicion_timeout, s_connections_on_demand,
         s_keep_intra_connections, s_throttle_steals, s_max_steal_throttle};
 
     /** Enable or disable asserts. */
@@ -124,8 +130,16 @@ public interface Config {
      * Properties are always specified in seconds, but this variable contains millis.
      */
     public static final long CONNECT_TIMEOUT = properties.getLongProperty(
-        s_ft_connectTimeout, 60) * 1000L;
+        s_ft_connectTimeout, 10) * 1000L;
 
+    
+    /**
+     * Timeout for sending exit messages
+     * Properties are always specified in seconds, but this variable contains millis.
+     */
+    public static final long EXIT_TIMEOUT = properties.getLongProperty(
+        s_ft_exitTimeout, 60) * 1000L;
+    
     /** Timeout in seconds for waiting on a steal reply from another node. 
      * Properties are always specified in seconds, but this variable contains millis.
      */
@@ -140,6 +154,15 @@ public interface Config {
     static final int SO_MAX_INVOCATION_DELAY = properties.getIntProperty(
             s_so_delay, 0);
 
+    /** Maximum period in seconds that a Ibis may be suspected of being dead (i.e., 
+     * because we could not connect with it). Within this time, the Ibis must be 
+     * declared dead by the registry. If not, it we be resurrected to it normal state. 
+     * Within the time it is suspected, Satin may decide not to communicate with it.      
+     * Properties are always specified in seconds, but this variable contains millis.
+     */
+    public static final long MAX_SUSPICION_TIMEOUT = properties.getLongProperty(
+        s_suspicion_timeout, 60) * 1000L;
+    
     /** 
      * The maximum message size if message combining is used for SO Invocations.
      */

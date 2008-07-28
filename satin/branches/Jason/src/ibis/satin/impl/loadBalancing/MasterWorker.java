@@ -23,7 +23,7 @@ public final class MasterWorker extends LoadBalancingAlgorithm implements
         }
 
         synchronized (satin) {
-            v = satin.victims.getVictim(satin.getMasterIdent());
+            v = satin.victims.getVictim(satin.getMasterIdent(), false);
         }
 
         if (v == null) return null; // node might have crashed

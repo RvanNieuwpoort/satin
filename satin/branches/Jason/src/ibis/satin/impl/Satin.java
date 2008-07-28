@@ -24,6 +24,9 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 import ibis.satin.impl.spawnSync.ReturnRecord;
 import ibis.satin.impl.spawnSync.SpawnCounter;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Vector;
 
 public final class Satin implements Config {
@@ -90,9 +93,13 @@ public final class Satin implements Config {
      * Used for fault tolerance. All ibises that once took part in the
      * computation, but then crashed. Assumption: ibis identifiers are uniqe in
      * time; the same ibis cannot crash and join the computation again.
+     * 
+     * Why was this a vector, and not a Set ? It only used for lookups! -- Jason
      */
-    public final Vector<IbisIdentifier> deadIbises = new Vector<IbisIdentifier>();
-
+    
+    // public final Vector<IbisIdentifier> deadIbises = new Vector<IbisIdentifier>();
+    public final Set<IbisIdentifier> deadIbises = Collections.synchronizedSet(new HashSet<IbisIdentifier>());
+    
     static {
         properties.checkProperties(PROPERTY_PREFIX, sysprops, null, true);
     }
@@ -152,7 +159,9 @@ public final class Satin implements Config {
     }
 
     private void exit(int status) {
-
+        
+//System.err.println("XXXXX FTTEST XXXXX -- Satin starting exit " + status);        		        		
+    	     	
         stats.totalTimer.stop();
 
         if (STATS && DETAILED_STATS) {
@@ -172,15 +181,16 @@ public final class Satin implements Config {
                 exiting = true;
                 notifyAll();
             }
-            comm.bcastMessage(Protocol.EXIT);
-            comm.waitForExitReplies();
+            comm.bcastMessage(Protocol.EXIT, true);
+            comm.waitForExitReplies(EXIT_TIMEOUT);
 
             // OK, we have got the ack from everybody, now we know that there will be no 
             // further communication between nodes. Broadcast this again.
-            comm.bcastMessage(Protocol.EXIT_STAGE2);
+            comm.bcastMessage(Protocol.EXIT_STAGE2, true);
         } else {
-            comm.sendExitAck();
-            comm.waitForExitStageTwo();
+            if (comm.sendExitAck(true, EXIT_TIMEOUT)) { 
+            	comm.waitForExitStageTwo(EXIT_TIMEOUT);
+            }
         }
 
         // OK, we have got the ack from everybody, 

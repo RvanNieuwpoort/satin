@@ -130,8 +130,9 @@ final class GlobalResultTable implements Config, Protocol {
         updateTimer = Timer.createTimer();
         updateTimer.start();
 
-        try {
-            for(int i=0; i<size; i++) {
+        try {        	
+        	// FIXME: This is not correct if the victim list changes while we are sending ? -- Jason        	
+            for(int i=0; i<size; i++) {            	
                 Victim v;
                 WriteMessage m = null;
 

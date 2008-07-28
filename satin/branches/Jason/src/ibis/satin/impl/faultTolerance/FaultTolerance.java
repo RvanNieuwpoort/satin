@@ -18,7 +18,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 
 public final class FaultTolerance implements Config {
     private Satin s;
@@ -29,6 +32,10 @@ public final class FaultTolerance implements Config {
     /* use these to avoid locking */
     protected volatile boolean gotCrashes = false;
 
+    protected volatile boolean gotSuspects = false;
+
+    protected volatile boolean gotRecoveries = false;
+    
     protected volatile boolean gotAbortsAndStores = false;
 
     protected volatile boolean gotDelete = false;
@@ -53,11 +60,37 @@ public final class FaultTolerance implements Config {
     public boolean getTable = true;
 
     /**
-     * Used for fault tolerance Ibises that crashed recently, and whose crashes
-     * still need to be handled.
+     * Contains identifiers of Ibises that crashed recently, and whose crashes
+     * still need to be handled. Note that crashed means "declare dead by the registry"
      */
     protected ArrayList<IbisIdentifier> crashedIbises = new ArrayList<IbisIdentifier>();
 
+    /**
+     * Contains identifiers of Ibises that we cannot communicate with (any more). We  
+     * notify the registry whenever an identifier is added to this list. In addition, 
+     * this list is used to filter out 'problematic' ibises when we are looking for a 
+     * steal victim. The Ibisses are removed from this list when they are declared dead 
+     * by the registry, or when they are ressurected, because they were not declared dead 
+     * within a certain amount of time. 
+     */
+    protected Set<IbisIdentifier> suspectedIbises = new HashSet<IbisIdentifier>();
+    
+    /**
+     * Contains InvocationRecords of results that could not be returned due to communication 
+     * problems. These results are not broadcast to the GRT yet, since the machines they should  
+     * be returned to are not officially dead yet (and may come alive again if we just had some 
+     * communication problems).       
+     */
+    protected HashMap<IbisIdentifier, LinkedList<InvocationRecord>> undeliverableResults = 
+    	new HashMap<IbisIdentifier, LinkedList<InvocationRecord>>();    
+    
+    /**
+     * Contains InvocationRecords of results that could not be returned earlier due to communication 
+     * problems that have since been resolved (i.e., we managed to connect to the Ibis again).
+     * These results should be returned ASAP. 
+     */
+    protected Set<IbisIdentifier> recoveredIbises = new HashSet<IbisIdentifier>();    
+    
     protected FTCommunication ftComm;
 
     public FaultTolerance(Satin s) {
@@ -105,7 +138,10 @@ public final class FaultTolerance implements Config {
         }
     }
 
+    
+    
     // The core of the fault tolerance mechanism, the crash recovery procedure
+/*
     public void handleCrashes() {
         ftLogger.debug("SATIN '" + s.ident + ": handling crashes");
 
@@ -165,7 +201,165 @@ public final class FaultTolerance implements Config {
             s.stats.crashTimer.stop();
         }
     }
+*/
+    
+    public void addUndeliverableResult(InvocationRecord r) { 
+    	synchronized (undeliverableResults) {    	
+    		LinkedList<InvocationRecord> tmp = undeliverableResults.get(r.getOwner());
+    		
+    		if (tmp == null) { 
+    			tmp = new LinkedList<InvocationRecord>();
+        		undeliverableResults.put(r.getOwner(), tmp);
+    		}
+    		
+    		tmp.add(r);
+    	}
+    	
+//		System.err.println("XXXXX FTTEST XXXXX -- Storing undeliverable result from " + r.getOwner());        		        		
+    }
+    
+    
+    private LinkedList<InvocationRecord> getUndeliverableResults(IbisIdentifier id) { 
+    	synchronized (undeliverableResults) {
+    		return undeliverableResults.remove(id);    		
+		}
+    }
+    
+    // The core of the fault tolerance mechanism, the crash recovery procedure
+    // 
+    // NOTE: the original implementation didn't see the difference between a 'dead' 
+    // Ibis (declared dead by the registry) and a 'suspect' Ibis (that we have some 
+    // trouble communincating with). Both cases were handled 'as if' the Ibis was dead. 
+    // This could lead to partitioning of the pool, and even deadlocks (since not all
+    // machines should necessary agree that in Ibis is dead, part of the recovery may 
+    // fail). The new implementation below should fix this....
+    
+    public void handleCrashes() {
 
+    	// NOTE: This only reacts to 'dead' upcall from the registry    	    	
+    	ftLogger.debug("SATIN '" + s.ident + ": handling crashes");
+
+        s.stats.crashTimer.start();
+
+        try {
+            ArrayList<IbisIdentifier> crashesToHandle;
+
+            synchronized (s) {
+                crashesToHandle = new ArrayList<IbisIdentifier>(crashedIbises);
+                crashedIbises.clear();
+                gotCrashes = false;
+                
+                while (crashesToHandle.size() > 0) {
+                    IbisIdentifier id = crashesToHandle.remove(0);
+                    ftLogger.debug("SATIN '" + s.ident + ": handling crash of "
+                        + id);
+
+                    // broadcast undeliverable results
+                    LinkedList<InvocationRecord> undeliverable = getUndeliverableResults(id);
+
+                    if (undeliverable != null && undeliverable.size() > 0) { 
+                    	for (InvocationRecord r : undeliverable) { 
+
+//                			System.err.println("XXXXX FTTEST XXXXX -- Putting undeliverable result in GRT " + r.getOwner());        		        		
+                    		
+                    		storeGlobalResult(r);
+                    	}
+                    }                    	                    
+                    
+                    // give the load-balancing algorith a chance to clean up
+                    s.algorithm.handleCrash(id);
+
+                    if (!FT_NAIVE) {
+                        // abort all jobs stolen from id or descendants of jobs
+                        // stolen from id
+                        killAndStoreSubtreeOf(id);
+                    }
+
+                    s.outstandingJobs.redoStolenBy(id);
+                    s.stats.numCrashesHandled++;
+                    
+                    s.so.handleCrash(id);
+                }
+
+                s.notifyAll();
+            }
+        } finally {
+            s.stats.crashTimer.stop();
+        }
+    }
+
+    public void handleSuspects() {
+        ftLogger.debug("SATIN '" + s.ident + ": handling suspects");
+
+        s.stats.crashTimer.start();
+
+        try {
+            ArrayList<IbisIdentifier> suspectsToHandle;
+
+            synchronized (s) {
+            	suspectsToHandle = new ArrayList<IbisIdentifier>(suspectedIbises);
+            	suspectedIbises.clear();
+                gotSuspects = false;
+            }
+
+            // Let the Ibis registry know that we have encountered problems            
+            for (int i = 0; i < suspectsToHandle.size(); i++) {
+                IbisIdentifier id = suspectsToHandle.get(0);
+                
+                // Make sure the Ibis has not 'officially' died yet... 
+                if (!s.deadIbises.contains(id)) { 
+                	try {
+                		s.comm.ibis.registry().maybeDead(id);
+                	} catch (IOException e) {
+                		// ignore exception
+                		ftLogger.info("SATIN '" + s.ident
+                				+ "' :exception while notifying registry about "
+                				+ "crash of " + id + ": " + e, e);
+                	}
+                }
+            }
+        } finally {
+            s.stats.crashTimer.stop();
+        }
+    }
+
+    public void handleRecoveries() {
+        ftLogger.debug("SATIN '" + s.ident + ": handling recoveries");
+
+        s.stats.crashTimer.start();
+
+        synchronized (s) {
+        	gotRecoveries = false;
+		}
+        
+        try {
+        	
+        	IbisIdentifier [] tmp;
+        	
+        	synchronized (recoveredIbises) {
+				tmp = recoveredIbises.toArray(new IbisIdentifier[recoveredIbises.size()]);        		
+				recoveredIbises.clear();
+        	}
+        	
+        	for (IbisIdentifier id : tmp) { 
+        		
+        		LinkedList<InvocationRecord> results = getUndeliverableResults(id);
+        		
+        		for (InvocationRecord r : results) { 
+        			
+//        			System.err.println("XXXXX FTTEST XXXXX -- Resending undeliverable result from " + r.getOwner() + " " + r.getReturnRecord());        		        		
+        			
+        			s.lb.sendResult(r, r.getReturnRecord());
+        		}
+        	}
+
+        } finally {
+            s.stats.crashTimer.stop();
+        }
+    }
+
+    
+    
     public void handleMasterCrash() {
         ftLogger.info("SATIN '" + s.ident + "': MASTER (" + s.getMasterIdent()
             + ") HAS CRASHED");
@@ -223,7 +417,7 @@ public final class FaultTolerance implements Config {
     private void storeFinishedChildrenOf(InvocationRecord r) {
         InvocationRecord child = r.getFinishedChild();
         while (child != null) {
-            s.ft.storeResult(child);
+            s.ft.storeGlobalResult(child);
             child = child.getFinishedSibling();
         }
     }
@@ -309,6 +503,15 @@ public final class FaultTolerance implements Config {
         if (gotCrashes) {
             s.ft.handleCrashes();
         }
+
+        if (gotRecoveries) {
+        	s.ft.handleRecoveries();
+        }
+        
+        if (gotSuspects) { 
+        	s.ft.handleSuspects();
+        }
+        
         if (gotAbortsAndStores) {
             s.ft.handleAbortsAndStores();
         }
@@ -346,7 +549,7 @@ public final class FaultTolerance implements Config {
         return false;
     }
 
-    public void storeResult(InvocationRecord r) {
+    public void storeGlobalResult(InvocationRecord r) {
         globalResultTable.storeResult(r);
     }
 
@@ -373,7 +576,48 @@ public final class FaultTolerance implements Config {
     public ReceivePortConnectUpcall getReceivePortConnectHandler() {
         return ftComm;
     }
-
+    
+    public void unreachableIbis(IbisIdentifier id, InvocationRecord result) {
+    	
+    	if (ftComm.handleSuspectedIbis(id)) { 
+    		// The Ibis is not officially dead yet, so we add the results 
+    		// to the 'undeliverable' list
+    		
+    		if (result != null) { 
+    			addUndeliverableResult(result);
+    		}
+    	} else { 
+    		// The Ibis if officially dead, so broadcast the result to  
+    		// the GlobalResultTable
+    		if (result != null) {
+    			synchronized (s) {
+                    storeGlobalResult(result);
+                }
+    		}
+    	}
+    }
+    
+    public void reachableIbis(IbisIdentifier id) { 
+    	
+    	boolean add;
+    	
+    	synchronized (undeliverableResults) {    	
+    		add = undeliverableResults.containsKey(id);
+    	}
+    	
+    	if (add) {
+    		
+    		synchronized (s) {
+    			gotRecoveries = true;
+    		}
+    		
+    		synchronized (recoveredIbises) {
+//    			System.err.println("XXXXX FTTEST XXXXX -- Ibis recovered " + id);        		        		
+    			recoveredIbises.add(id);
+			}
+    	}
+    }
+    
     public void disableConnectionUpcalls() {
         ftComm.disableConnectionUpcalls();
     }

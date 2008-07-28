@@ -108,7 +108,10 @@ final class AbortsCommunication implements Config {
         try {
             Victim v = null;
             synchronized (s) {
-                v = s.victims.getVictim(e.stealer);
+            	
+            	// Since abort messages may significantly reduce the amount of work, 
+            	// we also try to send to suspect Ibisses. 
+                v = s.victims.getVictim(e.stealer, true);
                 if (v == null)
                     return; // node might have crashed
             }

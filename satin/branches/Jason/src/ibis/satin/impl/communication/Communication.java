@@ -24,6 +24,7 @@ import ibis.satin.impl.sharedObjects.SharedObjects;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.LinkedList;
 
 public final class Communication implements Config, Protocol {
     private Satin s;
@@ -189,8 +190,11 @@ public final class Communication implements Config, Protocol {
                 PortType.RECEIVE_EXPLICIT, PortType.RECEIVE_AUTO_UPCALLS);
     }
 
-    public void bcastMessage(byte opcode) {
+    public void bcastMessage(byte opcode, boolean retry) {
         Victim[] victims;
+
+        LinkedList<IbisIdentifier> failed = null;
+        
         synchronized (s) {
             victims = s.victims.victims();
         }
@@ -208,19 +212,72 @@ public final class Communication implements Config, Protocol {
                 if (writeMessage != null) {
                     writeMessage.finish(e);
                 }
+
+                if (retry && failed == null) { 
+                	failed = new LinkedList<IbisIdentifier>();
+                	failed.add(v.getIdent());                	
+                } 
+                
                 synchronized (s) {
-                    ftLogger.info("SATIN '" + s.ident
-                            + "': could not send bcast message to "
-                            + v.getIdent(), e);
-                    try {
-                        ibis.registry().maybeDead(v.getIdent());
-                    } catch (IOException e2) {
-                        ftLogger.warn("SATIN '" + s.ident
-                                + "': got exception in maybeDead", e2);
-                    }
+                	ftLogger.info("SATIN '" + s.ident
+                			+ "': could not send bcast message to "
+                			+ v.getIdent(), e);
+                	try {
+                		ibis.registry().maybeDead(v.getIdent());
+                	} catch (IOException e2) {
+                		ftLogger.warn("SATIN '" + s.ident
+                				+ "': got exception in maybeDead", e2);
+                	}
                 }
-            }
+            }            
         }
+        
+        if (retry && failed != null) { 
+        	
+        	while (failed.size() != 0) { 
+
+        		IbisIdentifier id = failed.removeFirst();
+        		
+        		WriteMessage writeMessage = null;
+
+        		commLogger.debug("SATIN '" + s.ident + "': retry sending "
+                        + opcodeToString(opcode) + " message to " + id);
+                
+        		Victim v = null;
+        		
+        		synchronized (s) {
+        			v = s.victims.getVictim(id, true);
+        		}
+        			
+        		if (v != null) { 
+        			try {
+        				writeMessage = v.newMessage();
+        				writeMessage.writeByte(opcode);
+        				v.finish(writeMessage);        				
+        			} catch (IOException e) {
+        				if (writeMessage != null) {
+        					writeMessage.finish(e);
+        				}
+
+        				failed.addLast(id);                	
+        				
+        				synchronized (s) {
+        					ftLogger.info("SATIN '" + s.ident
+        							+ "': could not send bcast message to "
+        							+ v.getIdent(), e);
+        					try {
+        						ibis.registry().maybeDead(id);
+        					} catch (IOException e2) {
+        						ftLogger.warn("SATIN '" + s.ident
+        								+ "': got exception in maybeDead", e2);
+        					}
+        				}
+        			}
+        		}
+        	}
+        }
+        
+        
     }
 
     public static void disconnect(SendPort s, ReceivePortIdentifier ident) {
@@ -241,6 +298,9 @@ public final class Communication implements Config, Protocol {
         IbisIdentifier id = s.identifier().ibisIdentifier();
         connLogger.info("SATIN '" + id + "': connecting to " + name + " at "
                 + ident);
+        
+        /*
+        
         while (r == null && timeLeft > 0) {
             try {
                 r = s.connect(ident, name, timeLeft, false);
@@ -272,10 +332,35 @@ public final class Communication implements Config, Protocol {
             timeLeft = deadLine - System.currentTimeMillis();
         }
 
+         */
+        
+        try {
+        	r = s.connect(ident, name, timeLeft, true);
+        } catch (AlreadyConnectedException x) {
+        	connLogger.info("SATIN '" + id + "': already connected to "
+        			+ name + " at " + ident, x);
+        	ReceivePortIdentifier[] ports = s.connectedTo();
+        	for (int i = 0; i < ports.length; i++) {
+        		if (ports[i].ibisIdentifier().equals(ident)
+        				&& ports[i].name().equals(name)) {
+        			connLogger.info("SATIN '" + id
+        					+ "': the port was already connected, found it");
+        			return ports[i];
+        		}
+        	}
+        	connLogger.info("SATIN '"
+        			+ id
+        			+ "': the port was already connected, but could not find it, retry!");
+        } catch (IOException e) {
+        	connLogger.info("SATIN '" + id
+        			+ "': IOException in connect to " + ident + ": " + e, e);
+        }
+        
         if (r == null) {
             connLogger.info("could not connect port within given time ("
-                    + timeoutMillis + " ms)");
+                    + timeoutMillis + " ms)");      
         }
+        
         return r;
     }
 
@@ -329,7 +414,7 @@ public final class Communication implements Config, Protocol {
                 Victim v;
 
                 synchronized (s) {
-                    v = s.victims.getVictim(s.getMasterIdent());
+                    v = s.victims.getVictim(s.getMasterIdent(), true);
                 }
 
                 if (v == null) {
@@ -365,8 +450,11 @@ public final class Communication implements Config, Protocol {
         commLogger.debug("SATIN '" + ident + "': barrier DONE");
     }
 
-    public void waitForExitReplies() {
+    public void waitForExitReplies(long timeout) {
         int size;
+        
+        long endTime = System.currentTimeMillis() + timeout;        
+        
         synchronized (s) {
             size = s.victims.size();
         }
@@ -375,55 +463,82 @@ public final class Communication implements Config, Protocol {
         synchronized (s) {
             while (exitReplies != size) {
                 try {
+                    ftLogger.info("SATIN '" + ibis.identifier() + "': twaiting for exit replies -- got " 
+                    		+ exitReplies + " of " + size);
+                    
                     s.handleDelayedMessages();
                     s.wait(250);
                 } catch (Exception e) {
                     // Ignore.
                 }
                 size = s.victims.size();
+                                
+                if (timeout > 0 && System.currentTimeMillis() > endTime) { 
+                    ftLogger.warn("SATIN '" + ibis.identifier() + "': timeout while waiting for exit replies.");
+                	return;
+                }
             }
         }
     }
 
-    public void sendExitAck() {
+    public boolean sendExitAck(boolean retry, long timeout) {
         Victim v = null;
         WriteMessage writeMessage = null;
 
-        synchronized (s) {
-            v = s.victims.getVictim(s.getMasterIdent());
-        }
+        long endTime = System.currentTimeMillis() + timeout;
+        
+        do { 
+        	synchronized (s) {
+        		v = s.victims.getVictim(s.getMasterIdent(), true);
+        	}
 
-        if (v == null)
-            return; // node might have crashed
+        	if (v == null) {
+        		return false; // node might have crashed
+        	}
+        		
+        	try {
+        		commLogger.debug("SATIN '" + s.ident
+        				+ "': sending exit ACK message to " + s.getMasterIdent());
 
-        try {
-            commLogger.debug("SATIN '" + s.ident
-                    + "': sending exit ACK message to " + s.getMasterIdent());
+        		writeMessage = v.newMessage();
+        		writeMessage.writeByte(Protocol.EXIT_REPLY);
+        		if (STATS) {
+        			s.stats.fillInStats();
+        			writeMessage.writeObject(s.stats);
+        		}
+        		v.finish(writeMessage);
+        		
+        		return true;
+        		
+        	} catch (IOException e) {
+        		if (writeMessage != null) {
+        			writeMessage.finish(e);
+        		}
+        		ftLogger.info(
+        				"SATIN '" + s.ident + "': could not send exit message to "
+        				+ s.getMasterIdent(), e);
+        		try {
+        			ibis.registry().maybeDead(s.getMasterIdent());
+        		} catch (IOException e2) {
+        			ftLogger.warn("SATIN '" + s.ident
+        					+ "': got exception in maybeDead", e2);
+        		}
+        	}
+        	
+        	if (timeout > 0 && System.currentTimeMillis() > endTime) { 
+        		return false;
+        	}
+        	        	
+        } while (retry);
 
-            writeMessage = v.newMessage();
-            writeMessage.writeByte(Protocol.EXIT_REPLY);
-            if (STATS) {
-                s.stats.fillInStats();
-                writeMessage.writeObject(s.stats);
-            }
-            v.finish(writeMessage);
-        } catch (IOException e) {
-            if (writeMessage != null) {
-                writeMessage.finish(e);
-            }
-            ftLogger.info(
-                "SATIN '" + s.ident + "': could not send exit message to "
-                        + s.getMasterIdent(), e);
-            try {
-                ibis.registry().maybeDead(s.getMasterIdent());
-            } catch (IOException e2) {
-                ftLogger.warn("SATIN '" + s.ident
-                        + "': got exception in maybeDead", e2);
-            }
-        }
+        // stupid compiler ;-)
+        return false;
     }
-
-    public void waitForExitStageTwo() {
+    
+    public void waitForExitStageTwo(long timeout) {
+    	
+    	long endTime = System.currentTimeMillis() + timeout;
+    	
         synchronized (s) {
             while (!exitStageTwo) {
                 try {
@@ -431,6 +546,10 @@ public final class Communication implements Config, Protocol {
                     s.wait(250);
                 } catch (Exception e) {
                     // Ignore.
+                }
+                
+                if (timeout > 0 && System.currentTimeMillis() > endTime) { 
+                	return;
                 }
             }
         }
