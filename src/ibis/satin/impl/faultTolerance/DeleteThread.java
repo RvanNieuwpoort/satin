@@ -22,6 +22,6 @@ class DeleteThread extends Thread {
             //ignore
         }
         Satin satin = Satin.getSatin();
-        satin.ft.ftComm.gotSignal("delete");
+        satin.ft.ftComm.gotSignal("delete", null);
     }
 }

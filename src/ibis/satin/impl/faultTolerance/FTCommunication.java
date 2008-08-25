@@ -296,12 +296,21 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         }
     }
 
-    public void gotSignal(String signal) {
+    public void gotSignal(String signal, IbisIdentifier sender) {
         if (signal != null && signal.equals("delete")) {
             s.ft.gotDelete = true;
         }
     }
 
+
+    public void poolClosed() {
+        // ignored
+    }
+
+    public void poolTerminated(IbisIdentifier source) {
+        // ignored
+    }
+    
     protected void handleMyOwnJoinJoin() {
         s.so.handleMyOwnJoin();
     }
