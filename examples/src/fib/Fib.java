@@ -7,7 +7,9 @@ package fib;
  * fast Fibonacci implementation.
  */
 final class Fib extends ibis.satin.SatinObject implements FibInterface {
- 
+
+    private static final long serialVersionUID = -2084766268168809118L;
+
     public long fib(int n) {
         if (n < 2)
             return n;
@@ -20,7 +22,6 @@ final class Fib extends ibis.satin.SatinObject implements FibInterface {
     }
 
     public static void main(String[] args) {
-        long resSeq, resSatin;
         int n = 0;
 
         if (args.length == 0) {
@@ -41,9 +42,8 @@ final class Fib extends ibis.satin.SatinObject implements FibInterface {
         f.sync();
         double time = (double) (System.currentTimeMillis() - start) / 1000.0;
 
-        System.out.println("application time fib (" + n + ") took "
-                + time + " s");
-        System.out.println("application result fib (" + n + ") = "
-                + result);
+        System.out.println("application time fib (" + n + ") took " + time
+                + " s");
+        System.out.println("application result fib (" + n + ") = " + result);
     }
 }
