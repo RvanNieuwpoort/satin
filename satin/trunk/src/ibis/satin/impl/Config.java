@@ -5,7 +5,8 @@ package ibis.satin.impl;
 import ibis.ipl.IbisProperties;
 import ibis.util.TypedProperties;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Constants for the configuration of Satin. This interface is public because it
@@ -199,40 +200,40 @@ public interface Config {
             s_keep_intra_connections, true); 
 
     /** Logger for communication. */
-    public static final Logger commLogger = Logger.getLogger("ibis.satin.comm");
+    public static final Logger commLogger = LoggerFactory.getLogger("ibis.satin.comm");
 
     /** Logger for connections. */
-    public static final Logger connLogger = Logger.getLogger("ibis.satin.conn");
+    public static final Logger connLogger = LoggerFactory.getLogger("ibis.satin.conn");
 
     /** Logger for job stealing. */
-    public static final Logger stealLogger = Logger.getLogger(
+    public static final Logger stealLogger = LoggerFactory.getLogger(
             "ibis.satin.steal");
 
     /** Logger for spawns. */
-    public static final Logger spawnLogger = Logger.getLogger(
+    public static final Logger spawnLogger = LoggerFactory.getLogger(
             "ibis.satin.spawn");
 
     /** Logger for inlets. */
-    public static final Logger inletLogger = Logger.getLogger(
+    public static final Logger inletLogger = LoggerFactory.getLogger(
             "ibis.satin.inlet");
 
     /** Logger for aborts. */
-    public static final Logger abortLogger = Logger.getLogger(
+    public static final Logger abortLogger = LoggerFactory.getLogger(
             "ibis.satin.abort");
 
     /** Logger for fault tolerance. */
-    public static final Logger ftLogger = Logger.getLogger("ibis.satin.ft");
+    public static final Logger ftLogger = LoggerFactory.getLogger("ibis.satin.ft");
 
     /** Logger for the global result table. */
-    public static final Logger grtLogger = Logger.getLogger(
+    public static final Logger grtLogger = LoggerFactory.getLogger(
             "ibis.satin.ft.grt");
 
     /** Logger for shared objects. */
-    public static final Logger soLogger = Logger.getLogger("ibis.satin.so");
+    public static final Logger soLogger = LoggerFactory.getLogger("ibis.satin.so");
 
     /** Logger for shared objects broadcasts. */
-    public static final Logger soBcastLogger = Logger.getLogger("ibis.satin.so.bcast");
+    public static final Logger soBcastLogger = LoggerFactory.getLogger("ibis.satin.so.bcast");
 
     /** Generic logger. */
-    public static final Logger mainLogger = Logger.getLogger("ibis.satin");
+    public static final Logger mainLogger = LoggerFactory.getLogger("ibis.satin");
 }

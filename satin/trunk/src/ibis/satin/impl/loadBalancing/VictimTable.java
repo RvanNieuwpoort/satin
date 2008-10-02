@@ -155,7 +155,7 @@ public final class VictimTable implements Config {
         Satin.assertLocked(satin);
 
         if (ASSERTS && clusters.get(0) != thisCluster) {
-            commLogger.fatal("SATIN '" + satin.ident
+            commLogger.error("SATIN '" + satin.ident
                     + "': getRandomRemoteVictim: firstCluster != me");
             System.exit(1); // Failed assertion
         }

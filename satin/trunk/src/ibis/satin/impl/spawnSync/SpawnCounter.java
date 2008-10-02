@@ -55,7 +55,7 @@ public final class SpawnCounter {
      */
     static public final void deleteSpawnCounter(SpawnCounter s) {
         if (Satin.ASSERTS && s.value < 0) {
-            Satin.spawnLogger.fatal(
+            Satin.spawnLogger.error(
                 "deleteSpawnCounter: spawncouner < 0, val =" + s.value,
                 new Throwable());
             System.exit(1); // Failed assertion

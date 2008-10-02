@@ -195,7 +195,7 @@ public final class SharedObjects implements Config {
             // If the owner of the invocation is dead, replace by its replacer.
             IbisIdentifier owner = s.ft.lookupOwner(r);
             if (ASSERTS && owner == null) {
-                grtLogger.fatal("SATIN '" + s.ident
+                grtLogger.error("SATIN '" + s.ident
                     + "': orphan not locked in the table");
                 System.exit(1); // Failed assertion
             }
@@ -212,7 +212,7 @@ public final class SharedObjects implements Config {
         // try to ship the object(s) from the owner of the job
         Vector<String> objRefs = r.getSOReferences();
         if (objRefs == null || objRefs.isEmpty()) {
-            soLogger.fatal("SATIN '" + s.ident + "': "
+            soLogger.error("SATIN '" + s.ident + "': "
                 + "a guard is not satisfied, but the spawn does not "
                 + "have shared objects.\n"
                 + "This is not a correct Satin program.");
