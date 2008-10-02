@@ -106,7 +106,7 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
                     soMessageCombiner = new MessageCombiner(props, soSendPort);
                 }
             } catch (Exception e) {
-                commLogger.fatal("SATIN '" + s.ident
+                commLogger.error("SATIN '" + s.ident
                     + "': Could not start ibis: " + e, e);
                 System.exit(1); // Could not start ibis
             }
@@ -176,7 +176,7 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
                 rec.enableConnections();
                 rec.enableMessageUpcalls();
             } catch (Exception e) {
-                commLogger.fatal("SATIN '" + s.ident
+                commLogger.error("SATIN '" + s.ident
                     + "': Could not start ibis: " + e, e);
                 System.exit(1); // Could not start ibis
             }
@@ -471,8 +471,7 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
                 + "': received demanded object");
             return;
         }
-        soLogger
-            .fatal("SATIN '"
+        soLogger.error("SATIN '"
                 + s.ident
                 + "': internal error: did not receive shared object after I demanded it. ");
     }
@@ -595,7 +594,7 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
 
             SharedObjectInfo info = s.so.getSOInfo(objid);
             if (ASSERTS && info == null) {
-                soLogger.fatal("SATIN '" + s.ident
+                soLogger.error("SATIN '" + s.ident
                     + "': EEEK, requested shared object: " + objid
                     + " not found! Exiting..");
                 System.exit(1); // Failed assertion

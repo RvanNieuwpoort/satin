@@ -164,7 +164,7 @@ final class LBCommunication implements Config, Protocol {
             if (!FT_NAIVE && r.isOrphan()) {
                 IbisIdentifier owner = s.ft.lookupOwner(r);
                 if (ASSERTS && owner == null) {
-                    grtLogger.fatal("SATIN '" + s.ident
+                    grtLogger.error("SATIN '" + s.ident
                         + "': orphan not locked in the table");
                     System.exit(1); // Failed assertion
                 }

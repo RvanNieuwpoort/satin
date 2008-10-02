@@ -61,7 +61,7 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                         + " is " + s.ft.clusterCoordinatorIdent);
             }
         } catch (Exception e) {
-            ftLogger.fatal("SATIN '" + s.ident + "': Could not start ibis: "
+            ftLogger.error("SATIN '" + s.ident + "': Could not start ibis: "
                     + e, e);
             System.exit(1); // Could not start ibis
         }
@@ -386,12 +386,12 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             synchronized (s) {
                 value = s.ft.globalResultTable.lookup(stamp);
                 if (ASSERTS && value == null) {
-                    grtLogger.fatal("SATIN '" + s.ident
+                    grtLogger.error("SATIN '" + s.ident
                             + "': EEK!!! no requested result in the table: "
                             + stamp);
                     System.exit(1); // Failed assertion
                 } else if (ASSERTS && value.type == GlobalResultTableValue.TYPE_POINTER) {
-                    grtLogger.fatal("SATIN '" + s.ident + "': EEK!!! " + ident
+                    grtLogger.error("SATIN '" + s.ident + "': EEK!!! " + ident
                             + " requested a result: " + stamp
                             + " which is stored on another node: " + value);
                     System.exit(1); // Failed assertion

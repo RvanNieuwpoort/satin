@@ -608,9 +608,9 @@ public final class Satin implements Config {
 
     public static void assertFailedStatic(String reason, Throwable t) {
         if(reason != null) {
-            mainLogger.fatal("ASSERT FAILED: " + reason, t);
+            mainLogger.error("ASSERT FAILED: " + reason, t);
         } else {
-            mainLogger.fatal("ASSERT FAILED: ", t);
+            mainLogger.error("ASSERT FAILED: ", t);
         }
 
         throw new Error(reason, t);        
@@ -618,10 +618,10 @@ public final class Satin implements Config {
 
     public void assertFailed(String reason, Throwable t) {
         if(reason != null) {
-            mainLogger.fatal("SATIN '" + ident
+            mainLogger.error("SATIN '" + ident
                     + "': ASSERT FAILED: " + reason, t);
         } else {
-            mainLogger.fatal("SATIN '" + ident
+            mainLogger.error("SATIN '" + ident
                     + "': ASSERT FAILED: ", t);
         }
 
