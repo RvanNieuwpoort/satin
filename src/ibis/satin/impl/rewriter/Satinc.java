@@ -80,6 +80,7 @@ import org.apache.bcel.generic.POP;
 import org.apache.bcel.generic.POP2;
 import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.PUTSTATIC;
+import org.apache.bcel.generic.PopInstruction;
 import org.apache.bcel.generic.RETURN;
 import org.apache.bcel.generic.ReferenceType;
 import org.apache.bcel.generic.ReturnInstruction;
@@ -1015,6 +1016,15 @@ public final class Satinc extends IbiscComponent {
                 int l = t.getSourceLine(i.getNext().getPosition());
 
                 System.err.println("Error: \"return <spawnable method>\" is not "
+                    + "allowed, class " + m.getClassName()
+                    + ", line " + l);
+                System.exit(1);
+            }
+            if (store instanceof PopInstruction) {
+                LineNumberTable t = m.getLineNumberTable(cpg);
+                int l = t.getSourceLine(i.getNext().getPosition());
+
+                System.err.println("Error: \"not storing the result of a <spawnable method>\" is not "
                     + "allowed, class " + m.getClassName()
                     + ", line " + l);
                 System.exit(1);
