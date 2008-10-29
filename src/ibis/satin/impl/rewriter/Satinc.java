@@ -80,7 +80,6 @@ import org.apache.bcel.generic.POP;
 import org.apache.bcel.generic.POP2;
 import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.PUTSTATIC;
-import org.apache.bcel.generic.PopInstruction;
 import org.apache.bcel.generic.RETURN;
 import org.apache.bcel.generic.ReferenceType;
 import org.apache.bcel.generic.ReturnInstruction;
@@ -1020,7 +1019,7 @@ public final class Satinc extends IbiscComponent {
                     + ", line " + l);
                 System.exit(1);
             }
-            if (store instanceof PopInstruction) {
+            if (store instanceof POP || store instanceof POP2) {
                 LineNumberTable t = m.getLineNumberTable(cpg);
                 int l = t.getSourceLine(i.getNext().getPosition());
 
