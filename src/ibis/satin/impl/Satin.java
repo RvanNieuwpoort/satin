@@ -217,7 +217,9 @@ public final class Satin implements Config {
         System.gc();
         System.runFinalization();
 
-        System.exit(status); // Needed for IBM jit.
+        if (status != 0) {
+            System.exit(status);
+        }
     }
 
     /**
