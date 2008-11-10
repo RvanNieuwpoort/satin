@@ -1473,14 +1473,14 @@ public final class Satinc extends IbiscComponent {
 
     InstructionHandle insertTypecheckCode(MethodGen m, InstructionList il,
         InstructionHandle pos, int spawnId, int exceptionPos) {
-        ArrayList catches = mtab.getCatchTypes(m, spawnId);
+        ArrayList<CodeExceptionGen> catches = mtab.getCatchTypes(m, spawnId);
 
         InstructionHandle[] jumpTargets = new InstructionHandle[catches.size() + 1];
 
         BranchHandle[] jumps = new BranchHandle[catches.size()];
 
         for (int i = 0; i < catches.size(); i++) {
-            CodeExceptionGen e = (CodeExceptionGen) (catches.get(i));
+            CodeExceptionGen e = catches.get(i);
             ObjectType type = e.getCatchType();
             InstructionHandle catchTarget = e.getHandlerPC();
 
@@ -3132,10 +3132,10 @@ public final class Satinc extends IbiscComponent {
         }
     }
 
-    public boolean processArgs(ArrayList args) {
+    public boolean processArgs(ArrayList<String> args) {
         boolean retval = false;
         for (int i = 0; i < args.size(); i++) {
-            String arg = (String) args.get(i);
+            String arg = args.get(i);
             if (false) {
                 // nothing
             } else if (arg.equals("-satin-no-irc")) {
@@ -3177,7 +3177,7 @@ public final class Satinc extends IbiscComponent {
         return "BCEL";
     }
 
-    public void process(Iterator classes) {
+    public void process(Iterator<?> classes) {
         if (satinSet.size() == 0) {
             return;
         }
