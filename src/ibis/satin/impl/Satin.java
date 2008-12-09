@@ -442,7 +442,7 @@ public final class Satin implements Config {
         masterIdent = newMaster;
 
         if (masterIdent.equals(ident)) {
-            /* I an the master. */
+            /* I am the master. */
             commLogger.info(
                     "SATIN '" + ident
                     + "': init ibis: I am the master");
