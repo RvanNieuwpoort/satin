@@ -42,6 +42,9 @@ final class SOInvocationHandler implements MessageUpcall, Config, Protocol {
 
         switch (opt_code) {
         case SO_TRANSFER: // exportObject
+            if (soLogger.isInfoEnabled()) {
+                soLogger.info("got SO_TRANSFER");
+            }
             Timer tmp = Timer.createTimer();
             tmp.start();
             try {
@@ -67,6 +70,9 @@ final class SOInvocationHandler implements MessageUpcall, Config, Protocol {
             s.so.addObject(obj);
             break;
         case SO_INVOCATION: // normal invocation, can be message combined
+            if (soLogger.isInfoEnabled()) {
+                soLogger.info("got SO_INVOCATION");
+            }
             tmp = Timer.createTimer();
             tmp.start();
             try {

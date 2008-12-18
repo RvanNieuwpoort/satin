@@ -29,15 +29,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import mcast.object.ObjectMulticaster;
-import mcast.object.SendDoneUpcaller;
 
-
-final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
+final class SOCommunication implements Config, Protocol {
     private static final boolean ASYNC_SO_BCAST = false;
 
-    private static final boolean BLOCKING_BCAST = false;
-    
     public static final boolean DISABLE_SO_BCAST = false;
     
     private Satin s;
@@ -49,6 +44,9 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
 
     /** used to broadcast shared object invocations */
     private SendPort soSendPort;
+
+    /** used to receive shared object invocations */
+    private ReceivePort soReceivePort;
 
     private PortType soPortType;
 
@@ -62,13 +60,9 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
     private HashMap<IbisIdentifier, ReceivePortIdentifier> ports =
             new HashMap<IbisIdentifier, ReceivePortIdentifier>();
 
-    private ObjectMulticaster omc;
-
     private SharedObject sharedObject = null;
 
     private boolean receivedNack = false;
-
-    private OmcInfo omcInfo;
 
     protected SOCommunication(Satin s) {
         this.s = s;
@@ -79,17 +73,31 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
     
         if (LABEL_ROUTING_MCAST) {
             try {
-                omc = new ObjectMulticaster(s.comm.ibis,
-                            true /* efficient multi-cluster */, false /* no signals */,
-                            "satinSO", this);
-                omcInfo = new OmcInfo(s);
-            } catch (Exception e) {
-                System.err.println("cannot create OMC: " + e);
-                e.printStackTrace();
-                System.exit(1);
-            }
+                soPortType = getSOPortType();
 
-            new SOInvocationReceiver(s, omc).start();
+                SOInvocationHandler soInvocationHandler =
+                        new SOInvocationHandler(s);
+
+                // Create a multicast port to bcast shared object invocations.
+                // Connections are established later.
+                soSendPort =
+                        s.comm.ibis.createSendPort(soPortType, "lrmc port");
+                soReceivePort =
+                        s.comm.ibis.createReceivePort(soPortType, "lrmc port", soInvocationHandler);
+
+                if (SO_MAX_INVOCATION_DELAY > 0) {
+                    TypedProperties props = new TypedProperties();
+                    props.setProperty("ibis.serialization", "ibis");
+                    soMessageCombiner = new MessageCombiner(props, soSendPort);
+                    soInvocationHandler.setMessageSplitter(new MessageSplitter(
+                        props, soReceivePort));
+                }
+                soReceivePort.enableMessageUpcalls();
+            } catch (Exception e) {
+                commLogger.error("SATIN '" + s.ident
+                    + "': Could not start ibis: " + e, e);
+                System.exit(1); // Could not start ibis
+            }
         } else {
             try {
                 soPortType = getSOPortType();
@@ -115,13 +123,14 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
 
     public static PortType getSOPortType() throws IOException {
         if(LABEL_ROUTING_MCAST) {
-            return ObjectMulticaster.getPortType();
-        } else {
+            return new PortType(
+                PortType.CONNECTION_MANY_TO_MANY, PortType.RECEIVE_EXPLICIT,
+                PortType.RECEIVE_AUTO_UPCALLS, PortType.SERIALIZATION_OBJECT);
+        }
         return new PortType(
                 PortType.CONNECTION_ONE_TO_MANY, PortType.CONNECTION_UPCALLS,
                 PortType.CONNECTION_DOWNCALLS, PortType.RECEIVE_EXPLICIT,
                 PortType.RECEIVE_AUTO_UPCALLS, PortType.SERIALIZATION_OBJECT);
-        }
     }
 
     /**
@@ -133,24 +142,12 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
     
         // lrmc uses its own ports
         if (LABEL_ROUTING_MCAST) {
-            for (int i = 0; i < joiners.length; i++) {
-                omc.addIbis(joiners[i]);
-            }
-
-            // Set the destination for the multicast.
-            // The victimtable does not contain the new joiners yet.
-            IbisIdentifier[] victims;
+            /** Add new connections to the soSendPort */
             synchronized (s) {
-                victims = s.victims.getIbises();
+                for (int i = 0; i < joiners.length; i++) {
+                    toConnect.add(joiners[i]);
+                }
             }
-            HashSet<IbisIdentifier> destinations = new HashSet<IbisIdentifier>();
-            for (IbisIdentifier id : victims) {
-                destinations.add(id);
-            }
-            for (IbisIdentifier id : joiners) {
-                destinations.add(id);
-            }
-            omc.setDestination(destinations.toArray(new IbisIdentifier[destinations.size()]));
             return;
         }
 
@@ -167,14 +164,6 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
                             soInvocationHandler, s.ft
                                 .getReceivePortConnectHandler(), null);
 
-                if (SO_MAX_INVOCATION_DELAY > 0) {
-                    TypedProperties s = new TypedProperties();
-                    s.setProperty("ibis.serialization", "ibis");
-                    soInvocationHandler.setMessageSplitter(new MessageSplitter(
-                        s, rec));
-                }
-                rec.enableConnections();
-                rec.enableMessageUpcalls();
             } catch (Exception e) {
                 commLogger.error("SATIN '" + s.ident
                     + "': Could not start ibis: " + e, e);
@@ -182,12 +171,6 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
             }
         }
 
-        /** Add new connections to the soSendPort */
-        synchronized (s) {
-            for (int i = 0; i < joiners.length; i++) {
-                toConnect.add(joiners[i]);
-            }
-        }
     }
 
     protected void sendAccumulatedSOInvocations() {
@@ -231,43 +214,71 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
         }
     }
 
-    public void sendDone(int id) {
-        if (soLogger.isDebugEnabled()) {
-            soLogger.debug("SATIN '" + s.ident + "': got ACK for send "
-                + id);
-        }
-
-        omcInfo.sendDone(id);
-    }
-
     /** Broadcast an so invocation */
     protected void doBroadcastSOInvocationLRMC(SOInvocationRecord r) {
-        IbisIdentifier[] tmp;
-        synchronized (s) {
-            tmp = s.victims.getIbises();
-            if (tmp.length == 0) return;
-        }
+        long byteCount = 0;
+        WriteMessage w = null;
+
         soBcastLogger.debug("SATIN '" + s.ident
             + "': broadcasting so invocation for: " + r.getObjectId());
 
+        connectSendPortToNewReceivers();
+
+        IbisIdentifier[] tmp;
+        synchronized (s) {
+            tmp = s.victims.getIbises();
+        }
+        if (tmp.length == 0) return;
+
+        s.stats.broadcastSOInvocationsTimer.start();
+
         try {
-            s.stats.broadcastSOInvocationsTimer.start();
             s.so.registerMulticast(s.so.getSOReference(r.getObjectId()), tmp);
-            int id = omc.send(r);
-            long size = omc.lastSize();
-            omcInfo.registerSend(id, size);
-            if(BLOCKING_BCAST) {
-                omcInfo.waitForCompletion(id);
+
+            if (soSendPort != null) {
+                try {
+                    if (SO_MAX_INVOCATION_DELAY > 0) { // do message combining
+                        w = soMessageCombiner.newMessage();
+                        if (soInvocationsDelayTimer == -1) {
+                            soInvocationsDelayTimer = System.currentTimeMillis();
+                        }
+                    } else {
+                        w = soSendPort.newMessage();
+                    }
+
+                    w.writeByte(SO_INVOCATION);
+                    w.writeObject(r);
+                    byteCount = w.finish();
+
+                } catch (IOException e) {
+                    if (w != null) {
+                        w.finish(e);
+                    }
+                    System.err
+                        .println("SATIN '" + s.ident
+                            + "': unable to broadcast a shared object invocation: "
+                            + e);
+                }
+                if (SO_MAX_INVOCATION_DELAY > 0) {
+                    soCurrTotalMessageSize += byteCount;
+                } else {
+                    s.stats.soRealMessageCount++;
+                }
             }
+
             s.stats.soInvocations++;
-            s.stats.soRealMessageCount++;
-            s.stats.soInvocationsBytes += size;
-        } catch (Exception e) {
-            soBcastLogger.warn("SOI mcast failed: " + e + " msg: " + e.getMessage());
+            s.stats.soInvocationsBytes += byteCount;
         } finally {
             s.stats.broadcastSOInvocationsTimer.stop();
         }
+
+        // Try to send immediately if needed.
+        // We might not reach a safe point for a considerable time.
+        if (SO_MAX_INVOCATION_DELAY > 0) {
+            sendAccumulatedSOInvocations();
+        }
     }
+
 
     /** Broadcast an so invocation */
     protected void doBroadcastSOInvocation(SOInvocationRecord r) {
@@ -404,34 +415,59 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
 
     /** Broadcast an so invocation */
     protected void doBroadcastSharedObjectLRMC(SharedObject object) {
+
+        soBcastLogger.info("SATIN '" + s.ident + "': broadcasting object: "
+            + object.getObjectId());
+        WriteMessage w = null;
+        long size = 0;
+
+        connectSendPortToNewReceivers();
+
         IbisIdentifier[] tmp;
         synchronized (s) {
             tmp = s.victims.getIbises();
             if (tmp.length == 0) return;
         }
 
-        soBcastLogger.info("SATIN '" + s.ident + "': broadcasting object: "
-            + object.getObjectId());
+        if (soSendPort == null) {
+            return;
+        }
+
+        s.stats.soBroadcastTransferTimer.start();
+
         try {
-            s.stats.soBroadcastTransferTimer.start();
-            s.so.registerMulticast(object, tmp);
-            s.stats.soBroadcastSerializationTimer.start();
-            int id;
-            long size;
+            s.so.registerMulticast(s.so.getSOReference(object.getObjectId()), tmp);
+
             try {
-                id = omc.send(object);
-                size = omc.lastSize();
-                omcInfo.registerSend(id, size);            
-            } finally {
-                s.stats.soBroadcastSerializationTimer.stop();
+                if (SO_MAX_INVOCATION_DELAY > 0) {
+                    //do message combining
+                    w = soMessageCombiner.newMessage();
+                } else {
+                    w = soSendPort.newMessage();
+                }
+
+                w.writeByte(SO_TRANSFER);
+                s.stats.soBroadcastSerializationTimer.start();
+                try {
+                    w.writeObject(object);
+                    size = w.finish();
+                } finally {
+                    s.stats.soBroadcastSerializationTimer.stop();
+                }
+                w = null;
+                if (SO_MAX_INVOCATION_DELAY > 0) {
+                    soMessageCombiner.sendAccumulatedMessages();
+                }
+            } catch (IOException e) {
+                if (w != null) {
+                    w.finish(e);
+                }
+                System.err.println("SATIN '" + s.ident
+                    + "': unable to broadcast a shared object: " + e);
             }
-            if(BLOCKING_BCAST) {
-                omcInfo.waitForCompletion(id);
-            }
+
             s.stats.soBcasts++;
             s.stats.soBcastBytes += size;
-        } catch (Exception e) {
-            soBcastLogger.warn("SATIN '" + s.ident + "': SO mcast failed: " + e, e);
         } finally {
             s.stats.soBroadcastTransferTimer.stop();
         }
@@ -723,9 +759,15 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
     }
 
     private void connectSOSendPort(IbisIdentifier ident) {
+        String name = null;
+        if (LABEL_ROUTING_MCAST) {
+            name = "lrmc port";
+        } else {
+            name = "satin so receive port for " + s.ident;
+        }
+
         ReceivePortIdentifier r =
-                Communication.connect(soSendPort, ident,
-                    "satin so receive port for " + s.ident,
+                Communication.connect(soSendPort, ident, name,
                     Satin.CONNECT_TIMEOUT);
         if (r != null) {
             synchronized (s) {
@@ -758,27 +800,15 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
     }
 
     public void handleMyOwnJoin() {
-        if(DISABLE_SO_BCAST) return;
-    
-        if (LABEL_ROUTING_MCAST) {
-            omc.addIbis(s.ident);
-        }
+        // nothing now.
     }
 
     public void handleCrash(IbisIdentifier id) {
-        if (LABEL_ROUTING_MCAST) {
-            omc.removeIbis(id);
-            omc.setDestination(s.victims.getIbises());
-        }
+        // nothing now.
     }
 
     protected void exit() {
-        if(DISABLE_SO_BCAST) return;
-    
-        if (LABEL_ROUTING_MCAST) {
-            omc.done();
-            omcInfo.end();
-        }
+        // nothing now.
     }
 
     static class AsyncBcaster extends Thread {
@@ -795,75 +825,5 @@ final class SOCommunication implements Config, Protocol, SendDoneUpcaller {
             c.doBroadcastSOInvocation(r);
         }
     }
-    static final class OmcInfo implements Config {
-        static final class DataObject {
-            Timer timer;
-            long size;
-            boolean done;
-        }
-        
-        HashMap<Integer, DataObject> map = new HashMap<Integer, DataObject>();
 
-        Timer total = Timer.createTimer();
-
-        Satin s;
-
-        public OmcInfo(Satin s) {
-            this.s = s;
-        }
-
-        synchronized void registerSend(int id, long size) {
-            DataObject d = new DataObject();
-            d.timer = Timer.createTimer();
-            d.size = size;
-            map.put(id, d);
-            d.timer.start();
-        }
-
-        public synchronized void sendDone(int id) {
-            DataObject d;
-            
-            if(BLOCKING_BCAST) {
-                d = map.get(id);
-            } else {
-                d = map.remove(id);
-            }
-            if (d == null) {
-                soBcastLogger.info("SATIN '" + s.ident
-                    + "': got upcall for unknow id: " + id);
-                return;
-            }
-            d.timer.stop();
-            d.done = true;
-            total.add(d.timer);
-            notifyAll();
-            
-            soBcastLogger.info("SATIN '" + s.ident + "': broadcast " + id
-                + " took " + d.timer.totalTime() + " " + ((d.size / d.timer.totalTimeVal()) / 1024 * 1024) + " MB/s");
-        }
-
-        public synchronized void waitForCompletion(int id) {
-            DataObject d = map.get(id);
-            if (d == null) {
-                soBcastLogger.info("SATIN '" + s.ident
-                    + "': wait for unknow id: " + id);
-                return;
-            }
-
-            while(!d.done) {
-                try {
-                    wait();
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-            
-            map.remove(id);
-        }
-        
-        void end() {
-            soBcastLogger.debug("SATIN '" + s.ident
-                + "': total broadcast time was: " + total.totalTime());
-        }
-    }
 }
