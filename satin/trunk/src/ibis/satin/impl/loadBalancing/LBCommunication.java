@@ -243,7 +243,7 @@ final class LBCommunication implements Config, Protocol {
         try {
 
             if (stealLogger.isDebugEnabled()) {
-                stealLogger.debug("SATIN '" + s.ident + "': got steal request from "
+                stealLogger.debug("SATIN '" + s.ident + "': dealing with steal request from "
                     + ident.ibisIdentifier() + " opcode = "
                     + Communication.opcodeToString(opcode));
             }
