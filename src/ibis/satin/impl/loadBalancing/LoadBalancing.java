@@ -48,6 +48,9 @@ public final class LoadBalancing implements Config {
                 }
 
                 StealRequest sr = null;
+                if (stealLogger.isDebugEnabled()) {
+                    stealLogger.debug("StealRequestHandler woke up");
+                }
                 synchronized (stealQueue) {
                     if (stealQueue.size() > 0) {
                         sr = stealQueue.remove(0);
@@ -59,6 +62,9 @@ public final class LoadBalancing implements Config {
                         }
                         continue;
                     }
+                }
+                if (stealLogger.isDebugEnabled()) {
+                    stealLogger.debug("StealRequestHandler dealing with steal request");
                 }
 
                 // don't hold lock while sending reply 
@@ -359,6 +365,9 @@ public final class LoadBalancing implements Config {
         r.opcode = opcode;
         r.sp = ident;
         synchronized (stealQueue) {
+            if (stealLogger.isDebugEnabled()) {
+                stealLogger.debug("Queueing steal request from " + s);
+            }
             stealQueue.add(r);
             stealQueue.notifyAll();
         }
