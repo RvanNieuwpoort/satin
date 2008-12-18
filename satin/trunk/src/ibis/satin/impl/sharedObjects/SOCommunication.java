@@ -21,13 +21,11 @@ import ibis.satin.impl.communication.Communication;
 import ibis.satin.impl.communication.Protocol;
 import ibis.satin.impl.loadBalancing.Victim;
 import ibis.satin.impl.spawnSync.InvocationRecord;
-import ibis.util.Timer;
 import ibis.util.TypedProperties;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 
 
 final class SOCommunication implements Config, Protocol {
@@ -154,15 +152,10 @@ final class SOCommunication implements Config, Protocol {
         for (int i = 0; i < joiners.length; i++) {
             // create a receive port for this guy
             try {
-                SOInvocationHandler soInvocationHandler =
-                        new SOInvocationHandler(s);
-                ReceivePort rec;
-
-                rec =
-                        s.comm.ibis.createReceivePort(soPortType,
-                            "satin so receive port for " + joiners[i],
-                            soInvocationHandler, s.ft
-                                .getReceivePortConnectHandler(), null);
+                s.comm.ibis.createReceivePort(soPortType,
+                        "satin so receive port for " + joiners[i],
+                        new SOInvocationHandler(s), s.ft
+                        .getReceivePortConnectHandler(), null);
 
             } catch (Exception e) {
                 commLogger.error("SATIN '" + s.ident
