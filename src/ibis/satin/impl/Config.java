@@ -15,30 +15,37 @@ import org.slf4j.LoggerFactory;
 
 public interface Config {
 
-    static final TypedProperties properties
-            = new TypedProperties(IbisProperties.getDefaultProperties());
-    
+    static final TypedProperties properties = new TypedProperties(
+            IbisProperties.getDefaultProperties());
+
     static final String PROPERTY_PREFIX = "satin.";
 
     static final String s_asserts = PROPERTY_PREFIX + "asserts";
 
     static final String s_queue_steals = PROPERTY_PREFIX + "queueSteals";
-    
+
     static final String s_closed = PROPERTY_PREFIX + "closed";
 
     static final String s_client = PROPERTY_PREFIX + "client";
 
-    static final String s_close_connections
-            = PROPERTY_PREFIX + "closeConnections";
+    static final String s_unreliable = PROPERTY_PREFIX + "unreliable";
+
+    static final String s_close_connections = PROPERTY_PREFIX
+            + "closeConnections";
 
     static final String s_max_connections = PROPERTY_PREFIX + "maxConnections";
 
-    static final String s_connections_on_demand = PROPERTY_PREFIX + "connectionsOnDemand";
+    static final String s_connections_on_demand = PROPERTY_PREFIX
+            + "connectionsOnDemand";
 
-    static final String s_keep_intra_connections = PROPERTY_PREFIX + "keepIntraConnections";
+    static final String s_keep_intra_connections = PROPERTY_PREFIX
+            + "keepIntraConnections";
 
     static final String s_throttle_steals = PROPERTY_PREFIX + "throttleSteals";
-    static final String s_max_steal_throttle = PROPERTY_PREFIX + "maxStealThrottle";
+
+    static final String s_max_steal_throttle = PROPERTY_PREFIX
+            + "maxStealThrottle";
+
     static final String s_stats = PROPERTY_PREFIX + "stats";
 
     static final String s_detailed_stats = PROPERTY_PREFIX + "detailedStats";
@@ -59,31 +66,33 @@ public interface Config {
 
     static final String s_ft_naive = PROPERTY_PREFIX + "ft.naive";
 
-    static final String s_ft_connectTimeout
-            = PROPERTY_PREFIX + "ft.connectTimeout";
+    static final String s_ft_connectTimeout = PROPERTY_PREFIX
+            + "ft.connectTimeout";
 
     static final String s_masterhost = PROPERTY_PREFIX + "masterHost";
 
     static final String s_delete_time = PROPERTY_PREFIX + "deleteTime";
 
-    static final String s_steal_wait_timeout
-            = PROPERTY_PREFIX + "stealWaitTimeout";
-    
+    static final String s_steal_wait_timeout = PROPERTY_PREFIX
+            + "stealWaitTimeout";
+
     static final String s_delete_cluster_time = PROPERTY_PREFIX
-        + "deleteClusterTime";
+            + "deleteClusterTime";
 
     static final String s_kill_time = PROPERTY_PREFIX + "killTime";
 
     static final String[] sysprops = { s_stats, s_queue_steals,
-        s_detailed_stats, s_client, s_closed, s_asserts,
-        s_ft_naive, s_ft_connectTimeout, s_masterhost, s_in_latency,
-        s_delete_time, s_delete_cluster_time, s_kill_time, s_dump, s_so_delay,
-        s_so_size, s_alg, s_so_lrmc, s_close_connections, s_max_connections,
-        s_so_wait_time, s_steal_wait_timeout, s_connections_on_demand,
-        s_keep_intra_connections, s_throttle_steals, s_max_steal_throttle};
+            s_detailed_stats, s_client, s_closed, s_unreliable, s_asserts,
+            s_ft_naive, s_ft_connectTimeout, s_masterhost, s_in_latency,
+            s_delete_time, s_delete_cluster_time, s_kill_time, s_dump,
+            s_so_delay, s_so_size, s_alg, s_so_lrmc, s_close_connections,
+            s_max_connections, s_so_wait_time, s_steal_wait_timeout,
+            s_connections_on_demand, s_keep_intra_connections,
+            s_throttle_steals, s_max_steal_throttle };
 
     /** Enable or disable asserts. */
-    static final boolean ASSERTS = properties.getBooleanProperty(s_asserts, true);
+    static final boolean ASSERTS = properties.getBooleanProperty(s_asserts,
+            true);
 
     /** True if the node should dump its datastructures during shutdown. */
     static final boolean DUMP = properties.getBooleanProperty(s_dump, false);
@@ -93,16 +102,26 @@ public interface Config {
 
     /** Enable this if Satin should print statistics per machine at the end. */
     static final boolean DETAILED_STATS = properties.getBooleanProperty(
-        s_detailed_stats, false);
+            s_detailed_stats, false);
 
-    /** When set, this instance cannot be master.  */
-    static final boolean CLIENT = properties.getBooleanProperty(s_client, false);
+    /** When set, this instance cannot be master. */
+    static final boolean CLIENT = properties
+            .getBooleanProperty(s_client, false);
 
     /**
-     * Enable this if satin should run with a closed world: no nodes can join
-     * or leave.
+     * Enable this if satin should run with a closed world: no nodes can join or
+     * leave.
      */
-    static final boolean CLOSED = properties.getBooleanProperty(s_closed, false);
+    static final boolean CLOSED = properties
+            .getBooleanProperty(s_closed, false);
+
+    /**
+     * Enable this if satin should use a lesser consistency model for
+     * join/leaves and elections. This breaks lrmc as well as the master
+     * election, so the master must be specified, and lrmc must be disable.
+     */
+    static final boolean UNRELIABLE = properties
+            .getBooleanProperty(s_unreliable, false);
 
     /** Determines master hostname. */
     static final String MASTER_HOST = properties.getProperty(s_masterhost);
@@ -114,42 +133,45 @@ public interface Config {
      * Fault tolerance with restarting crashed jobs, but without the global
      * result table.
      */
-    static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive, false);
+    static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive,
+            false);
 
     /** Enable or disable an optimization for handling delayed messages. */
-    static final boolean HANDLE_MESSAGES_IN_LATENCY = properties.getBooleanProperty(
-            s_in_latency, false);
+    static final boolean HANDLE_MESSAGES_IN_LATENCY = properties
+            .getBooleanProperty(s_in_latency, false);
 
     /**
-     * Timeout for connecting to other nodes.
-     * Properties are always specified in seconds, but this variable contains millis.
+     * Timeout for connecting to other nodes. Properties are always specified in
+     * seconds, but this variable contains millis.
      */
     public static final long CONNECT_TIMEOUT = properties.getLongProperty(
-        s_ft_connectTimeout, 60) * 1000L;
-
-    /** Timeout in seconds for waiting on a steal reply from another node. 
-     * Properties are always specified in seconds, but this variable contains millis.
-     */
-    public static final long STEAL_WAIT_TIMEOUT = properties.getLongProperty(
-        s_steal_wait_timeout, (CONNECT_TIMEOUT/1000L) * 2 + 1) * 1000L;
+            s_ft_connectTimeout, 60) * 1000L;
 
     /**
-     * Maximum time that messages may be buffered for message combining.
-     * If > 0, it is used for combining shared objects invocations.
-     * setting this to 0 disables message combining.
+     * Timeout in seconds for waiting on a steal reply from another node.
+     * Properties are always specified in seconds, but this variable contains
+     * millis.
+     */
+    public static final long STEAL_WAIT_TIMEOUT = properties.getLongProperty(
+            s_steal_wait_timeout, (CONNECT_TIMEOUT / 1000L) * 2 + 1) * 1000L;
+
+    /**
+     * Maximum time that messages may be buffered for message combining. If > 0,
+     * it is used for combining shared objects invocations. setting this to 0
+     * disables message combining.
      */
     static final int SO_MAX_INVOCATION_DELAY = properties.getIntProperty(
             s_so_delay, 0);
 
-    /** 
+    /**
      * The maximum message size if message combining is used for SO Invocations.
      */
     static final int SO_MAX_MESSAGE_SIZE = properties.getIntProperty(s_so_size,
             64 * 1024);
 
     /** Wait time before requesting a shared object. */
-    static final int SO_WAIT_FOR_UPDATES_TIME
-            = properties.getIntProperty(s_so_wait_time, 60) * 1000;
+    static final int SO_WAIT_FOR_UPDATES_TIME = properties.getIntProperty(
+            s_so_wait_time, 60) * 1000;
 
     /** Enable or disable label routing multicast for shared objects . */
     static final boolean LABEL_ROUTING_MCAST = properties.getBooleanProperty(
@@ -166,74 +188,80 @@ public interface Config {
     static final int KILL_TIME = properties.getIntProperty(s_kill_time, 0);
 
     /**
-     * Enable or disable using a seperate queue for work steal requests to 
-     * avoid thread creation.
+     * Enable or disable using a seperate queue for work steal requests to avoid
+     * thread creation.
      */
-    static final boolean QUEUE_STEALS = properties.getBooleanProperty(s_queue_steals,
-            true);
+    static final boolean QUEUE_STEALS = properties.getBooleanProperty(
+            s_queue_steals, true);
 
     /** Close connections after use. Used for scalability. */
     static final boolean CLOSE_CONNECTIONS = properties.getBooleanProperty(
-            s_close_connections, true); 
+            s_close_connections, true);
 
     /** When using CLOSE_CONNECTIONS, keep open MAX_CONNECTIONS connections. */
-    static final int MAX_CONNECTIONS = properties.getIntProperty(s_max_connections,
-            64); 
+    static final int MAX_CONNECTIONS = properties.getIntProperty(
+            s_max_connections, 64);
 
     /** Setup connections as we need them. Used for scalability. */
     static final boolean CONNECTIONS_ON_DEMAND = properties.getBooleanProperty(
-            s_connections_on_demand, true); 
+            s_connections_on_demand, true);
 
     /** Do not steal as fast as we can, but use exponential backoff. */
     static final boolean THROTTLE_STEALS = properties.getBooleanProperty(
-            s_throttle_steals, false); 
-    
+            s_throttle_steals, false);
+
     /** the maximal time to sleep after a failed steal attempt in milliseconds */
-    static final int MAX_STEAL_THROTTLE = properties.getIntProperty(s_max_steal_throttle,
-            256);  
-    
+    static final int MAX_STEAL_THROTTLE = properties.getIntProperty(
+            s_max_steal_throttle, 256);
+
     /**
-     * When CLOSE_CONNECTIONS is set, keep intra-cluster connections.
-     * When set, MAX_CONNECTIONS is ignored.
+     * When CLOSE_CONNECTIONS is set, keep intra-cluster connections. When set,
+     * MAX_CONNECTIONS is ignored.
      */
-    static final boolean KEEP_INTRA_CONNECTIONS = properties.getBooleanProperty(
-            s_keep_intra_connections, true); 
+    static final boolean KEEP_INTRA_CONNECTIONS = properties
+            .getBooleanProperty(s_keep_intra_connections, true);
 
     /** Logger for communication. */
-    public static final Logger commLogger = LoggerFactory.getLogger("ibis.satin.comm");
+    public static final Logger commLogger = LoggerFactory
+            .getLogger("ibis.satin.comm");
 
     /** Logger for connections. */
-    public static final Logger connLogger = LoggerFactory.getLogger("ibis.satin.conn");
+    public static final Logger connLogger = LoggerFactory
+            .getLogger("ibis.satin.conn");
 
     /** Logger for job stealing. */
-    public static final Logger stealLogger = LoggerFactory.getLogger(
-            "ibis.satin.steal");
+    public static final Logger stealLogger = LoggerFactory
+            .getLogger("ibis.satin.steal");
 
     /** Logger for spawns. */
-    public static final Logger spawnLogger = LoggerFactory.getLogger(
-            "ibis.satin.spawn");
+    public static final Logger spawnLogger = LoggerFactory
+            .getLogger("ibis.satin.spawn");
 
     /** Logger for inlets. */
-    public static final Logger inletLogger = LoggerFactory.getLogger(
-            "ibis.satin.inlet");
+    public static final Logger inletLogger = LoggerFactory
+            .getLogger("ibis.satin.inlet");
 
     /** Logger for aborts. */
-    public static final Logger abortLogger = LoggerFactory.getLogger(
-            "ibis.satin.abort");
+    public static final Logger abortLogger = LoggerFactory
+            .getLogger("ibis.satin.abort");
 
     /** Logger for fault tolerance. */
-    public static final Logger ftLogger = LoggerFactory.getLogger("ibis.satin.ft");
+    public static final Logger ftLogger = LoggerFactory
+            .getLogger("ibis.satin.ft");
 
     /** Logger for the global result table. */
-    public static final Logger grtLogger = LoggerFactory.getLogger(
-            "ibis.satin.ft.grt");
+    public static final Logger grtLogger = LoggerFactory
+            .getLogger("ibis.satin.ft.grt");
 
     /** Logger for shared objects. */
-    public static final Logger soLogger = LoggerFactory.getLogger("ibis.satin.so");
+    public static final Logger soLogger = LoggerFactory
+            .getLogger("ibis.satin.so");
 
     /** Logger for shared objects broadcasts. */
-    public static final Logger soBcastLogger = LoggerFactory.getLogger("ibis.satin.so.bcast");
+    public static final Logger soBcastLogger = LoggerFactory
+            .getLogger("ibis.satin.so.bcast");
 
     /** Generic logger. */
-    public static final Logger mainLogger = LoggerFactory.getLogger("ibis.satin");
+    public static final Logger mainLogger = LoggerFactory
+            .getLogger("ibis.satin");
 }
