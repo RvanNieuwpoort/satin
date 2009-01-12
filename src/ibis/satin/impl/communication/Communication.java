@@ -47,21 +47,20 @@ public final class Communication implements Config, Protocol {
     public Communication(Satin s) {
         this.s = s;
 
-        IbisCapabilities ibisProperties = createIbisProperties();
+        IbisCapabilities ibisProperties = createIbisCapabilities();
 
         commLogger.debug("SATIN '" + "- " + "': init ibis");
 
         portType = createSatinPortType();
 
         try {
-            ibis =
-                IbisFactory.createIbis(ibisProperties, null, true,
-                    s.ft.getRegistryEventHandler(), portType,
-                    SharedObjects.getSOPortType());
+            ibis = IbisFactory.createIbis(ibisProperties, null, true, s.ft
+                    .getRegistryEventHandler(), portType, SharedObjects
+                    .getSOPortType());
         } catch (Exception e) {
             s.assertFailed("Could not start ibis: ", e);
         }
-        
+
         IbisIdentifier ident = ibis.identifier();
 
         commLogger.debug("SATIN '" + "- " + "': init ibis DONE, "
@@ -70,9 +69,8 @@ public final class Communication implements Config, Protocol {
         try {
             MessageHandler messageHandler = new MessageHandler(s);
 
-            receivePort =
-                ibis.createReceivePort(portType, "satin port", messageHandler,
-                    s.ft.getReceivePortConnectHandler(), null);
+            receivePort = ibis.createReceivePort(portType, "satin port",
+                messageHandler, s.ft.getReceivePortConnectHandler(), null);
         } catch (Exception e) {
             s.assertFailed("Could not start ibis: ", e);
         }
@@ -105,8 +103,8 @@ public final class Communication implements Config, Protocol {
                     commLogger.warn("continuing with default election");
                 }
                 try {
-                    localHostName =
-                        InetAddress.getLocalHost().getCanonicalHostName();
+                    localHostName = InetAddress.getLocalHost()
+                            .getCanonicalHostName();
                 } catch (Exception e) {
                     commLogger.warn("Could not get local hostname");
                     canonicalMasterHost = null;
@@ -164,22 +162,20 @@ public final class Communication implements Config, Protocol {
         receivePort.enableConnections();
     }
 
-    public IbisCapabilities createIbisProperties() {
-        String elections;
-
-        // elections = IbisCapabilities.ELECTIONS_UNRELIABLE;
-        elections = IbisCapabilities.ELECTIONS_STRICT;
-        
+    public IbisCapabilities createIbisCapabilities() {
         if (CLOSED) {
             return new IbisCapabilities(IbisCapabilities.CLOSED_WORLD,
-                    IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED, elections);
+                    IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
+                    IbisCapabilities.ELECTIONS_STRICT);
+        } else if (UNRELIABLE) {
+            // NOTE: using this breaks both lrmc and the master election.
+            return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
+                    IbisCapabilities.ELECTIONS_UNRELIABLE);
+        } else {
+            return new IbisCapabilities(
+                    IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
+                    IbisCapabilities.ELECTIONS_STRICT);
         }
-        //FIXME: this breaks LRMC!!!
-        // return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
-        //         elections);
-        // Disabled this for now. --Ceriel
-        return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
-                elections);
     }
 
     public PortType createSatinPortType() {
@@ -251,18 +247,22 @@ public final class Communication implements Config, Protocol {
                 for (int i = 0; i < ports.length; i++) {
                     if (ports[i].ibisIdentifier().equals(ident)
                             && ports[i].name().equals(name)) {
-                        connLogger.info("SATIN '" + id
-                                + "': the port was already connected, found it");
+                        connLogger
+                                .info("SATIN '"
+                                        + id
+                                        + "': the port was already connected, found it");
                         return ports[i];
                     }
                 }
-                connLogger.info("SATIN '"
-                        + id
-                        + "': the port was already connected, but could not find it, retry!");
+                connLogger
+                        .info("SATIN '"
+                                + id
+                                + "': the port was already connected, but could not find it, retry!");
                 // return null;
             } catch (IOException e) {
-                connLogger.info("SATIN '" + id
-                        + "': IOException in connect to " + ident + ": " + e, e);
+                connLogger
+                        .info("SATIN '" + id + "': IOException in connect to "
+                                + ident + ": " + e, e);
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e2) {
