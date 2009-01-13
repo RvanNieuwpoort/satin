@@ -90,6 +90,7 @@ final class SOCommunication implements Config, Protocol {
                     soInvocationHandler.setMessageSplitter(new MessageSplitter(
                         props, soReceivePort));
                 }
+                soReceivePort.enableConnections();
                 soReceivePort.enableMessageUpcalls();
             } catch (Exception e) {
                 commLogger.error("SATIN '" + s.ident
