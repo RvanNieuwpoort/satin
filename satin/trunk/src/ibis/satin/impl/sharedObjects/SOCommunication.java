@@ -775,7 +775,7 @@ final class SOCommunication implements Config, Protocol {
             }
         } else {
             soLogger.warn("SATIN '" + s.ident
-                + "': unable to connect to SO receive port ");
+                + "': unable to connect to SO receive port " + name + " on " + ident);
             // We won't broadcast the object to this receiver.
             // This is not really a problem, it will get the object if it
             // needs it. But the node has probably crashed anyway.
