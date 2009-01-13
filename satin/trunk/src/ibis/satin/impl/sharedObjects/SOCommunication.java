@@ -5,6 +5,7 @@
  */
 package ibis.satin.impl.sharedObjects;
 
+import ibis.ipl.IbisConfigurationException;
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.PortType;
 import ibis.ipl.ReadMessage;
@@ -90,7 +91,12 @@ final class SOCommunication implements Config, Protocol {
                     soInvocationHandler.setMessageSplitter(new MessageSplitter(
                         props, soReceivePort));
                 }
-                soReceivePort.enableConnections();
+                try {
+                    soReceivePort.enableConnections();
+                } catch(IbisConfigurationException e) {
+                    // LRMC ibis throws this. TODO: should it do this?
+                    // Ignored.
+                }
                 soReceivePort.enableMessageUpcalls();
             } catch (Exception e) {
                 commLogger.error("SATIN '" + s.ident
