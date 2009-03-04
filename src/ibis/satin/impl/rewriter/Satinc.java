@@ -3162,7 +3162,7 @@ public final class Satinc extends IbiscComponent {
                 if (i >= args.size()) {
                     throw new IllegalArgumentException("-satin needs classlist");
                 }
-                addToSatinSet((String) args.get(i));
+                addToSatinSet(args.get(i));
                 args.remove(i--);
             }
         }

@@ -40,7 +40,7 @@ final class Fib extends ibis.satin.SatinObject implements FibInterface {
         long start = System.currentTimeMillis();
         long result = f.fib(n);
         f.sync();
-        double time = (double) (System.currentTimeMillis() - start) / 1000.0;
+        double time = (System.currentTimeMillis() - start) / 1000.0;
 
         System.out.println("application time fib (" + n + ") took " + time
                 + " s");
