@@ -28,6 +28,32 @@ import org.apache.bcel.generic.DASTORE;
 import org.apache.bcel.generic.ALOAD;
 
 
+
+
+/* Three possible implementations:
+ *
+ * naieve:
+ *  res = spawnableCall();
+ *  sync();
+ *
+ * first load
+ *  res = spawnableCall();
+ *  doStuff();
+ *  sync();
+ *  read(res);
+ *
+ * control flow analysis
+ *
+ * This is the first load implementation. 
+ * It fails with Checkers.play();
+ *  res = spawnableCall();
+ *  if (condition) {
+ *	sync();
+ *	read(res);
+ *  }
+ *  read(res);
+ *
+ */
 class SyncRewriter {
 
 
