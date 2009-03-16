@@ -9,6 +9,7 @@ public interface Analyzer {
 
 
     InstructionHandle[] proposeSyncInsertion(MethodGen methodGen, 
-	    ArrayList<SpawnableMethodCall> spawnableCalls);
+	    ArrayList<SpawnableMethodCall> spawnableCalls) 
+	throws NeverReadException;
 
 }
