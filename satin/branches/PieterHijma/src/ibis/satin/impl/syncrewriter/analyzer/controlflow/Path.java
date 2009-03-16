@@ -1,11 +1,11 @@
-package ibis.satin.impl.syncrewriter;
+package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 import java.util.ArrayList;
 
 import org.apache.bcel.generic.InstructionHandle;
 
 
-class Path extends ArrayList<CodeBlock> {
+public class Path extends ArrayList<CodeBlock> {
 
 
     Path() {
@@ -17,7 +17,7 @@ class Path extends ArrayList<CodeBlock> {
     }
 
 
-    Path getSubPathIncluding(int indexCodeBlock) {
+    public Path getSubPathIncluding(int indexCodeBlock) {
 	for (int i = 0; i < size(); i++) {
 	    if (get(i).getIndex() == indexCodeBlock) {
 		return (Path) subList(0, i + 1);
@@ -27,7 +27,7 @@ class Path extends ArrayList<CodeBlock> {
     }
 
 
-    Path getCommonSubPathFromStart(Path rhs) {
+    public Path getCommonSubPathFromStart(Path rhs) {
 	Path path = new Path();
 
 	/*

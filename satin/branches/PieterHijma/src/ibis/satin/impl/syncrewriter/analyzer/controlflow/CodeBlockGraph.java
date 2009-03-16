@@ -1,4 +1,4 @@
-package ibis.satin.impl.syncrewriter;
+package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 import java.util.ArrayList;
 
@@ -34,16 +34,21 @@ import org.apache.bcel.verifier.structurals.ExceptionHandler;
 */
 
 
-class CodeBlockGraph {
+public class CodeBlockGraph {
 
 
     private Path codeBlocks;
 
 
-    CodeBlockGraph(MethodGen methodGen) {
+    public CodeBlockGraph(MethodGen methodGen) {
 	codeBlocks = constructBasicCodeBlocks(methodGen);
 	setTargetsCodeBlocks();
 	setLevelsCodeBlocks();
+    }
+
+
+    public CodeBlock getCodeBlock(int i) {
+	return codeBlocks.get(i);
     }
 
 
@@ -300,7 +305,7 @@ class CodeBlockGraph {
     }
 
 
-    ArrayList<Path> getEndingPathsFrom(int index) {
+    public ArrayList<Path> getEndingPathsFrom(int index) {
 	ArrayList<Path> paths = 
 	    new ArrayList<Path>();
 
@@ -313,7 +318,7 @@ class CodeBlockGraph {
     }
 
 
-    int getIndexCodeBlock(InstructionHandle ih) {
+    public int getIndexCodeBlock(InstructionHandle ih) {
 	for (CodeBlock codeBlock : codeBlocks) {
 	    if (codeBlock.contains(ih)) {
 		return codeBlock.getIndex();

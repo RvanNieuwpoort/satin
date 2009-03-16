@@ -1,4 +1,4 @@
-package ibis.satin.impl.syncrewriter;
+package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 import java.util.ArrayList;
 
@@ -7,7 +7,7 @@ import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
 
 
-class CodeBlock {
+public class CodeBlock {
 
 
     public static final boolean IGNORE_FIRST_INSTRUCTIONS = true;
@@ -95,8 +95,12 @@ class CodeBlock {
     }
 
 
-    InstructionContext getEnd() {
+    public InstructionContext getEnd() {
 	return end;
+    }
+
+    public ArrayList<InstructionContext> getInstructions() {
+	return instructions;
     }
 
 
