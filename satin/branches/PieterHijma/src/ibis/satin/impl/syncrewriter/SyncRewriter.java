@@ -5,6 +5,8 @@ import java.io.PrintStream;
 
 import java.util.ArrayList;
 
+import java.lang.annotation.Annotation;
+
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.Repository;
@@ -56,9 +58,10 @@ import org.apache.bcel.generic.ALOAD;
  */
 class SyncRewriter {
 
+    static final String[] ANALYZER_NAMES = {"Naive", "EarliestLoad"};
 
     private Debug d;
-    private Analyzer a;
+    private Analyzer analyzer;
 
 
     SyncRewriter() {
@@ -86,8 +89,14 @@ class SyncRewriter {
 	System.out.println("syncrewriter [options] classname...");
 	System.out.println("  example syncrewriter mypackage.MyClass");
 	System.out.println("Options:");
-	System.out.println("  -debug      print debug information");
-	System.out.println("  -help       this information");
+	System.out.printf("  -debug               %s\n", 
+		"print debug information");
+	System.out.printf("  -help                %s\n", 
+		"this information");
+	System.out.printf("  -analyzerinfo        %s\n", 
+		"show info about all analyzers");
+	System.out.printf("  -analyzer analyzer   %s\n", 
+		"load analyzer analyzer");
     }
 
 
@@ -172,53 +181,6 @@ class SyncRewriter {
     }
 
 
-    /* Get the load instruction corresponding to this spawnable call.
-    */
-    InstructionHandle getLoadInstruction(InstructionList il, 
-	    SpawnableMethodCall spawnableCall) throws NeverReadException {
-
-	InstructionHandle ih = spawnableCall.getInstructionHandle();
-	while ((ih = ih.getNext()) != null) {
-	    try {
-		LoadInstruction loadInstruction = 
-		    (LoadInstruction) (ih.getInstruction());
-		if (loadInstruction.getIndex() == 
-			spawnableCall.getResultIndex()) {
-		    return ih;
-		}
-	    }
-	    catch (ClassCastException e) {
-	    }
-	}
-	throw new NeverReadException();
-    }
-
-
-    /* Get the earliest load instruction of the results of the spawnable calls.
-     *
-     * result1 = spawnableCall();
-     * result2 = spawnableCall();
-     *
-     * read(result2); <---- this is returned
-     * read(result1);
-     */
-    InstructionHandle getEarliestLoadInstruction(InstructionList il,
-	    ArrayList<SpawnableMethodCall> spawnableCalls) 
-	throws NeverReadException {
-
-	InstructionHandle earliestLoadInstruction = null;
-	for (SpawnableMethodCall spawnableCall : spawnableCalls) {
-	    InstructionHandle loadInstruction = 
-		getLoadInstruction(il, spawnableCall);
-	    if (earliestLoadInstruction == null || loadInstruction.getPosition()
-		    < earliestLoadInstruction.getPosition()) {
-		earliestLoadInstruction = loadInstruction;
-		    }
-	}
-	return earliestLoadInstruction;
-    }
-
-
     void insertSync(MethodGen methodGen, 
 	    ArrayList<SpawnableMethodCall> spawnableCalls, int indexSync) 
 	throws NeverReadException {
@@ -226,12 +188,7 @@ class SyncRewriter {
 	d.log(5, "trying to insert sync statement(s)\n");
 
 	InstructionHandle[] ihs = 
-	    a.proposeSyncInsertion(methodGen, spawnableCalls);
-
-	/*
-	InstructionHandle earliestLoadInstruction = 
-	    getEarliestLoadInstruction(instructionList, spawnableCalls);
-	    */
+	    analyzer.proposeSyncInsertion(methodGen, spawnableCalls);
 
 	InstructionList instructionList = methodGen.getInstructionList();
 
@@ -451,6 +408,45 @@ class SyncRewriter {
     }
 
 
+    void setAnalyzer(String analyzerName) {
+	try {
+	    analyzer = AnalyzerFactory.createAnalyzer(analyzerName);
+	}
+	catch (ClassNotFoundException e) {
+	    System.out.printf("Loading analyzer failed: %s\n", e.getMessage());
+	    System.exit(1);
+	}
+	catch (InstantiationException e) {
+	    System.out.printf("Loading analyzer failed: %s\n", e.getMessage());
+	    System.exit(1);
+	}
+	catch (IllegalAccessException e) {
+	    System.out.printf("Loading analyzer failed: %s\n", e.getMessage());
+	    System.exit(1);
+	}
+    }
+
+
+    void printAnalyzerInfo() {
+	System.out.printf("Available analyzers:\n");
+	for (String analyzerName : ANALYZER_NAMES) {
+	    try {
+		analyzer = AnalyzerFactory.createAnalyzer(analyzerName);
+		System.out.printf("  %s\n", analyzerName);
+	    }
+	    catch (ClassNotFoundException e) {
+		throw new Error(e);
+	    }
+	    catch (InstantiationException e) {
+		throw new Error(e);
+	    }
+	    catch (IllegalAccessException e) {
+		throw new Error(e);
+	    }
+	}
+    }
+
+
     /* Process the arguments.
      *
      * Everything that doesn't start with a - is considered a class file.
@@ -459,7 +455,9 @@ class SyncRewriter {
     ArrayList<String> processArguments(String[] argv) {
 	ArrayList<String> classNames = new ArrayList<String>();
 
-	for (String arg : argv) {
+	for (int i = 0; i < argv.length; i++) {
+	    String arg = argv[i];
+
 	    if (!arg.startsWith("-")) {
 		classNames.add(arg);
 	    }
@@ -469,6 +467,21 @@ class SyncRewriter {
 	    }
 	    else if (arg.equals("-debug")) {
 		d.turnOn();
+	    }
+	    else if (arg.equals("-analyzer")) {
+		if (i + 1 < argv.length) {
+		    setAnalyzer(argv[i+1]);
+		    i++; // skip the following as argument
+		}
+		else {
+		    System.out.printf("No analyzers specified\n"); 
+		    printUsage();
+		    System.exit(1);
+		}
+	    }
+	    else if (arg.equals("-analyzerinfo")) {
+		printAnalyzerInfo();
+		System.exit(0);
 	    }
 	}
 
@@ -484,7 +497,6 @@ class SyncRewriter {
 
     void start(String[] argv) {
 	ArrayList<String> classNames = processArguments(argv);
-	a = AnalyzerFactory.createAnalyzer("Naieve");
 	evaluateClasses(classNames);
     }
 
