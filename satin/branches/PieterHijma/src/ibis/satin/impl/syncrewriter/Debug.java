@@ -1,4 +1,4 @@
-package ibis.satin.impl.rewriter;
+package ibis.satin.impl.syncrewriter;
 
 
 
