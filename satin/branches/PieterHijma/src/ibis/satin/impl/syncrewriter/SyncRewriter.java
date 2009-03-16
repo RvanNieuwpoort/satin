@@ -58,23 +58,7 @@ class SyncRewriter {
 
 
     private Debug d;
-
-
-    private class SpawnableMethodCall {
-
-
-	private InstructionHandle ih;
-	private InstructionHandle objectReference;
-	private int resultIndex;
-
-
-	private SpawnableMethodCall(InstructionHandle ih, 
-		InstructionHandle objectReference, int resultIndex) {
-	    this.ih = ih;
-	    this.objectReference = objectReference;
-	    this.resultIndex = resultIndex;
-	}
-    }
+    private Analyzer a;
 
 
     SyncRewriter() {
@@ -193,12 +177,13 @@ class SyncRewriter {
     InstructionHandle getLoadInstruction(InstructionList il, 
 	    SpawnableMethodCall spawnableCall) throws NeverReadException {
 
-	InstructionHandle ih = spawnableCall.ih;
+	InstructionHandle ih = spawnableCall.getInstructionHandle();
 	while ((ih = ih.getNext()) != null) {
 	    try {
 		LoadInstruction loadInstruction = 
 		    (LoadInstruction) (ih.getInstruction());
-		if (loadInstruction.getIndex() == spawnableCall.resultIndex) {
+		if (loadInstruction.getIndex() == 
+			spawnableCall.getResultIndex()) {
 		    return ih;
 		}
 	    }
@@ -234,21 +219,30 @@ class SyncRewriter {
     }
 
 
-    void insertSync(InstructionList instructionList, 
+    void insertSync(MethodGen methodGen, 
 	    ArrayList<SpawnableMethodCall> spawnableCalls, int indexSync) 
 	throws NeverReadException {
 
-	d.log(5, "trying to insert a sync statement\n");
+	d.log(5, "trying to insert sync statement(s)\n");
 
+	InstructionHandle[] ihs = 
+	    a.proposeSyncInsertion(methodGen, spawnableCalls);
+
+	/*
 	InstructionHandle earliestLoadInstruction = 
 	    getEarliestLoadInstruction(instructionList, spawnableCalls);
+	    */
 
-	InstructionHandle syncInvoke = 
-	    instructionList.insert(earliestLoadInstruction, 
-		    new INVOKEVIRTUAL(indexSync));
-	instructionList.insert(syncInvoke, 
-		spawnableCalls.get(0).objectReference.getInstruction());
-	d.log(6, "sync statement inserted\n");
+	InstructionList instructionList = methodGen.getInstructionList();
+
+	for (InstructionHandle ih : ihs) {
+	    InstructionHandle syncInvoke = 
+		instructionList.insert(ih, 
+			new INVOKEVIRTUAL(indexSync));
+	    instructionList.insert(syncInvoke, 
+		    spawnableCalls.get(0).getObjectReference().getInstruction());
+	    d.log(6, "sync statement inserted\n");
+	}
     }
 
 
@@ -332,7 +326,7 @@ class SyncRewriter {
 
 	if (spawnableCalls.size() > 0) {
 	    try {
-		insertSync(instructionList, spawnableCalls, indexSync);
+		insertSync(methodGen, spawnableCalls, indexSync);
 	    }
 	    catch (NeverReadException e) {
 		System.out.println(e.getMessage());
@@ -490,6 +484,7 @@ class SyncRewriter {
 
     void start(String[] argv) {
 	ArrayList<String> classNames = processArguments(argv);
+	a = AnalyzerFactory.createAnalyzer("Naieve");
 	evaluateClasses(classNames);
     }
 
