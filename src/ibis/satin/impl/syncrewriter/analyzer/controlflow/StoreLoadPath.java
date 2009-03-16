@@ -1,11 +1,12 @@
-package ibis.satin.impl.syncrewriter;
+package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 
 import org.apache.bcel.generic.InstructionHandle;
 
+import ibis.satin.impl.syncrewriter.NeverReadException;
 
 
-class StoreLoadPath extends Path {
+public class StoreLoadPath extends Path {
 
 
     private InstructionHandle store;
@@ -13,7 +14,7 @@ class StoreLoadPath extends Path {
     private int indexCodeBlockEarliestLoad;
 
 
-    StoreLoadPath(InstructionHandle store, Path path, int resultIndexLoad) throws NeverReadException {
+    public StoreLoadPath(InstructionHandle store, Path path, int resultIndexLoad) throws NeverReadException {
 	super(path);
 
 	this.store = store;
