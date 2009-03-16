@@ -41,7 +41,8 @@ class Debug {
 
 	StringBuilder sb = new StringBuilder("DEBUG: ");
 	for (int i = 0; i < level; i++) sb.append("  ");
-	sb.append(debugMessage);
+	sb.append((debugMessage.replace('\n', ' ')).replace('\t', ' '));
+	sb.append('\n');
 
 	String completeMessage = String.format(sb.toString(), arguments);
 	if (completeMessage.length() > NR_CHARS_ON_LINE) {
