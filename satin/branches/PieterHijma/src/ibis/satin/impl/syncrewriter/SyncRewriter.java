@@ -51,322 +51,12 @@ class SyncRewriter {
     }
 
 
-    /*
-    Method[] getSpawnableMethods(JavaClass spawnableClass) {
-	Method[] spawnableMethods = null;
-
-	JavaClass[] interfaces = spawnableClass.getInterfaces();
-	for (JavaClass javaInterface : interfaces) {
-	    if (isSpawnable(javaInterface)) {
-		spawnableMethods = javaInterface.getMethods();
-	    }
-	}
-
-	if (spawnableMethods == null) {
-	    throw new Error("no methods specified in " +
-		    spawnableClass.getClassName());
-	}
-
-	return spawnableMethods;
+    void dump(JavaClass spawnableClass) {
+	String fileName = spawnableClass.getClassName() + 
+	    (RETAIN_ORIGINAL_CLASSFILES ? "_.class" : ".class");
+	dump(spawnableClass, fileName);
+	d.log(2, "spawnable class dumped in %s\n", fileName);
     }
-    */
-
-
-    /*
-    int getNrWordsArguments(MethodGen methodGen) {
-	int nrWords = 0;
-	for (Type type : methodGen.getArgumentTypes()) {
-	    nrWords += type.getSize();
-	}
-	return nrWords;
-    }
-    */
-
-
-    /*
-    InstructionHandle getArrayReferenceLoadInstruction(InstructionHandle ih,
-	    int nrWords, ConstantPoolGen constantPoolGen) {
-	int count = 10;
-	while (count != 0) {
-	    ih = ih.getPrev();
-	    Instruction instruction = ih.getInstruction();
-	    System.out.println("instructie " + instruction);
-	    if (instruction instanceof StackProducer) {
-		System.out.printf("produceert %d op de stack\n", 
-			instruction.produceStack(constantPoolGen));
-	    }
-	    if (instruction instanceof StackConsumer) {
-		System.out.printf("consumeert %d op de stack\n", 
-			instruction.consumeStack(constantPoolGen));
-	    }
-	    System.out.println();
-	    count--;
-	}
-	return ih;
-    }
-    */
-
-
-    /* Get the corresponding object reference load instruction of instruction
-     * ih.
-     */
-    /*
-    InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
-	    ConstantPoolGen constantPoolGen) {
-	Instruction instruction = ih.getInstruction();
-	int stackConsumption = instruction.consumeStack(constantPoolGen);
-	//stackConsumption--; // we're interested in the first one
-
-	while (stackConsumption != 0) {
-	    ih = ih.getPrev();
-	    Instruction previousInstruction = ih.getInstruction();
-	    //out.println(instruction);
-	    //if (instruction instanceof StackProducer) {
-	    stackConsumption -= 
-		previousInstruction.produceStack(constantPoolGen);
-	    //}
-	    //if (instruction instanceof StackConsumer) {
-	    stackConsumption += 
-		previousInstruction.consumeStack(constantPoolGen);
-	    //}
-	}
-	return ih;
-    }
-    */
-
-
-    /*
-    void insertSync(MethodGen methodGen, 
-	    ArrayList<SpawnableMethodCall> spawnableCalls, int indexSync) 
-	throws NeverReadException {
-
-	d.log(5, "trying to insert sync statement(s)\n");
-
-	InstructionHandle[] ihs = 
-	    analyzer.proposeSyncInsertion(methodGen, spawnableCalls);
-
-	InstructionList instructionList = methodGen.getInstructionList();
-
-	for (InstructionHandle ih : ihs) {
-	    InstructionHandle syncInvoke = 
-		instructionList.insert(ih, 
-			new INVOKEVIRTUAL(indexSync));
-	    instructionList.insert(syncInvoke, 
-		    spawnableCalls.get(0).getObjectReference().getInstruction());
-	    d.log(6, "sync statement inserted\n");
-	}
-    }
-    */
-
-
-    /* Get the local variable index of the result of the spawnable methode
-     * invoke.
-     */
-    /*
-    int getLocalVariableIndexResult(InstructionHandle spawnableMethodInvoke,
-	    InstructionList instructionList, ConstantPoolGen constantPoolGen) {
-
-	InstructionHandle storeInstructionHandle = 
-	    spawnableMethodInvoke.getNext();
-
-	try {
-	    StoreInstruction storeInstruction = (StoreInstruction) 
-		(storeInstructionHandle.getInstruction());
-	    return storeInstruction.getIndex();
-	}
-	catch (ClassCastException e) {
-	}
-	try {
-	    ArrayInstruction arrayStoreInstruction = (ArrayInstruction)
-		((StackConsumer)(storeInstructionHandle.getInstruction()));
-	    InstructionHandle ih  = getObjectReferenceLoadInstruction
-		(storeInstructionHandle, constantPoolGen);
-	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
-	    return objectLoadInstruction.getIndex();
-	}
-	catch (ClassCastException e) {
-	}
-	//out.printf("He, hier gaat het niet goed: %s\n");
-	throw new Error("He, hier gaat het niet goed\n");
-    }
-
-
-    ArrayList<SpawnableMethodCall> getSpawnableCalls(InstructionList il, 
-	    ConstantPoolGen constantPoolGen, MethodGen spawnableMethodGen) {
-
-	int indexSpawnableMethod = 
-	    constantPoolGen.lookupMethodref(spawnableMethodGen);
-	INVOKEVIRTUAL spawnableInvoke = 
-	    new INVOKEVIRTUAL(indexSpawnableMethod);
-
-	ArrayList<SpawnableMethodCall> spawnableCalls = 
-	    new ArrayList<SpawnableMethodCall>();
-
-	InstructionHandle ih = il.getStart();
-	do {
-	    if (ih.getInstruction().equals(spawnableInvoke)) {
-		d.log(5, "the spawnable method is invoked, rewriting\n");
-
-		SpawnableMethodCall spawnableCall = new SpawnableMethodCall(ih, 
-			getObjectReferenceLoadInstruction(ih, constantPoolGen), 
-			getLocalVariableIndexResult(ih, il, 
-			    constantPoolGen));
-		spawnableCalls.add(spawnableCall);
-	    }
-	} while((ih = ih.getNext()) != null);
-
-	return spawnableCalls;
-    }
-
-
-    MethodGen getMethodGen(Method method, ClassGen classGen) {
-	ConstantPoolGen constantPoolGen = classGen.getConstantPool();
-	String className = classGen.getClassName();
-	return new MethodGen(method, className, constantPoolGen);
-    }
-    */
-
-
-    /* Evaluate the method and rewrite in case spawnableMethod is called. 
-    */
-    /*
-    Method evaluateMethod(Method method, Method spawnableMethod, 
-	    ClassGen spawnableClassGen, int indexSync) {
-	d.log(4, "evaluating method %s for spawnable calls\n", method);
-
-	MethodGen methodGen = getMethodGen(method, spawnableClassGen);
-	MethodGen spawnableMethodGen = 
-	    getMethodGen(spawnableMethod, spawnableClassGen);
-	ArrayList<SpawnableMethodCall> spawnableCalls = 
-	    getSpawnableCalls(methodGen.getInstructionList(), 
-		    spawnableClassGen.getConstantPool(), spawnableMethodGen);
-
-	if (spawnableCalls.size() > 0) {
-	    try {
-		insertSync(methodGen, spawnableCalls, indexSync);
-	    }
-	    catch (NeverReadException e) {
-		System.out.println(e.getMessage());
-	    }
-	}
-	return methodGen.getMethod();
-    }
-    */
-
-
-    /* Rewrite the methods that invoke spawnableMethod.
-    */
-    /*
-    void rewriteForSpawnableMethod(ClassGen spawnableClassGen, 
-	    Method spawnableMethod, int indexSync) {
-
-	Method[] methods = spawnableClassGen.getMethods();
-
-	for (Method method : methods) {
-	    Method newMethod = evaluateMethod(method, spawnableMethod, 
-		    spawnableClassGen, indexSync);
-	    spawnableClassGen.removeMethod(method);
-	    spawnableClassGen.addMethod(newMethod);
-	}
-    }
-    */
-
-
-    /*
-    JavaClass rewrite(JavaClass spawnableClass) {
-	d.log(3, "rewriting spawnable class %s\n", 
-	    spawnableClass.getClassName());
-
-	ClassGen spawnableClassGen = new ClassGen(spawnableClass);
-	int indexSync = spawnableClassGen.getConstantPool().addMethodref(
-		spawnableClass.getClassName(), "sync", "()V");
-	Method[] spawnableMethods = getSpawnableMethods(spawnableClass);
-
-	for (Method spawnableMethod : spawnableMethods) {
-	    d.log(4, "spawnable method for which %s %s\n", 
-		    "methods will be rewritten: ", spawnableMethod);
-	    rewriteForSpawnableMethod(spawnableClassGen, spawnableMethod,
-		    indexSync);
-	    d.log(4, "methods spawnableClassGen for spawnable method %s\n", 
-		    spawnableMethod);
-	}
-
-	d.log(3, "spawnable class %s spawnableClassGen\n", 
-		spawnableClass.getClassName());
-	return spawnableClassGen.getJavaClass();
-    }
-    */
-
-
-    /*
-    boolean isSpawnable(JavaClass javaClass) {
-	JavaClass[] interfaces = javaClass.getAllInterfaces();
-
-	for (JavaClass javaInterface : interfaces) {
-	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
-		return true;
-	    }
-	}
-
-	return false;
-    }
-
-
-    String getClassName(String fileName) {
-	return fileName.endsWith(".class") ? 
-	    fileName.substring(0, fileName.length() - 6) : fileName;
-    }
-    */
-
-
-    /* Evaluate a class and rewrite if spawnable.
-    */
-    /*
-    void evaluateClass(JavaClass javaClass) {
-	if (javaClass.isClass() && isSpawnable(javaClass)) {
-	    //d.log(1, "%s is a spawnable class\n", className);
-
-	    backup(javaClass);
-	    JavaClass rewritten = rewrite(javaClass);
-	    dump(rewritten);
-	}
-	else {
-	    // nothing
-	    //d.log(1, "%s not a spawnable class, not rewritten\n", className);
-	}
-    }
-    */
-
-
-    /* Evaluate classes and rewrite the spawnable classes.
-    */ 
-    /*
-    void evaluateClasses(ArrayList<String> classOrFileNames) {
-	for (String classOrFileName : classOrFileNames) {
-	    String className = getClassName(classOrFileName);
-	    d.log(0, "evaluating class %s\n", className);
-
-	    evaluateClass(getClassFromName(className));
-
-	    d.log(0, "class %s evaluated\n\n", className);
-	}
-    }
-    */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     void dump(JavaClass javaClass, String name) {
@@ -376,14 +66,6 @@ class SyncRewriter {
 	catch (Exception e) {
 	    e.printStackTrace();
 	}
-    }
-
-
-    void dump(JavaClass spawnableClass) {
-	String fileName = spawnableClass.getClassName() + 
-	    (RETAIN_ORIGINAL_CLASSFILES ? "_.class" : ".class");
-	dump(spawnableClass, fileName);
-	d.log(2, "spawnable class dumped in %s\n", fileName);
     }
 
 
@@ -413,12 +95,24 @@ class SyncRewriter {
     }
 
 
+    void rewrite(String className) throws NoSpawnableClassException {
+	JavaClass javaClass = getClassFromName(className);
+	SpawnableClass spawnableClass = 
+	    new SpawnableClass(javaClass, new Debug(d.turnedOn(), 2));
+	d.log(0, "%s is a spawnable class\n", className);
+	d.log(1, "backing up spawnable class %s\n", className);
+	backup(javaClass);
+	d.log(1, "rewriting %s\n", className);
+	spawnableClass.rewrite(analyzer);
+	d.log(1, "dumping %s\n", className);
+	dump(spawnableClass.getJavaClass());
+    }
+
+
     String getClassName(String fileName) {
 	return fileName.endsWith(".class") ? 
 	    fileName.substring(0, fileName.length() - 6) : fileName;
     }
-
-
 
 
     void printAnalyzerInfo() {
@@ -524,21 +218,12 @@ class SyncRewriter {
 	if (analyzer == null) setAnalyzer("ControlFlow");
 
 	for (String classFileName : classFileNames) {
+	    String className = getClassName(classFileName);
 	    try {
-		String className = getClassName(classFileName);
-		JavaClass javaClass = getClassFromName(className);
-		SpawnableClass spawnableClass = 
-		    new SpawnableClass(javaClass, new Debug(d.turnedOn(), 2));
-		d.log(0, "%s is a spawnable class\n", className);
-		d.log(1, "backing up spawnable class %s\n", className);
-		backup(javaClass);
-		d.log(1, "rewriting %s\n", className);
-		spawnableClass.rewrite(analyzer);
-		d.log(1, "dumping %s\n", className);
-		dump(spawnableClass.getJavaClass());
+		rewrite(className);
 	    }
 	    catch (NoSpawnableClassException e) {
-		d.log(0, "%s is not a spawnable class\n", getClassName(classFileName));
+		d.log(0, "%s is not a spawnable class\n", className);
 	    }
 	}
     }

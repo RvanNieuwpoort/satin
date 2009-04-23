@@ -14,7 +14,8 @@ public class StoreLoadPath extends Path {
     private int indexCodeBlockEarliestLoad;
 
 
-    public StoreLoadPath(InstructionHandle store, Path path, int resultIndexLoad) throws NeverReadException {
+    public StoreLoadPath(InstructionHandle store, Path path, int resultIndexLoad)
+	throws NeverReadException {
 	super(path);
 
 	this.store = store;

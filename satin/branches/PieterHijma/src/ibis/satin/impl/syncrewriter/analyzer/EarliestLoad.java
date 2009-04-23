@@ -17,19 +17,21 @@ import org.apache.bcel.generic.MethodGen;
 public class EarliestLoad implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod) throws NeverReadException {
+    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod)
+	throws NeverReadException {
 
-	    ArrayList<SpawnableMethodCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
+	ArrayList<SpawnableMethodCall> spawnableCalls = 
+	    spawnableMethod.getSpawnableCalls();
 
-	    InstructionHandle[] instructionHandles = new InstructionHandle[1];
+	InstructionHandle[] instructionHandles = new InstructionHandle[1];
 
-	    InstructionList instructionList = spawnableMethod.getInstructionList();
+	InstructionList instructionList = spawnableMethod.getInstructionList();
 
-	    instructionHandles[0] = 
-		getEarliestLoadInstruction(instructionList, spawnableCalls);
+	instructionHandles[0] = 
+	    getEarliestLoadInstruction(instructionList, spawnableCalls);
 
-	    return instructionHandles;
-	}
+	return instructionHandles;
+    }
 
 
 
