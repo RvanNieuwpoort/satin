@@ -147,11 +147,19 @@ public class ControlFlow implements Analyzer {
 		codeBlockGraph.getIndexCodeBlock(spawnableCalls.get(i).getInstructionHandle());
 	    ArrayList<Path> endingPaths = 
 		codeBlockGraph.getEndingPathsFrom(indexCodeBlock);
+	    System.out.println("Ending paths:");
+	    System.out.println(endingPaths);
+
 	    ArrayList<StoreLoadPath> storeLoadPaths = getStoreLoadPaths(endingPaths, spawnableCalls.get(i));
+	    System.out.println("StoreLoadPaths:");
+	    System.out.println(storeLoadPaths);
+
 	    Path finalPath = getCommonSubPathFromStart(storeLoadPaths);
 	    spawnToStorePaths[i] = finalPath;
 	}
 
 	return spawnToStorePaths;
     }
+
+
 }
