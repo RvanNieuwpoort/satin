@@ -8,8 +8,7 @@ import org.apache.bcel.generic.MethodGen;
 public interface Analyzer {
 
 
-    InstructionHandle[] proposeSyncInsertion(MethodGen methodGen, 
-	    ArrayList<SpawnableMethodCall> spawnableCalls) 
+    InstructionHandle[] proposeSyncInsertion(SpawnableMethod method) 
 	throws NeverReadException;
 
 }

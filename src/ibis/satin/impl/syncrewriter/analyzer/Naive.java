@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableMethodCall;
+import ibis.satin.impl.syncrewriter.SpawnableMethod;
+import ibis.satin.impl.syncrewriter.NeverReadException;
 
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
@@ -13,7 +15,8 @@ import org.apache.bcel.generic.MethodGen;
 public class Naive implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(MethodGen methodGen, ArrayList<SpawnableMethodCall> spawnableCalls) {
+    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod) throws NeverReadException {
+	ArrayList<SpawnableMethodCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
 	InstructionHandle[] instructionHandles = 
 	    new InstructionHandle[spawnableCalls.size()];
 

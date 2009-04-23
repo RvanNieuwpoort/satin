@@ -17,6 +17,11 @@ public class Path extends ArrayList<CodeBlock> {
     }
 
 
+    public CodeBlock getLastCodeBlock() {
+	return get(size() - 1);
+    }
+
+
     public Path getSubPathIncluding(int indexCodeBlock) {
 	for (int i = 0; i < size(); i++) {
 	    if (get(i).getIndex() == indexCodeBlock) {
