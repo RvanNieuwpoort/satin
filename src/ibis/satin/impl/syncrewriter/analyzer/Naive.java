@@ -15,8 +15,10 @@ import org.apache.bcel.generic.MethodGen;
 public class Naive implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod) throws NeverReadException {
-	ArrayList<SpawnableMethodCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
+    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod)
+	throws NeverReadException {
+	ArrayList<SpawnableMethodCall> spawnableCalls = 
+	    spawnableMethod.getSpawnableCalls();
 	InstructionHandle[] instructionHandles = 
 	    new InstructionHandle[spawnableCalls.size()];
 

@@ -12,28 +12,6 @@ import org.apache.bcel.verifier.structurals.ControlFlowGraph;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 import org.apache.bcel.verifier.structurals.ExceptionHandler;
 
-/*
-   import java.io.PrintStream;
-
-
-   import org.apache.bcel.classfile.JavaClass;
-   import org.apache.bcel.classfile.Method;
-   import org.apache.bcel.Repository;
-
-   import org.apache.bcel.generic.ConstantPoolGen;
-   import org.apache.bcel.generic.INVOKEVIRTUAL;
-   import org.apache.bcel.generic.InstructionTargeter;
-   import org.apache.bcel.generic.Instruction;
-   import org.apache.bcel.generic.LocalVariableInstruction;
-   import org.apache.bcel.generic.StoreInstruction;
-   import org.apache.bcel.generic.LoadInstruction;
-   import org.apache.bcel.generic.Type;
-   import org.apache.bcel.generic.StackConsumer;
-   import org.apache.bcel.generic.StackProducer;
-
-*/
-
-
 public class CodeBlockGraph {
 
 
@@ -327,56 +305,5 @@ public class CodeBlockGraph {
 	throw new Error("getIndexCodeBlock(), can't find instruction");
     }
 }
-
-
-/*
-   void buildCodeBlock(int indexCurrentCodeBlock, 
-   boolean[] codeBlocksFinished) {
-   CodeBlock currentCodeBlock = codeBlocks.get(indexCurrentCodeBlock);
-
-   setTargets(currentCodeBlock);
-
-
-   int currentLevel = codeBlocks.get(i).getLevel();
-   CodeBlock nextCodeBlock = i < codeBlocks.size() - 1 ? 
-   codeBlocks.get(i + 1) : null;
-   */
-
-
-
-
-/*
-
-
-   {
-
-   InstructionContext[] successors = 
-   currentCodeBlock.getEnd().getSuccessors();
-
-
-   if ((successors.length == 1) && 
-   (successors[0].equals(nextCodeBlock.getStart()))) 
-   {
-   nextCodeBlock.setLevel(currentLevel);
-   currentCodeBlock.setTarget1Index(i + 1);
-   codeBlocksFinished[i] = true;
-   }
-   else if (successors.length == 2) {
-   int index1 = findIndex(successors[0]);
-   int index2 = findIndex(successors[1]);
-   currentCodeBlock.setTarget1Index(index1);
-   currentCodeBlock.setTarget2Index(index2);
-
-   CodeBlock target1 = codeBlocks.get(index1);
-   CodeBlock target2 = codeBlocks.get(index2);
-
-   target1.setLevel(currentLevel + 1);
-   target2.setLevel(currentLevel + 1);
-
-// als block1 block2 als target heeft, dan is block1 van het
-// level van currentBlock.
-   }
-   */
-
 
 
