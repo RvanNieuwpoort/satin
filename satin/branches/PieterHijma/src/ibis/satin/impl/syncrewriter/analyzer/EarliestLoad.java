@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableMethodCall;
+import ibis.satin.impl.syncrewriter.SpawnableMethod;
 
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
@@ -16,12 +17,13 @@ import org.apache.bcel.generic.MethodGen;
 public class EarliestLoad implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(MethodGen methodGen, 
-	    ArrayList<SpawnableMethodCall> spawnableCalls) throws 
-	NeverReadException {
+    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod) throws NeverReadException {
+
+	    ArrayList<SpawnableMethodCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
+
 	    InstructionHandle[] instructionHandles = new InstructionHandle[1];
 
-	    InstructionList instructionList = methodGen.getInstructionList();
+	    InstructionList instructionList = spawnableMethod.getInstructionList();
 
 	    instructionHandles[0] = 
 		getEarliestLoadInstruction(instructionList, spawnableCalls);

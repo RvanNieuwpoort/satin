@@ -31,34 +31,14 @@ import org.apache.bcel.generic.ALOAD;
 
 
 
-
-/* Three possible implementations:
- *
- * naieve:
- *  res = spawnableCall();
- *  sync();
- *
- * first load
- *  res = spawnableCall();
- *  doStuff();
- *  sync();
- *  read(res);
- *
- * control flow analysis
- *
- * This is the first load implementation. 
- * It fails with Checkers.play();
- *  res = spawnableCall();
- *  if (condition) {
- *	sync();
- *	read(res);
- *  }
- *  read(res);
- *
- */
 class SyncRewriter {
 
-    static final String[] ANALYZER_NAMES = {"Naive", "EarliestLoad"};
+
+    static final String[] ANALYZER_NAMES = {"Naive", "EarliestLoad", 
+	"ControlFlow"};
+    static final boolean RETAIN_ORIGINAL_CLASSFILES = true;
+    static final boolean BACKUP_ORIGINAL_CLASSFILES = true;
+
 
     private Debug d;
     private Analyzer analyzer;
@@ -67,47 +47,18 @@ class SyncRewriter {
     SyncRewriter() {
 	d = new Debug();
 	d.turnOn();
+	analyzer = null;
     }
 
 
-    JavaClass getClassFromName(String fileName) {
-	String className = fileName.endsWith(".class") ? 
-	    fileName.substring(0, fileName.length() - 6) : fileName;
-	JavaClass javaClass = Repository.lookupClass(className);
-
-	if (javaClass == null) {
-	    System.out.println("class " + className + " not found");
-	    System.exit(1);
-	}
-
-	return javaClass;
-    }
-
-
-    void printUsage() {
-	System.out.println("Usage:");
-	System.out.println("syncrewriter [options] classname...");
-	System.out.println("  example syncrewriter mypackage.MyClass");
-	System.out.println("Options:");
-	System.out.printf("  -debug               %s\n", 
-		"print debug information");
-	System.out.printf("  -help                %s\n", 
-		"this information");
-	System.out.printf("  -analyzerinfo        %s\n", 
-		"show info about all analyzers");
-	System.out.printf("  -analyzer analyzer   %s\n", 
-		"load analyzer analyzer");
-    }
-
-
+    /*
     Method[] getSpawnableMethods(JavaClass spawnableClass) {
-	Method[] spawnableMethods = null;/*new Method[0];*/
+	Method[] spawnableMethods = null;
 
 	JavaClass[] interfaces = spawnableClass.getInterfaces();
 	for (JavaClass javaInterface : interfaces) {
 	    if (isSpawnable(javaInterface)) {
 		spawnableMethods = javaInterface.getMethods();
-		// it is certain that only one interface is spawnable
 	    }
 	}
 
@@ -118,6 +69,7 @@ class SyncRewriter {
 
 	return spawnableMethods;
     }
+    */
 
 
     /*
@@ -158,6 +110,7 @@ class SyncRewriter {
     /* Get the corresponding object reference load instruction of instruction
      * ih.
      */
+    /*
     InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
 	    ConstantPoolGen constantPoolGen) {
 	Instruction instruction = ih.getInstruction();
@@ -179,8 +132,10 @@ class SyncRewriter {
 	}
 	return ih;
     }
+    */
 
 
+    /*
     void insertSync(MethodGen methodGen, 
 	    ArrayList<SpawnableMethodCall> spawnableCalls, int indexSync) 
 	throws NeverReadException {
@@ -201,11 +156,13 @@ class SyncRewriter {
 	    d.log(6, "sync statement inserted\n");
 	}
     }
+    */
 
 
     /* Get the local variable index of the result of the spawnable methode
      * invoke.
      */
+    /*
     int getLocalVariableIndexResult(InstructionHandle spawnableMethodInvoke,
 	    InstructionList instructionList, ConstantPoolGen constantPoolGen) {
 
@@ -262,24 +219,27 @@ class SyncRewriter {
     }
 
 
+    MethodGen getMethodGen(Method method, ClassGen classGen) {
+	ConstantPoolGen constantPoolGen = classGen.getConstantPool();
+	String className = classGen.getClassName();
+	return new MethodGen(method, className, constantPoolGen);
+    }
+    */
+
+
     /* Evaluate the method and rewrite in case spawnableMethod is called. 
     */
+    /*
     Method evaluateMethod(Method method, Method spawnableMethod, 
-	    ClassGen newSpawnableClass, int indexSync) {
-
+	    ClassGen spawnableClassGen, int indexSync) {
 	d.log(4, "evaluating method %s for spawnable calls\n", method);
 
-	ConstantPoolGen constantPoolGen = newSpawnableClass.getConstantPool();
-	MethodGen methodGen = new MethodGen(method, 
-		newSpawnableClass.getClassName(), constantPoolGen);
-	MethodGen spawnableMethodGen = new MethodGen(spawnableMethod, 
-		newSpawnableClass.getClassName(), constantPoolGen);
-
-	InstructionList instructionList = methodGen.getInstructionList();
-
+	MethodGen methodGen = getMethodGen(method, spawnableClassGen);
+	MethodGen spawnableMethodGen = 
+	    getMethodGen(spawnableMethod, spawnableClassGen);
 	ArrayList<SpawnableMethodCall> spawnableCalls = 
-	    getSpawnableCalls(instructionList, constantPoolGen, 
-		    spawnableMethodGen);
+	    getSpawnableCalls(methodGen.getInstructionList(), 
+		    spawnableClassGen.getConstantPool(), spawnableMethodGen);
 
 	if (spawnableCalls.size() > 0) {
 	    try {
@@ -291,82 +251,54 @@ class SyncRewriter {
 	}
 	return methodGen.getMethod();
     }
+    */
 
 
     /* Rewrite the methods that invoke spawnableMethod.
     */
-    void rewriteForSpawnableMethod(ClassGen newSpawnableClass, 
+    /*
+    void rewriteForSpawnableMethod(ClassGen spawnableClassGen, 
 	    Method spawnableMethod, int indexSync) {
 
-	Method[] methods = newSpawnableClass.getMethods();
+	Method[] methods = spawnableClassGen.getMethods();
 
 	for (Method method : methods) {
 	    Method newMethod = evaluateMethod(method, spawnableMethod, 
-		    newSpawnableClass, indexSync);
-	    newSpawnableClass.removeMethod(method);
-	    newSpawnableClass.addMethod(newMethod);
+		    spawnableClassGen, indexSync);
+	    spawnableClassGen.removeMethod(method);
+	    spawnableClassGen.addMethod(newMethod);
 	}
     }
+    */
 
 
-    void dumpNewSpawnableClass(ClassGen newSpawnableClass) {
-	JavaClass c = newSpawnableClass.getJavaClass();
-	//c.setConstantPool
-	//	(newSpawnableClass.getConstantPool().getFinalConstantPool());
-	dump(c, c.getClassName() + "_.class");
-	d.log(3, "spawnable class dumped in %s_.class\n", c.getClassName());
-    }
+    /*
+    JavaClass rewrite(JavaClass spawnableClass) {
+	d.log(3, "rewriting spawnable class %s\n", 
+	    spawnableClass.getClassName());
 
-
-    void dump(JavaClass javaClass, String name) {
-	try {
-	    javaClass.dump(name);
-	}
-	catch (Exception e) {
-	    e.printStackTrace();
-	}
-    }
-
-
-    void backup(JavaClass javaClass) {
-	String name = javaClass.getClassName() + ".class";// hier _ 
-	//dump(javaClass, name);
-	//d.log(3, "class %s backed up in %s\n", 
-	d.log(3, "class %s remains in %s\n", javaClass.getClassName(), name);
-    }
-
-
-    void rewriteSpawnableClass(JavaClass spawnableClass) {
-	d.log(2, "rewriting spawnable class %s\n", 
-		spawnableClass.getClassName());
-
-	backup(spawnableClass);
-
-	//CONSTANTPOOL/////////////////////////////////////////////////////////
-	//out.println(spawnableClass.getConstantPool());
-	///////////////////////////////////////////////////////////////////////
-
-	ClassGen newSpawnableClass = new ClassGen(spawnableClass);
-	int indexSync = newSpawnableClass.getConstantPool().addMethodref(
+	ClassGen spawnableClassGen = new ClassGen(spawnableClass);
+	int indexSync = spawnableClassGen.getConstantPool().addMethodref(
 		spawnableClass.getClassName(), "sync", "()V");
 	Method[] spawnableMethods = getSpawnableMethods(spawnableClass);
 
 	for (Method spawnableMethod : spawnableMethods) {
-	    d.log(3, "spawnable method for which %s %s\n", 
-		    "methods will be rewritten: ", 
-		    spawnableMethod);
-	    rewriteForSpawnableMethod(newSpawnableClass, spawnableMethod,
+	    d.log(4, "spawnable method for which %s %s\n", 
+		    "methods will be rewritten: ", spawnableMethod);
+	    rewriteForSpawnableMethod(spawnableClassGen, spawnableMethod,
 		    indexSync);
-	    d.log(3, "methods rewritten for spawnable method %s\n", 
+	    d.log(4, "methods spawnableClassGen for spawnable method %s\n", 
 		    spawnableMethod);
 	}
 
-	dumpNewSpawnableClass(newSpawnableClass);
-	d.log(2, "spawnable class %s rewritten\n", 
+	d.log(3, "spawnable class %s spawnableClassGen\n", 
 		spawnableClass.getClassName());
+	return spawnableClassGen.getJavaClass();
     }
+    */
 
 
+    /*
     boolean isSpawnable(JavaClass javaClass) {
 	JavaClass[] interfaces = javaClass.getAllInterfaces();
 
@@ -380,30 +312,131 @@ class SyncRewriter {
     }
 
 
+    String getClassName(String fileName) {
+	return fileName.endsWith(".class") ? 
+	    fileName.substring(0, fileName.length() - 6) : fileName;
+    }
+    */
+
+
     /* Evaluate a class and rewrite if spawnable.
     */
-    void evaluateClass(String className) {
-	d.log(0, "evaluating class %s\n", className);
-
-	JavaClass javaClass = getClassFromName(className);
-
+    /*
+    void evaluateClass(JavaClass javaClass) {
 	if (javaClass.isClass() && isSpawnable(javaClass)) {
-	    d.log(1, "%s is a spawnable class\n", className);
-	    rewriteSpawnableClass(javaClass);
+	    //d.log(1, "%s is a spawnable class\n", className);
+
+	    backup(javaClass);
+	    JavaClass rewritten = rewrite(javaClass);
+	    dump(rewritten);
 	}
 	else {
 	    // nothing
-	    d.log(1, "%s not a spawnable class, not rewritten\n", className);
+	    //d.log(1, "%s not a spawnable class, not rewritten\n", className);
 	}
-	d.log(0, "class %s evaluated\n\n", className);
     }
+    */
 
 
     /* Evaluate classes and rewrite the spawnable classes.
     */ 
-    void evaluateClasses(ArrayList<String> classNames) {
-	for (String className : classNames) {
-	    evaluateClass(className);
+    /*
+    void evaluateClasses(ArrayList<String> classOrFileNames) {
+	for (String classOrFileName : classOrFileNames) {
+	    String className = getClassName(classOrFileName);
+	    d.log(0, "evaluating class %s\n", className);
+
+	    evaluateClass(getClassFromName(className));
+
+	    d.log(0, "class %s evaluated\n\n", className);
+	}
+    }
+    */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    void dump(JavaClass javaClass, String name) {
+	try {
+	    javaClass.dump(name);
+	}
+	catch (Exception e) {
+	    e.printStackTrace();
+	}
+    }
+
+
+    void dump(JavaClass spawnableClass) {
+	String fileName = spawnableClass.getClassName() + 
+	    (RETAIN_ORIGINAL_CLASSFILES ? "_.class" : ".class");
+	dump(spawnableClass, fileName);
+	d.log(2, "spawnable class dumped in %s\n", fileName);
+    }
+
+
+    void backup(JavaClass javaClass) {
+	if (RETAIN_ORIGINAL_CLASSFILES) {
+	    String fileName = javaClass.getClassName() + ".class";
+	    d.log(2, "class %s remains in file %s\n", 
+		    javaClass.getClassName(), fileName);
+	}
+	else if (BACKUP_ORIGINAL_CLASSFILES) {
+	    String fileName = javaClass.getClassName() + "_.class";
+	    dump(javaClass, fileName);
+	    d.log(2, "class %s backed up in %s\n", fileName);
+	}
+    }
+
+
+    JavaClass getClassFromName(String className) {
+	JavaClass javaClass = Repository.lookupClass(className);
+
+	if (javaClass == null) {
+	    System.out.println("class " + className + " not found");
+	    System.exit(1);
+	}
+
+	return javaClass;
+    }
+
+
+    String getClassName(String fileName) {
+	return fileName.endsWith(".class") ? 
+	    fileName.substring(0, fileName.length() - 6) : fileName;
+    }
+
+
+
+
+    void printAnalyzerInfo() {
+	System.out.printf("Available analyzers:\n");
+	for (String analyzerName : ANALYZER_NAMES) {
+	    try {
+		analyzer = AnalyzerFactory.createAnalyzer(analyzerName);
+		System.out.printf("  %s\n", analyzerName);
+	    }
+	    catch (ClassNotFoundException e) {
+		throw new Error(e);
+	    }
+	    catch (InstantiationException e) {
+		throw new Error(e);
+	    }
+	    catch (IllegalAccessException e) {
+		throw new Error(e);
+	    }
 	}
     }
 
@@ -427,31 +460,22 @@ class SyncRewriter {
     }
 
 
-    void printAnalyzerInfo() {
-	System.out.printf("Available analyzers:\n");
-	for (String analyzerName : ANALYZER_NAMES) {
-	    try {
-		analyzer = AnalyzerFactory.createAnalyzer(analyzerName);
-		System.out.printf("  %s\n", analyzerName);
-	    }
-	    catch (ClassNotFoundException e) {
-		throw new Error(e);
-	    }
-	    catch (InstantiationException e) {
-		throw new Error(e);
-	    }
-	    catch (IllegalAccessException e) {
-		throw new Error(e);
-	    }
-	}
+    void printUsage() {
+	System.out.println("Usage:");
+	System.out.println("syncrewriter [options] classname...");
+	System.out.println("  example syncrewriter mypackage.MyClass");
+	System.out.println("Options:");
+	System.out.printf("  -debug               %s\n", 
+		"print debug information");
+	System.out.printf("  -help                %s\n", 
+		"this information");
+	System.out.printf("  -analyzerinfo        %s\n", 
+		"show info about all analyzers");
+	System.out.printf("  -analyzer analyzer   %s\n", 
+		"load analyzer analyzer");
     }
 
 
-    /* Process the arguments.
-     *
-     * Everything that doesn't start with a - is considered a class file.
-     * A class file can end with .class or not.
-     */
     ArrayList<String> processArguments(String[] argv) {
 	ArrayList<String> classNames = new ArrayList<String>();
 
@@ -496,8 +520,27 @@ class SyncRewriter {
 
 
     void start(String[] argv) {
-	ArrayList<String> classNames = processArguments(argv);
-	evaluateClasses(classNames);
+	ArrayList<String> classFileNames = processArguments(argv);
+	if (analyzer == null) setAnalyzer("ControlFlow");
+
+	for (String classFileName : classFileNames) {
+	    try {
+		String className = getClassName(classFileName);
+		JavaClass javaClass = getClassFromName(className);
+		SpawnableClass spawnableClass = 
+		    new SpawnableClass(javaClass, new Debug(d.turnedOn(), 2));
+		d.log(0, "%s is a spawnable class\n", className);
+		d.log(1, "backing up spawnable class %s\n", className);
+		backup(javaClass);
+		d.log(1, "rewriting %s\n", className);
+		spawnableClass.rewrite(analyzer);
+		d.log(1, "dumping %s\n", className);
+		dump(spawnableClass.getJavaClass());
+	    }
+	    catch (NoSpawnableClassException e) {
+		d.log(0, "%s is not a spawnable class\n", getClassName(classFileName));
+	    }
+	}
     }
 
 
