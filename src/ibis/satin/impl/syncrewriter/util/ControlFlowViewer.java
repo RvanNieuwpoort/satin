@@ -3,6 +3,8 @@ package ibis.satin.impl.syncrewriter.util;
 import ibis.satin.impl.syncrewriter.analyzer.controlflow.*;
 
 import java.io.PrintStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 import java.util.ArrayList;
 
@@ -36,14 +38,9 @@ class ControlFlowViewer {
 
     public static final int NR_CHARS_ON_LINE = 80;
 
-    PrintStream out;
 
 
-    ControlFlowViewer() {
-	out = System.out;
-    }
-
-
+    /*
     private JavaClass getClassFromName(String fileName) {
 	String className = fileName.endsWith(".class") ? 
 	    fileName.substring(0, fileName.length() - 6) : fileName;
@@ -56,18 +53,19 @@ class ControlFlowViewer {
 
 	return javaClass;
     }
+    */
 
 
     void printUsage() {
-	out.println("Usage:");
-	out.println("classviewer [options] classname...");
-	out.println("  example classviewer mypackage.MyClass");
-	out.println("Options:");
-	out.println("  -help       this information");
+	System.out.println("Usage:");
+	System.out.println("classviewer [options] classname...");
+	System.out.println("  example classviewer mypackage.MyClass");
+	System.out.println("Options:");
+	System.out.println("  -help       this information");
     }
 
 
-    void print(int level, String string, Object... arguments) {
+    void print(PrintStream out, int level, String string, Object... arguments) {
 	if (level < 0) throw new Error("print(), level < 0");
 
 	StringBuilder sb = new StringBuilder("INFO: ");
@@ -77,7 +75,7 @@ class ControlFlowViewer {
 	String completeMessage = String.format(sb.toString(), arguments);
 	if (completeMessage.length() > NR_CHARS_ON_LINE) {
 	    out.print(completeMessage.substring(0, NR_CHARS_ON_LINE));
-	    print(level + 1, completeMessage.substring(NR_CHARS_ON_LINE, 
+	    print(out, level + 1, completeMessage.substring(NR_CHARS_ON_LINE, 
 			completeMessage.length()));
 	}
 	else {
@@ -86,7 +84,7 @@ class ControlFlowViewer {
     }
 
 
-    void show(InstructionContext context, int level) {
+    void show(PrintStream out, InstructionContext context, int level) {
 	if (level == 20) {
 	    return;
 	}
@@ -98,7 +96,7 @@ class ControlFlowViewer {
 	InstructionContext[] successors = context.getSuccessors();
 	for (InstructionContext successor : successors) {
 	    if (successors.length == 0) out.println("HOERA");
-	    show(successor, successors.length > 1 ? level + 1 : level);
+	    show(out, successor, successors.length > 1 ? level + 1 : level);
 	}
     }
 
@@ -214,7 +212,7 @@ class ControlFlowViewer {
     }
 
 
-    void showControlFlow4(JavaClass javaClass, Method method) {
+    void showControlFlow4(PrintStream out, JavaClass javaClass, Method method) {
 	out.println("Control flow:");
 	MethodGen methodGen = new MethodGen(method, javaClass.getClassName(), 
 		new ConstantPoolGen(javaClass.getConstantPool()));
@@ -224,9 +222,11 @@ class ControlFlowViewer {
 
 
 	
+	/*
 	out.println("Ending paths:");
 	ArrayList<Path> paths = codeBlockGraph.getEndingPathsFrom(0);
 	printPaths(paths);
+	*/
     }
 
 
@@ -513,17 +513,17 @@ class ControlFlowViewer {
     */
 
 
-    void showClass(JavaClass javaClass) {
-	print(0, "constantpool:\n");
+    void showClass(PrintStream out, JavaClass javaClass) {
+	print(out, 0, "constantpool:\n");
 	//out.println(javaClass.getConstantPool());
 
 	Method[] methods = javaClass.getMethods();
 
 	for (Method method : methods) {
-	    print(0, "%s\n", method);
+	    print(out, 0, "%s\n", method);
 	    //if (method.getCode() != null) out.println(method.getCode());
 	    //out.println();
-	    showControlFlow4(javaClass, method);
+	    showControlFlow4(out, javaClass, method);
 
 	}
     }
@@ -542,20 +542,55 @@ class ControlFlowViewer {
     }
 
 
-    void showClass(String className) {
-	print(0, "showing class %s\n", className);
+    JavaClass getClassFromName(String className) {
+	JavaClass javaClass = Repository.lookupClass(className);
 
-	JavaClass javaClass = getClassFromName(className);
+	if (javaClass == null) {
+	    System.out.println("class " + className + " not found");
+	    System.exit(1);
+	}
 
-	if (javaClass.isClass() && isSpawnable(javaClass)) {
-	    print(1, "%s is a spawnable class\n\n", className);
-	}
-	else {
-	    // nothing
-	    print(1, "%s not a spawnable class\n\n", className);
-	}
-	showClass(javaClass);
+	return javaClass;
     }
+
+
+    String getClassName(String fileName) {
+	return fileName.endsWith(".class") ? 
+	    fileName.substring(0, fileName.length() - 6) : fileName;
+    }
+
+
+
+    void showClass(String fileName) {
+	String className = getClassName(fileName);
+	String outputFileName = className + ".cf";
+	try {
+	    PrintStream out = new PrintStream(new File(outputFileName));
+
+	    print(out, 0, "showing class %s\n", className);
+
+	    JavaClass javaClass = getClassFromName(className);
+
+	    if (javaClass.isClass() && isSpawnable(javaClass)) {
+		print(out, 1, "%s is a spawnable class\n\n", className);
+	    }
+	    else {
+		// nothing
+		print(out, 1, "%s not a spawnable class\n\n", className);
+	    }
+	    showClass(out, javaClass);
+	}
+	catch (FileNotFoundException e) {
+	    System.out.printf("Can't write to file: %s\n", outputFileName);
+	    System.exit(1);
+	}
+	catch (SecurityException e) {
+	    System.out.printf("No permission to write file: %s\n", outputFileName);
+	    System.exit(1);
+	}
+    }
+
+
 
 
     void showClasses(ArrayList<String> classNames) {
