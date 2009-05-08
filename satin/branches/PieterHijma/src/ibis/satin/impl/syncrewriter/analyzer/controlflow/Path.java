@@ -8,7 +8,7 @@ import org.apache.bcel.generic.InstructionHandle;
 public class Path extends ArrayList<CodeBlock> {
 
 
-    Path() {
+    public Path() {
     }
 
 
@@ -32,6 +32,24 @@ public class Path extends ArrayList<CodeBlock> {
     }
 
 
+    public Path getCommonSubPathFromEnd(Path rhs) {
+	Path path = new Path();
+
+	if (rhs.size() == 0 || size() == 0) {
+	    return path;
+	}
+	int i = size() - 1;
+	int j = rhs.size() - 1;
+	while (i >= 0 && j >= 0 && get(i).equals(rhs.get(j))) {
+	    path.add(0, get(i));
+	    i--; 
+	    j--;
+	}
+	return path;
+    }
+
+
+
     public Path getCommonSubPathFromStart(Path rhs) {
 	Path path = new Path();
 
@@ -51,10 +69,28 @@ public class Path extends ArrayList<CodeBlock> {
 
     public String toString() {
 	StringBuilder sb = new StringBuilder();
-	for (CodeBlock codeBlock: this) {
-	    sb.append(codeBlock.getIndex());
+	for (int i = 0; i < size() - 1; i++) {
+	    sb.append(get(i).getIndex());
 	    sb.append(" ");
 	}
+	sb.append(get(size() - 1).getIndex());
 	return sb.toString();
+    }
+
+
+    public void removeLast(CodeBlock codeBlock) {
+	remove(lastIndexOf(codeBlock));
+    }
+
+
+    int nrOfOccurences(CodeBlock codeBlock) {
+	int nrOfOccurences = 0;
+	for (CodeBlock i : this) {
+	    if (i.equals(codeBlock)) {
+		nrOfOccurences++;
+	    }
+	}
+	
+	return nrOfOccurences;
     }
 }

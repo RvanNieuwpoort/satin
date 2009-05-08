@@ -52,14 +52,25 @@ class SpawnableClass extends ClassGen {
     }
 
 
-    void rewrite(Analyzer analyzer) {
+    void rewrite(Analyzer analyzer) throws ClassRewriteFailure {
+	boolean throwRewriteFailure = false;
+
 	for (Method spawnSignature : spawnSignatures) {
-	    rewriteForSpawnSignature(spawnSignature, analyzer);
+	    try {
+	        rewriteForSpawnSignature(spawnSignature, analyzer);
+	    }
+	    catch (MethodRewriteFailure e) {
+		throwRewriteFailure = true;
+	    }
 	}
+	if (throwRewriteFailure) throw new ClassRewriteFailure();
     }
 
 
-    private void rewriteForSpawnSignature(Method spawnSignature, Analyzer analyzer) {
+    private void rewriteForSpawnSignature(Method spawnSignature, Analyzer analyzer) 
+	throws MethodRewriteFailure {
+	boolean throwRewriteFailure = false;
+
 	d.log(0, "rewriting for spawn signature: %s\n", spawnSignature.getName());
 
 	Method[] methods = getMethods();
@@ -79,7 +90,21 @@ class SpawnableClass extends ClassGen {
 		d.log(1, "%s doesn't call %s\n", method.getName(), spawnSignature.getName());
 		// spawnSignature is not called
 	    }
+	    catch (MethodRewriteFailure e) {
+		d.error("Failed to rewrite %s for spawn signature: %s\n",
+			method.getName(), spawnSignature.getName());
+		throwRewriteFailure = true;
+	    }
+	    catch (AssumptionFailure e) {
+		d.error("Failed to rewrite %s for spawn signature: %s\n",
+			method.getName(), spawnSignature.getName());
+		d.error(e.getMessage());
+		throwRewriteFailure = true;
+	    }
 	}
+
+	if (throwRewriteFailure) throw new MethodRewriteFailure();
+	d.log(0, "rewritten for spawn signature: %s\n", spawnSignature.getName());
     }
 
 
