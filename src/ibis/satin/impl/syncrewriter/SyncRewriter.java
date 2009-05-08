@@ -95,7 +95,9 @@ class SyncRewriter {
     }
 
 
-    void rewrite(String className) throws NoSpawnableClassException {
+    void rewrite(String className) throws NoSpawnableClassException, 
+	 ClassRewriteFailure {
+
 	JavaClass javaClass = getClassFromName(className);
 	SpawnableClass spawnableClass = 
 	    new SpawnableClass(javaClass, new Debug(d.turnedOn(), 2));
@@ -214,6 +216,7 @@ class SyncRewriter {
 
 
     void start(String[] argv) {
+	int returnCode = 0;
 	ArrayList<String> classFileNames = processArguments(argv);
 	if (analyzer == null) setAnalyzer("ControlFlow");
 
@@ -225,7 +228,12 @@ class SyncRewriter {
 	    catch (NoSpawnableClassException e) {
 		d.log(0, "%s is not a spawnable class\n", className);
 	    }
+	    catch (ClassRewriteFailure e) {
+		d.error("Failed to rewrite %s\n", className);
+		returnCode++;
+	    }
 	}
+	System.exit(returnCode);
     }
 
 

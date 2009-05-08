@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
+import org.apache.bcel.classfile.ConstantPool;
 import org.apache.bcel.Repository;
 
 import org.apache.bcel.generic.ConstantPoolGen;
@@ -78,15 +79,41 @@ class ClassViewer {
     }
 
 
+    void showInstruction(PrintStream out, InstructionHandle ih, ConstantPool cp) {
+    }
+
+
+    void showMethod(PrintStream out, MethodGen methodGen, ConstantPool cp) {
+	InstructionList il = methodGen.getInstructionList();
+	InstructionHandle[] instructionHandles = il.getInstructionHandles();
+	ConstantPoolGen cpg = new ConstantPoolGen(cp);
+	int balanceOnStack = 0;
+	for (InstructionHandle ih : instructionHandles) {
+	    int produced = ih.getInstruction().produceStack(cpg);
+	    int consumed = ih.getInstruction().consumeStack(cpg);
+	    balanceOnStack = balanceOnStack + produced - consumed;
+	    out.printf("%d:\t(c: %d, p: %d, t: %d)\t%s\n", 
+		ih.getPosition(), consumed, produced, balanceOnStack,
+		ih.getInstruction().toString(cp));
+	}
+    }
+
+
     void showClass(PrintStream out, JavaClass javaClass) {
 	print(out, 0, "constantpool:\n");
 	out.println(javaClass.getConstantPool());
+	ConstantPoolGen cp = new ConstantPoolGen(javaClass.getConstantPool());
 
 	Method[] methods = javaClass.getMethods();
 
 	for (Method method : methods) {
+	    MethodGen methodGen = new MethodGen(method, javaClass.getClassName(), cp);
+	    print(out, 0, "%s (with stack consumption)\n", method);
+	    showMethod(out, methodGen, javaClass.getConstantPool());
+	    out.println();
+
 	    print(out, 0, "%s\n", method);
-	    if (method.getCode() != null) out.println(method.getCode());
+	    if (method.getCode() != null) out.println((method.getCode()).toString(true));
 	    out.println();
 	}
     }

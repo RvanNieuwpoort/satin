@@ -1,12 +1,13 @@
 package ibis.satin.impl.syncrewriter.analyzer;
 
-import ibis.satin.impl.syncrewriter.NeverReadException;
+import ibis.satin.impl.syncrewriter.SyncInsertionProposalFailure;
 
 import java.util.ArrayList;
 
 import ibis.satin.impl.syncrewriter.Analyzer;
-import ibis.satin.impl.syncrewriter.SpawnableMethodCall;
+import ibis.satin.impl.syncrewriter.SpawnableCall;
 import ibis.satin.impl.syncrewriter.SpawnableMethod;
+import ibis.satin.impl.syncrewriter.Debug;
 
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
@@ -17,10 +18,10 @@ import org.apache.bcel.generic.MethodGen;
 public class EarliestLoad implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod)
-	throws NeverReadException {
+    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod, Debug debug)
+	throws SyncInsertionProposalFailure {
 
-	ArrayList<SpawnableMethodCall> spawnableCalls = 
+	ArrayList<SpawnableCall> spawnableCalls = 
 	    spawnableMethod.getSpawnableCalls();
 
 	InstructionHandle[] instructionHandles = new InstructionHandle[1];
@@ -44,11 +45,11 @@ public class EarliestLoad implements Analyzer {
      * read(result1);
      */
     private InstructionHandle getEarliestLoadInstruction(InstructionList il,
-	    ArrayList<SpawnableMethodCall> spawnableCalls) 
-	throws NeverReadException {
+	    ArrayList<SpawnableCall> spawnableCalls) 
+	throws SyncInsertionProposalFailure {
 
 	InstructionHandle earliestLoadInstruction = null;
-	for (SpawnableMethodCall spawnableCall : spawnableCalls) {
+	for (SpawnableCall spawnableCall : spawnableCalls) {
 	    InstructionHandle loadInstruction = 
 		getLoadInstruction(il, spawnableCall);
 	    if (earliestLoadInstruction == null || loadInstruction.getPosition()
@@ -63,7 +64,7 @@ public class EarliestLoad implements Analyzer {
     /* Get the load instruction corresponding to this spawnable call.
     */
     private InstructionHandle getLoadInstruction(InstructionList il, 
-	    SpawnableMethodCall spawnableCall) throws NeverReadException {
+	    SpawnableCall spawnableCall) throws SyncInsertionProposalFailure {
 
 	InstructionHandle ih = spawnableCall.getInstructionHandle();
 	while ((ih = ih.getNext()) != null) {
@@ -78,6 +79,6 @@ public class EarliestLoad implements Analyzer {
 	    catch (ClassCastException e) {
 	    }
 	}
-	throw new NeverReadException();
+	throw new SyncInsertionProposalFailure();
     }
 }

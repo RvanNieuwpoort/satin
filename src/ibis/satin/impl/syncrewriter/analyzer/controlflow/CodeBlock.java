@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
+import org.apache.bcel.classfile.ConstantPool;
 
 
 public class CodeBlock {
@@ -17,6 +18,7 @@ public class CodeBlock {
     private ArrayList<InstructionContext> instructions;
     private InstructionContext end;
     private int index;
+    private ConstantPool constantPool;
 
     private CodeBlock[] targets;
 
@@ -25,14 +27,21 @@ public class CodeBlock {
 
     CodeBlock(InstructionContext start, 
 	    ArrayList<InstructionContext> instructions, 
-	    InstructionContext end, int index) {
+	    InstructionContext end, int index, 
+	    ConstantPool constantPool) {
 	this.start = start;
 	this.instructions = instructions;
 	this.end = end;
 	this.index = index;
+	this.constantPool = constantPool;
 
 	this.targets = new CodeBlock[end.getSuccessors().length];
 	this.level = -1;
+    }
+
+
+    public InstructionHandle getLastInstruction() {
+	return instructions.get(instructions.size() - 1).getInstruction();
     }
 
 
@@ -85,7 +94,7 @@ public class CodeBlock {
     }
 
 
-    int getIndex() {
+    public int getIndex() {
 	return index;
     }
 
@@ -204,7 +213,9 @@ public class CodeBlock {
 	sb.append(String.format("LEVEL: %d\n", level));
 	sb.append(getTargetString());
 	for (InstructionContext context : instructions) {
-	    sb.append(context);
+	    sb.append(context.getInstruction().getPosition());
+	    sb.append(":\t");
+	    sb.append(context.getInstruction().getInstruction().toString(constantPool));
 	    sb.append('\n');
 	}
 	sb.append(String.format("END CODEBLOCK: %d\n", index));

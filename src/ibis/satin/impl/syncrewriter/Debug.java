@@ -6,11 +6,14 @@ import java.io.PrintStream;
 
 
 
-class Debug {
+public class Debug {
 
 
 
-    public static final int NR_CHARS_ON_LINE = 80;
+    public static final int NR_CHARS_ON_LINE = 150;
+    public static final int INDENTATION_WIDTH = 2;
+
+    public static final boolean IS_FIRST_LINE = true;
 
 
     private boolean debug;
@@ -19,59 +22,94 @@ class Debug {
 
 
 
-    Debug() {
+    public Debug() {
 	this.debug = false;
 	this.out = System.out;
 	this.startLevel = 0;
     }
 
 
-    Debug(boolean turnOn, int startLevel) {
+    public Debug(boolean turnOn, int startLevel) {
 	this.debug = turnOn;
 	this.out = System.out;
 	this.startLevel = startLevel;
     }
 
 
-    int getStartLevel() {
+    public int getStartLevel() {
 	return startLevel;
     }
 
 
-    void turnOn() {
+    public void turnOn() {
 	debug = true;
     }
 
 
-    void turnOff() {
+    public void turnOff() {
 	debug = false;
     }
 
 
-    boolean turnedOn() {
+    public boolean turnedOn() {
 	return debug;
     }
 
-
-    void warning(String warningMessage, Object... arguments) {
-	out.printf("WARNING: " + warningMessage, arguments);
+    public void error(String warningMessage, Object... arguments) {
+	print("WARNING: ", 0, String.format(warningMessage, arguments));
     }
 
 
-    void log(int level, String debugMessage, Object... arguments) {
+    public void warning(String warningMessage, Object... arguments) {
+	print("WARNING: ", 0, String.format(warningMessage, arguments));
+    }
+
+
+    public void log(int level, String debugMessage, Object... arguments) {
 	if (!debug) return;
 
-	level = startLevel + level;
+	print("DEBUG: ", level + startLevel, String.format(debugMessage, arguments));
+    }
+
+   
+    private void print(String prefix, int indentation, String message, boolean isFirstLine) {
+	StringBuilder sb = new StringBuilder(prefix);
+	for (int i = 0; i < indentation * INDENTATION_WIDTH; i++) {
+	    sb.append(' ');
+	}
+	sb.append(((message.replace('\n', ' ')).replace('\t', ' ')).trim());
+	if (sb.length() > NR_CHARS_ON_LINE) {
+	    String firstLine = sb.substring(0, NR_CHARS_ON_LINE);
+	    String followingLines = sb.substring(NR_CHARS_ON_LINE, sb.length());
+	    out.println(firstLine);
+	    print(prefix, isFirstLine ? indentation + 2 : indentation , followingLines, !IS_FIRST_LINE);
+	    // all following lines are indented two times more
+	}
+	else {
+	    out.println(sb.toString());
+	}
+    }
+
+ 
+    private void print(String prefix, int indentation, String message) {
+	print(prefix, indentation, message, IS_FIRST_LINE);
+    }
+
+
+    /*
+    public void log2(int level, String debugMessage, Object... arguments) {
+	if (!debug) return;
+
 	if (level < 0) throw new Error("printDebug(), level < 0");
 
 	StringBuilder sb = new StringBuilder("DEBUG: ");
-	for (int i = 0; i < level; i++) sb.append("  ");
+	for (int i = 0; i < level + startLevel; i++) sb.append("  ");
 	sb.append((debugMessage.replace('\n', ' ')).replace('\t', ' '));
 	sb.append('\n');
 
 	String completeMessage = String.format(sb.toString(), arguments);
 	if (completeMessage.length() > NR_CHARS_ON_LINE) {
-	    out.print(completeMessage.substring(0, NR_CHARS_ON_LINE));
+	    out.println(completeMessage.substring(0, NR_CHARS_ON_LINE));
 	    log(level + 2, completeMessage.substring(NR_CHARS_ON_LINE, 
 			completeMessage.length()));
 	}
@@ -79,4 +117,5 @@ class Debug {
 	    out.print(completeMessage);
 	}
     }
+    */
 }

@@ -21,9 +21,11 @@ import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.LocalVariableInstruction;
 import org.apache.bcel.generic.StoreInstruction;
 import org.apache.bcel.generic.LoadInstruction;
+import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.Type;
 import org.apache.bcel.generic.StackConsumer;
 import org.apache.bcel.generic.StackProducer;
+import org.apache.bcel.generic.ExceptionThrower;
 import org.apache.bcel.generic.ClassGen;
 import org.apache.bcel.generic.ArrayInstruction;
 import org.apache.bcel.generic.DASTORE;
@@ -33,7 +35,7 @@ import org.apache.bcel.generic.ALOAD;
 public class SpawnableMethod extends MethodGen {
 
 
-    private ArrayList<SpawnableMethodCall> spawnableCalls;
+    private ArrayList<SpawnableCall> spawnableCalls;
     private int indexSync;
     private Method spawnSignature;
 
@@ -42,12 +44,12 @@ public class SpawnableMethod extends MethodGen {
 
     SpawnableMethod (Method method, String className, ConstantPoolGen constantPoolGen, 
 	    Method spawnSignature, int indexSync, Debug d) 
-	throws NoSpawnableMethodException {
+	throws NoSpawnableMethodException, AssumptionFailure {
 
 	super(method, className, constantPoolGen);
 
 	MethodGen spawnSignatureGen = new MethodGen(spawnSignature, className, constantPoolGen);
-	ArrayList<SpawnableMethodCall> spawnableCalls = 
+	ArrayList<SpawnableCall> spawnableCalls = 
 	    getSpawnableCalls(getInstructionList(), constantPoolGen, spawnSignatureGen);
 
 	if (spawnableCalls.size() > 0) {
@@ -62,27 +64,22 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    void rewrite(Analyzer analyzer) {
+    void rewrite(Analyzer analyzer) throws MethodRewriteFailure {
 	d.log(0, "rewriting %s\n", getName());
-	try {
-	    d.log(1, "trying to insert a sync()\n");
-	    insertSync(analyzer);
-	}
-	catch (NeverReadException e) {
-	    d.warning("result of spawnable call %s is never read\n", 
-		    spawnSignature.getName());
-	}
+	insertSync(analyzer);
+	d.log(0, "rewrote %s\n", getName());
     }
 
 
-    public ArrayList<SpawnableMethodCall> getSpawnableCalls() {
+    public ArrayList<SpawnableCall> getSpawnableCalls() {
 	return spawnableCalls;
     }
 
 
-    private void insertSync(Analyzer analyzer) throws NeverReadException {
+    private void insertSync(Analyzer analyzer) throws MethodRewriteFailure {
+	d.log(1, "trying to insert sync statement(s)\n");
 	InstructionHandle[] ihs = 
-	    analyzer.proposeSyncInsertion(this);
+	    analyzer.proposeSyncInsertion(this, new Debug(d.turnedOn(), d.getStartLevel() + 2));
 
 	InstructionList instructionList = getInstructionList();
 
@@ -92,39 +89,82 @@ public class SpawnableMethod extends MethodGen {
 			new INVOKEVIRTUAL(indexSync));
 	    instructionList.insert(syncInvoke, 
 		    spawnableCalls.get(0).getObjectReference().getInstruction());
+	    // the same objectReference for every sync insertion
 	    d.log(2, "inserted sync()\n");
 	}
+	d.log(1, "inserted sync statement(s)\n");
     }
+
+
+    private InstructionHandle findStackConsumer(InstructionHandle start, int consumingWords, ConstantPoolGen constantPoolGen) {
+	int stackConsumption = 0;
+	InstructionHandle stackConsumer = start;
+	do {
+	    Instruction stackConsumerInstruction = stackConsumer.getInstruction();
+	    stackConsumption-=stackConsumerInstruction.produceStack(constantPoolGen);
+	    stackConsumption+=stackConsumerInstruction.consumeStack(constantPoolGen);
+	}
+	while (stackConsumption == consumingWords);
+
+	return stackConsumer;
+    }
+
 
 
     /* Get the local variable index of the result of the spawnable methode
      * invoke.
      */
+    // assumption that the result needs to be stored and that it happens right
+    // after the invoke of the spawnable call
     private int getLocalVariableIndexResult(InstructionHandle spawnableMethodInvoke,
-	    InstructionList instructionList, ConstantPoolGen constantPoolGen) {
+	    InstructionList instructionList, ConstantPoolGen constantPoolGen) throws AssumptionFailure {
 
-	InstructionHandle storeInstructionHandle = 
-	    spawnableMethodInvoke.getNext();
+	/*
+	System.err.printf("spawnableMethodInvoke: %s\n", spawnableMethodInvoke);
+	    int producedOnStack = spawnableMethodInvoke.getInstruction().produceStack(constantPoolGen);
+	    System.err.printf("producedOnStack: %d\n", producedOnStack);
+	    if (producedOnStack <= 0) {
+		throw new Error("The spawnable invoke doesn't return anything");
+	    }
+	    InstructionHandle stackConsumer = findStackConsumer(spawnableMethodInvoke.getNext(), producedOnStack, constantPoolGen);
+	    System.err.printf("stackConsumer: %s\n", stackConsumer);
+	    */
+
+
+	/* assumption that the next instruction is going to be the store
+	 * instruction
+	 */
+	InstructionHandle stackConsumer = spawnableMethodInvoke.getNext();
+
 
 	try {
 	    StoreInstruction storeInstruction = (StoreInstruction) 
-		(storeInstructionHandle.getInstruction());
+		(stackConsumer.getInstruction());
 	    return storeInstruction.getIndex();
 	}
 	catch (ClassCastException e) {
 	}
 	try {
 	    ArrayInstruction arrayStoreInstruction = (ArrayInstruction)
-		((StackConsumer)(storeInstructionHandle.getInstruction()));
+		/*((StackConsumer)(*/stackConsumer.getInstruction()/*))*/;
 	    InstructionHandle ih  = getObjectReferenceLoadInstruction
-		(storeInstructionHandle, constantPoolGen);
+		(stackConsumer, constantPoolGen);
 	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
 	    return objectLoadInstruction.getIndex();
 	}
 	catch (ClassCastException e) {
 	}
-	//out.printf("He, hier gaat het niet goed: %s\n");
-	throw new Error("He, hier gaat het niet goed\n");
+	try {
+	    PUTFIELD putFieldInstruction = (PUTFIELD) stackConsumer.getInstruction();
+	    InstructionHandle ih  = getObjectReferenceLoadInstruction
+		(stackConsumer, constantPoolGen);
+	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
+	    return objectLoadInstruction.getIndex();
+	}
+	catch (ClassCastException e) {
+	}
+	
+	throw new AssumptionFailure("Instruction following spawnableCall doesn't store the result");
     }
 
 
@@ -154,25 +194,31 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    private ArrayList<SpawnableMethodCall> getSpawnableCalls(InstructionList il, 
-	    ConstantPoolGen constantPoolGen, MethodGen spawnSignatureGen) {
+    private ArrayList<SpawnableCall> getSpawnableCalls(InstructionList il, 
+	    ConstantPoolGen constantPoolGen, MethodGen spawnSignatureGen) throws 
+    AssumptionFailure {
 
 	int indexSpawnableCall = 
 	    constantPoolGen.lookupMethodref(spawnSignatureGen);
 	INVOKEVIRTUAL spawnableInvoke = 
 	    new INVOKEVIRTUAL(indexSpawnableCall);
 
-	ArrayList<SpawnableMethodCall> spawnableCalls = 
-	    new ArrayList<SpawnableMethodCall>();
+	ArrayList<SpawnableCall> spawnableCalls = 
+	    new ArrayList<SpawnableCall>();
 
 	InstructionHandle ih = il.getStart();
 	do {
-	    if (ih.getInstruction().equals(spawnableInvoke)) {
-		SpawnableMethodCall spawnableCall = new SpawnableMethodCall(ih, 
+	    Instruction instruction = ih.getInstruction();
+	    if (instruction.equals(spawnableInvoke) && (instruction.produceStack(constantPoolGen) > 0)) {
+		SpawnableCall spawnableCall = new SpawnableCall(ih, 
 			getObjectReferenceLoadInstruction(ih, constantPoolGen), 
 			getLocalVariableIndexResult(ih, il, 
 			    constantPoolGen));
 		spawnableCalls.add(spawnableCall);
+	    }
+	    else if (instruction instanceof ExceptionThrower) {
+		SpawnableCall spawnableCall = new SpawnableCall(ih,
+			getObjectReferenceLoadInstruction(ih, constantPoolGen));
 	    }
 	} while((ih = ih.getNext()) != null);
 

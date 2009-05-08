@@ -7,6 +7,7 @@ import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.ReturnInstruction;
 import org.apache.bcel.generic.ATHROW;
+import org.apache.bcel.classfile.ConstantPool;
 
 import org.apache.bcel.verifier.structurals.ControlFlowGraph;
 import org.apache.bcel.verifier.structurals.InstructionContext;
@@ -82,12 +83,13 @@ public class CodeBlockGraph {
     private void addCodeBlock(Path codeBlocks, 
 	    InstructionContext start, 
 	    ArrayList<InstructionContext> instructions, 
-	    InstructionContext end) {
+	    InstructionContext end,
+	    ConstantPool constantPool) {
 	if (start == null || instructions == null || end == null) {
 	    throw new Error("CodeBlock start/end out of sync");
 	} else {
 	    codeBlocks.add(new CodeBlock(start, instructions, end, 
-			codeBlocks.size()));
+			codeBlocks.size(), constantPool));
 	}
     }
 
@@ -145,7 +147,8 @@ public class CodeBlockGraph {
 		    ||
 		    (isEndInstruction(currentContext))) {
 
-		addCodeBlock(codeBlocks, start, instructions, currentContext);
+		addCodeBlock(codeBlocks, start, instructions, currentContext, 
+			methodGen.getConstantPool().getConstantPool());
 		start = null;
 		instructions = null;
 		    }
@@ -261,6 +264,7 @@ public class CodeBlockGraph {
     }
 
 
+    /*
     private void fillPaths(ArrayList<Path> paths, 
 	    CodeBlock current, Path visited) {
 	if (visited.contains(current)) {
@@ -281,9 +285,113 @@ public class CodeBlockGraph {
 	    return;
 	}
     }
+    */
+
+
+
+    private void fillPaths(ArrayList<Path> paths, 
+	    CodeBlock current, Path visited) {
+//	System.out.printf("fillPaths() for %d\n", current.getIndex());
+//	System.out.printf("\tvisited: %s\n", visited);
+	if (current.isEnding()) {
+	    visited.add(current);
+//	    System.out.printf("\tending, found a path: %s\n", visited);
+	    paths.add((Path)visited.clone());
+	    visited.removeLast(current);
+//	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
+	    return;
+	}
+
+	int nrOfOccurences = visited.nrOfOccurences(current);
+	if (nrOfOccurences == current.getNrOfTargets()) { // all posibilities done
+///	    System.out.printf("\tnrOfOccurences (%d) == nrOfTargets\n", 
+//		    nrOfOccurences);
+//	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
+	    return; // all loops handled
+	}
+	else if (nrOfOccurences == 0) { // do every target
+//	    System.out.println("\tnrOfOccurences == 0\n");
+	    visited.add(current);
+	    for (int i = 0; i < current.getNrOfTargets(); i++) {
+		fillPaths(paths, current.getTarget(i), visited);
+	    }
+	    visited.removeLast(current);
+//	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
+	    return;
+	}
+	else { // already visited current, now take the other route
+//	    System.out.printf("\tnrOfOccurences: %d\n", nrOfOccurences);
+	    visited.add(current);
+	    fillPaths(paths, current.getTarget(nrOfOccurences), visited);
+	    visited.removeLast(current);
+//	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
+	    return;
+	}
+	//System.out.printf("HEEEEEEE\n");
+    }
+
+
+    private boolean isPartOfLoop(CodeBlock current, Path visited) {
+	if (visited.size() > 0 && current.equals(visited.get(0))) {
+	    return true;
+	}
+	else if (current.isEnding()) {
+	    return false;
+	}
+
+	int nrOfOccurences = visited.nrOfOccurences(current);
+	if (nrOfOccurences == current.getNrOfTargets()) {
+	    // all loops handled, the first in visited is not found
+	    return false;
+	}
+	else if (nrOfOccurences == 0) {
+	    visited.add(current);
+	    for (int i = 0; i < current.getNrOfTargets(); i++) {
+		if (isPartOfLoop(current.getTarget(i), visited)) {
+		    visited.removeLast(current);
+		    return true;
+		}
+	    }
+	    visited.removeLast(current);
+	    return false;
+	}
+	else { // already visited current, now take the other route
+	    visited.add(current);
+	    if (isPartOfLoop(current.getTarget(nrOfOccurences), visited)) {
+		visited.removeLast(current);
+		return true;
+	    }
+	    visited.remove(current);
+	    return false;
+	}
+    }
+
+
+
+
+    public boolean isPartOfLoop(int index) {
+	CodeBlock start = codeBlocks.get(index);
+	Path visited = new Path();
+
+	return isPartOfLoop(start, visited);
+    }
 
 
     public ArrayList<Path> getEndingPathsFrom(int index) {
+	ArrayList<Path> paths = 
+	    new ArrayList<Path>();
+
+	CodeBlock start = codeBlocks.get(index);
+	Path visited = new Path();
+
+	fillPaths(paths, start, visited);
+
+	return paths;
+    }
+
+
+
+    public ArrayList<Path> getEndingPathsFrom2(int index) {
 	ArrayList<Path> paths = 
 	    new ArrayList<Path>();
 
