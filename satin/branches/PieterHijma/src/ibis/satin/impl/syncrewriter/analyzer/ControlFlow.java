@@ -47,9 +47,9 @@ public class ControlFlow implements Analyzer {
 	throws SyncInsertionProposalFailure {
 
 	this.d = d;
-	InstructionHandle[] instructionHandles = new InstructionHandle[1];
 	/* We only want to return one sync statement at exactly the right spot
 	*/ 
+	InstructionHandle[] instructionHandles = new InstructionHandle[1];
 
 	d.log(0, "proposing codeblock\n");
 	CodeBlock proposedCodeBlock = proposeCodeBlock(spawnableMethod);
@@ -68,41 +68,8 @@ public class ControlFlow implements Analyzer {
 	return instructionHandles;
     }
 
-    private InstructionHandle getPositionSpawnableCall(ArrayList<InstructionContext> instructions, SpawnableCall spawnableCall) throws 
-	ResultNotLoadedException {
-	    /*
-	    for (int i = 0; i < instructions.size(); i++) {
-		if (spawnableCall.getInstructionHandle().equals(instructions.get(i).getInstruction())) {
-		    return i;
-		}
-	}
-	*/
-	throw new ResultNotLoadedException();
-	}
 
 
-
-    private InstructionHandle getStackConsumer(ArrayList<InstructionContext> instructions, SpawnableCall spawnableCall) throws 
-	ResultNotLoadedException {
-	
-	    /*
-	    int positionSpawnableCall = getPositionSpawnableCall(instructions, spawnableCall);
-	    int stackProduction = instructions.get(positionSpawnableCall);
-	for (int i = positionSpawnableCall; i < instructions.size(); i++) {
-	    InstructionHandle ih = instructions.get(i).getInstruction();
-	    try {
-		LoadInstruction loadInstruction = 
-		    (LoadInstruction) (ih.getInstruction());
-		if (loadInstruction.getIndex() == spawnableCall.getResultIndex()) {
-		    return ih;
-		}
-	    }
-	    catch (ClassCastException e) {
-	    }
-	}
-	*/
-	throw new ResultNotLoadedException();
-    }
 
 
 
@@ -135,6 +102,7 @@ public class ControlFlow implements Analyzer {
 	}
 	throw new ResultNotLoadedException();
     }
+
 
 
     /* Get the earliest load instruction of the results of the spawnable calls.
@@ -183,15 +151,26 @@ public class ControlFlow implements Analyzer {
 	}
 
 
-	private boolean lastCodeBlocksTheSame(Path[] paths) {
-	    CodeBlock lastCodeBlock = paths[0].getLastCodeBlock();
-	    boolean lastCodeBlocksTheSame = true;
-	    for (int i = 0; i < paths.length; i++) {
-		if (!lastCodeBlock.equals(paths[i].getLastCodeBlock())) {
-		    lastCodeBlocksTheSame = false;
+	private CodeBlock getLastCodeBlockNotPartOfLoop(CodeBlockGraph codeBlockGraph, Path path) throws PathPartOfLoopException {
+	    for (int i = path.size() - 1; i >= 0; i--) {
+		CodeBlock codeBlock = path.get(i);
+		if (!codeBlockGraph.isPartOfLoop(codeBlock.getIndex())) {
+		    return codeBlock;
 		}
 	    }
-	    return lastCodeBlocksTheSame;
+	    throw new PathPartOfLoopException();
+	}
+
+
+	private String toString(Path[] paths) {
+	    StringBuilder sb = new StringBuilder("[");
+	    for (int i = 0; i < paths.length - 1; i++) {
+		sb.append(paths[i]);
+		sb.append(", ");
+	    }
+	    sb.append(paths[paths.length - 1]);
+	    sb.append("]");
+	    return sb.toString();
 	}
 
 
@@ -219,6 +198,17 @@ public class ControlFlow implements Analyzer {
 	}
 
 
+
+	private Path getLatestCommonSubPath(Path[] paths) {
+	    Path latestCommonSubPath = getCommonSubPathFromEnd(paths);
+	    if (latestCommonSubPath.size() == 0) {
+		latestCommonSubPath = getCommonSubPathFromStart(paths);
+	    }
+
+	    return latestCommonSubPath;
+	}
+
+
 	private ArrayList<StoreLoadPath> getStoreLoadPaths(ArrayList<Path> 
 		endingPaths, SpawnableCall spawnableCall) {
 
@@ -241,15 +231,6 @@ public class ControlFlow implements Analyzer {
 	    return storeLoadPaths;
 		}
 
-
-	private Path getLatestCommonSubPath(Path[] paths) {
-	    Path latestCommonSubPath = getCommonSubPathFromEnd(paths);
-	    if (latestCommonSubPath.size() == 0) {
-		latestCommonSubPath = getCommonSubPathFromStart(paths);
-	    }
-
-	    return latestCommonSubPath;
-	}
 
 
 	private Path calculateSpawnToLoadPath(CodeBlockGraph codeBlockGraph, SpawnableCall spawnableCall) {
@@ -299,29 +280,6 @@ public class ControlFlow implements Analyzer {
 	}
 
 
-	private CodeBlock getLastCodeBlockNotPartOfLoop(CodeBlockGraph codeBlockGraph, Path path) throws PathPartOfLoopException {
-	    for (int i = path.size() - 1; i >= 0; i--) {
-		CodeBlock codeBlock = path.get(i);
-		if (!codeBlockGraph.isPartOfLoop(codeBlock.getIndex())) {
-		    return codeBlock;
-		}
-	    }
-	    throw new PathPartOfLoopException();
-	}
-
-
-	private String toString(Path[] paths) {
-	    StringBuilder sb = new StringBuilder("[");
-	    for (int i = 0; i < paths.length - 1; i++) {
-		sb.append(paths[i]);
-		sb.append(", ");
-	    }
-	    sb.append(paths[paths.length - 1]);
-	    sb.append("]");
-	    return sb.toString();
-	}
-
-
 	private CodeBlock proposeCodeBlock(SpawnableMethod spawnableMethod) 
 	    throws SyncInsertionProposalFailure {
 
@@ -349,6 +307,8 @@ public class ControlFlow implements Analyzer {
 		return lastCodeBlock;
 	    }
 	}
+}
+
 
 
 	/*
@@ -363,5 +323,73 @@ public class ControlFlow implements Analyzer {
 	   return instructionHandles;
     }
     */
-}
+
+
+
+
+
+
+
+
+    /*
+    private InstructionHandle getPositionSpawnableCall(ArrayList<InstructionContext> instructions, SpawnableCall spawnableCall) throws 
+	ResultNotLoadedException {
+	*/
+	    /*
+	    for (int i = 0; i < instructions.size(); i++) {
+		if (spawnableCall.getInstructionHandle().equals(instructions.get(i).getInstruction())) {
+		    return i;
+		}
+	}
+	*/
+/*
+	throw new ResultNotLoadedException();
+	}
+	*/
+
+
+    /*
+
+    private InstructionHandle getStackConsumer(ArrayList<InstructionContext> instructions, SpawnableCall spawnableCall) throws 
+	ResultNotLoadedException {
+	*/
+	
+	    /*
+	    int positionSpawnableCall = getPositionSpawnableCall(instructions, spawnableCall);
+	    int stackProduction = instructions.get(positionSpawnableCall);
+	for (int i = positionSpawnableCall; i < instructions.size(); i++) {
+	    InstructionHandle ih = instructions.get(i).getInstruction();
+	    try {
+		LoadInstruction loadInstruction = 
+		    (LoadInstruction) (ih.getInstruction());
+		if (loadInstruction.getIndex() == spawnableCall.getResultIndex()) {
+		    return ih;
+		}
+	    }
+	    catch (ClassCastException e) {
+	    }
+	}
+	*/
+/*
+	throw new ResultNotLoadedException();
+    }
+    */
+
+
+	/*
+	private boolean lastCodeBlocksTheSame(Path[] paths) {
+	    CodeBlock lastCodeBlock = paths[0].getLastCodeBlock();
+	    boolean lastCodeBlocksTheSame = true;
+	    for (int i = 0; i < paths.length; i++) {
+		if (!lastCodeBlock.equals(paths[i].getLastCodeBlock())) {
+		    lastCodeBlocksTheSame = false;
+		}
+	    }
+	    return lastCodeBlocksTheSame;
+	}
+	*/
+
+
+
+
 
