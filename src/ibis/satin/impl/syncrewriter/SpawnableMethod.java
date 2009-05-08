@@ -87,8 +87,9 @@ public class SpawnableMethod extends MethodGen {
 	    InstructionHandle syncInvoke = 
 		instructionList.insert(ih, 
 			new INVOKEVIRTUAL(indexSync));
-	    instructionList.insert(syncInvoke, 
+	    InstructionHandle newTarget = instructionList.insert(syncInvoke, 
 		    spawnableCalls.get(0).getObjectReference().getInstruction());
+	    instructionList.redirectBranches(ih, newTarget);
 	    // the same objectReference for every sync insertion
 	    d.log(2, "inserted sync()\n");
 	}
