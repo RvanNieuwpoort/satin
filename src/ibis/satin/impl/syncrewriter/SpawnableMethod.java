@@ -96,6 +96,7 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
+    /*
     private InstructionHandle findStackConsumer(InstructionHandle start, int consumingWords, ConstantPoolGen constantPoolGen) {
 	int stackConsumption = 0;
 	InstructionHandle stackConsumer = start;
@@ -108,6 +109,7 @@ public class SpawnableMethod extends MethodGen {
 
 	return stackConsumer;
     }
+    */
 
 
 
