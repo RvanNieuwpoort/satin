@@ -15,6 +15,8 @@ import org.apache.bcel.verifier.structurals.ExceptionHandler;
 
 public class CodeBlockGraph {
 
+    public static final boolean SHOULD_BE_NULL = true;
+
 
     private Path codeBlocks;
 
@@ -148,6 +150,8 @@ public class CodeBlockGraph {
 	}
 	else { // already visited current, now take the other route
 	    visited.add(current);
+	    System.out.printf("current == null: %b\n", current == null);
+	    System.out.printf("visited == null: %b\n", current == null);
 	    if (isPartOfLoop(current.getTarget(nrOfOccurences), visited)) {
 		visited.removeLast(current);
 		return true;
@@ -251,7 +255,7 @@ public class CodeBlockGraph {
 	}
     }
 
-    
+
 
 
 
@@ -286,45 +290,21 @@ public class CodeBlockGraph {
     }
 
 
-    private boolean isEndOfCodeBlock(InstructionContext currentContext, ArrayList<InstructionContext> targets, InstructionContext nextContext) {
-	return isOnlySuccessor(nextContext, successors) || successors.length > 1 || isTarget(nextContext, targets) || isEndInstruction(currentContext);
+    private boolean isEndOfCodeBlock(InstructionContext currentContext, ArrayList<InstructionContext> targets, InstructionContext nextContext,
+	    InstructionContext[] successors) {
+	return hasOneSuccessorNotBeingNext(nextContext, successors) || successors.length > 1 || isTarget(nextContext, targets) || isEndInstruction(currentContext);
     }
+
 
     private boolean isStartOfCodeBlock(int i, InstructionContext currentContext, 
-	    ArrayList<InstructionContext> targets, InstructionContext start, ArrayList<InstructionContext> instructions) {
-	return (i == 0 || targets.contains(currentContext)) && start == null && instructions == null;
-    }
-
-    private void determineCodeBlock(int i, InstructionContext[] contexts, ArrayList<InstructionContext> targets, 
-	    Path codeBlocks, InstructionContext start, ArrayList<InstructionContext> instructions) {
-
-	InstructionContext currentContext = contexts[i];
-	InstructionContext nextContext = i < contexts.length - 1 ? 
-	    contexts[i+1] :
-	    null;
-	InstructionContext[] successors = currentContext.getSuccessors();
-
-	if (isStartOfCodeBlock(i, currentContext, targets, start, instructions)) {
-	    start = currentContext;
-	    instructions = new ArrayList<InstructionContext>();
-	}
-	else {
-	    throw new Error("CodeBlock start/end out of sync");
-	}
-
-	instructions.add(currentContext);
-
-	if (isEndOfCodeBlock(currentContext, targets, nextContext)) {
-	    addCodeBlock(codeBlocks, start, instructions, currentContext, 
-		    methodGen.getConstantPool().getConstantPool());
-	    start = null;
-	    instructions = null;
-	}
-    }
-
-
-    private void add ExceptionHandlers(InstructionContext instructionContext, 
 	    ArrayList<InstructionContext> targets) {
+	return i == 0 || targets.contains(currentContext);
+    }
+
+
+
+    private void addExceptionHandlers(InstructionContext instructionContext, 
+	    ArrayList<InstructionContext> targets, ControlFlowGraph graph) {
 	ExceptionHandler[] handlers = instructionContext.getExceptionHandlers();
 	for (ExceptionHandler handler : handlers) {
 	    InstructionContext handlerContext = graph.contextOf(
@@ -344,17 +324,8 @@ public class CodeBlockGraph {
     }
 
 
-    private boolean isOnlySuccessor(InstructionContext nextContext, InstructionHandle[] successors) {
+    private boolean hasOneSuccessorNotBeingNext(InstructionContext nextContext, InstructionContext[] successors) {
 	return successors.length == 1 && !successors[0].equals(nextContext);
-    }
-
-
-    private boolean jumpInstruction(InstructionContext instructionContext, InstructionContext[] contexts) {
-	InstructionContext nextContext = i < contexts.length - 1 ? 
-	    contexts[i+1] :
-	    null;
-	InstructionContext[] successors = currentContext.getSuccessors();
-	return isOnlySuccessor(nextContext, successors);
     }
 
 
@@ -366,9 +337,12 @@ public class CodeBlockGraph {
 
 	for (int i = 0; i < contexts.length; i++) {
 	    InstructionContext currentContext = contexts[i];
+	    InstructionContext nextContext = i < contexts.length - 1 ? 
+		contexts[i+1] :
+		null;
 	    InstructionContext[] successors = currentContext.getSuccessors();
 
-	    if (jumpInstruction(currentContext, contexts)) {
+	    if (hasOneSuccessorNotBeingNext(nextContext, successors)) {
 		targets.add(successors[0]);
 	    }
 	    else if (successors.length > 1) {
@@ -379,11 +353,12 @@ public class CodeBlockGraph {
 		   }
 		   */
 	    }
-	    addExceptionHandlers(currentContext, targets);
+	    addExceptionHandlers(currentContext, targets, graph);
 	}
 
 	return targets;
 	    }
+
 
 
     private InstructionContext[] getContexts(MethodGen methodGen, 
@@ -393,6 +368,17 @@ public class CodeBlockGraph {
 	return graph.contextsOf(instructionHandles);
     }
 
+    void checkSet(InstructionContext start, ArrayList<InstructionContext> instructions, boolean shouldBeNull) {
+	if (start == null && instructions == null && shouldBeNull) {
+	    // ok
+	}
+	else if (start != null && instructions != null && !shouldBeNull) {
+	    // ok
+	}
+	else {
+	    throw new Error("CodeBlock start/end out of sync");
+	}
+    }
 
     private Path constructBasicCodeBlocks(MethodGen methodGen) {
 	Path codeBlocks = new Path();
@@ -405,7 +391,30 @@ public class CodeBlockGraph {
 	ArrayList<InstructionContext> instructions = null;
 
 	for (int i = 0; i < contexts.length; i++) {
-	    determineCodeBlock(i, contexts, targets, codeBlocks, start, instructions);
+	    InstructionContext currentContext = contexts[i];
+	    InstructionContext nextContext = i < contexts.length - 1 ? 
+		contexts[i+1] :
+		null;
+	    InstructionContext[] successors = currentContext.getSuccessors();
+
+	    if (isStartOfCodeBlock(i, currentContext, targets)) {
+		checkSet(start, instructions, SHOULD_BE_NULL);
+		start = currentContext;
+		instructions = new ArrayList<InstructionContext>();
+	    }
+
+	    System.out.printf("%s\n", currentContext);
+	    System.out.printf("targets.contains(currentContext): %b\n", targets.contains(currentContext));
+	    System.out.println(targets);
+	    instructions.add(currentContext);
+
+	    if (isEndOfCodeBlock(currentContext, targets, nextContext, successors)) {
+		checkSet(start, instructions, !SHOULD_BE_NULL);
+		addCodeBlock(codeBlocks, start, instructions, currentContext, 
+			methodGen.getConstantPool().getConstantPool());
+		start = null;
+		instructions = null;
+	    }
 	}
 	return codeBlocks;
     }
@@ -424,27 +433,27 @@ public class CodeBlockGraph {
 
 
     /*
-    public ArrayList<Path> getEndingPathsFrom2(int index) {
-	ArrayList<Path> paths = 
-	    new ArrayList<Path>();
+       public ArrayList<Path> getEndingPathsFrom2(int index) {
+       ArrayList<Path> paths = 
+       new ArrayList<Path>();
 
-	CodeBlock start = codeBlocks.get(index);
-	Path visited = new Path();
+       CodeBlock start = codeBlocks.get(index);
+       Path visited = new Path();
 
-	fillPaths(paths, start, visited);
+       fillPaths(paths, start, visited);
 
-	return paths;
-    }
-    */
+       return paths;
+       }
+       */
 
 
 
     /*
-    private boolean canReach(CodeBlock target1, CodeBlock target2, 
-	    CodeBlock parent) {
-	return target1.targets(target2) || target1.targets(parent);
-    }
-    */
+       private boolean canReach(CodeBlock target1, CodeBlock target2, 
+       CodeBlock parent) {
+       return target1.targets(target2) || target1.targets(parent);
+       }
+       */
 
 
     /*
