@@ -13,28 +13,33 @@ import org.apache.bcel.verifier.structurals.ControlFlowGraph;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 import org.apache.bcel.verifier.structurals.ExceptionHandler;
 
-public class CodeBlockGraph {
-
-    public static final boolean SHOULD_BE_NULL = true;
+public class BasicBlockGraph {
 
 
-    private Path codeBlocks;
+
+    private static final boolean SHOULD_BE_NULL = true;
 
 
-    public CodeBlockGraph(MethodGen methodGen) {
-	codeBlocks = constructBasicCodeBlocks(methodGen);
-	setTargetsCodeBlocks();
-	setLevelsCodeBlocks();
+    private Path basicBlocks;
+
+    
+
+    /* public methods */
+
+    public BasicBlockGraph(MethodGen methodGen) {
+	basicBlocks = constructBasicBasicBlocks(methodGen);
+	setTargetsBasicBlocks();
+	setLevelsBasicBlocks();
     }
 
 
-    public CodeBlock getCodeBlock(int i) {
-	return codeBlocks.get(i);
+    public BasicBlock getBasicBlock(int i) {
+	return basicBlocks.get(i);
     }
 
 
     public boolean isPartOfLoop(int index) {
-	CodeBlock start = codeBlocks.get(index);
+	BasicBlock start = basicBlocks.get(index);
 	Path visited = new Path();
 
 	return isPartOfLoop(start, visited);
@@ -45,7 +50,7 @@ public class CodeBlockGraph {
 	ArrayList<Path> paths = 
 	    new ArrayList<Path>();
 
-	CodeBlock start = codeBlocks.get(index);
+	BasicBlock start = basicBlocks.get(index);
 	Path visited = new Path();
 
 	fillPaths(paths, start, visited);
@@ -55,25 +60,25 @@ public class CodeBlockGraph {
 
 
 
-    public int getIndexCodeBlock(InstructionHandle ih) {
-	for (CodeBlock codeBlock : codeBlocks) {
-	    if (codeBlock.contains(ih)) {
-		return codeBlock.getIndex();
+    public int getIndexBasicBlock(InstructionHandle ih) {
+	for (BasicBlock basicBlock : basicBlocks) {
+	    if (basicBlock.contains(ih)) {
+		return basicBlock.getIndex();
 	    }
 	}
-	throw new Error("getIndexCodeBlock(), can't find instruction");
+	throw new Error("getIndexBasicBlock(), can't find instruction");
     }
 
 
     public String toString() {
 	StringBuilder sb = new StringBuilder();
-	for (CodeBlock codeBlock : codeBlocks) {
-	    sb.append(codeBlock);
+	for (BasicBlock basicBlock : basicBlocks) {
+	    sb.append(basicBlock);
 	}
 	sb.append("\n");
 	/*
-	   for (CodeBlock codeBlock : codeBlocks) {
-	   sb.append(codeBlock.toStringNoInstructions());
+	   for (BasicBlock basicBlock : basicBlocks) {
+	   sb.append(basicBlock.toStringNoInstructions());
 	   }
 	   sb.append("\n");
 	   */
@@ -82,8 +87,14 @@ public class CodeBlockGraph {
     }
 
 
+
+
+
+    /* private methods */
+
+
     private void fillPaths(ArrayList<Path> paths, 
-	    CodeBlock current, Path visited) {
+	    BasicBlock current, Path visited) {
 	//	System.out.printf("fillPaths() for %d\n", current.getIndex());
 	//	System.out.printf("\tvisited: %s\n", visited);
 	if (current.isEnding()) {
@@ -124,7 +135,7 @@ public class CodeBlockGraph {
     }
 
 
-    private boolean isPartOfLoop(CodeBlock current, Path visited) {
+    private boolean isPartOfLoop(BasicBlock current, Path visited) {
 	if (visited.size() > 0 && current.equals(visited.get(0))) {
 	    return true;
 	}
@@ -150,8 +161,6 @@ public class CodeBlockGraph {
 	}
 	else { // already visited current, now take the other route
 	    visited.add(current);
-	    System.out.printf("current == null: %b\n", current == null);
-	    System.out.printf("visited == null: %b\n", current == null);
 	    if (isPartOfLoop(current.getTarget(nrOfOccurences), visited)) {
 		visited.removeLast(current);
 		return true;
@@ -164,60 +173,60 @@ public class CodeBlockGraph {
 
 
 
-    /* set the levels of the codeblocks */
+    /* set the levels of the basic blocks */
 
-    private void setLevels(int index, CodeBlock currentCodeBlock) {
+    private void setLevels(int index, BasicBlock currentBasicBlock) {
 
-	int currentLevel = currentCodeBlock.getLevel();
-	CodeBlock nextCodeBlock = index < codeBlocks.size() - 1 ? 
-	    codeBlocks.get(index + 1) : null;
+	int currentLevel = currentBasicBlock.getLevel();
+	BasicBlock nextBasicBlock = index < basicBlocks.size() - 1 ? 
+	    basicBlocks.get(index + 1) : null;
 
-	if (currentCodeBlock.getNrOfTargets() == 1 /*&& 
-						     currentCodeBlock.targets(nextCodeBlock)*/) 
+	if (currentBasicBlock.getNrOfTargets() == 1 /*&& 
+						     currentBasicBlock.targets(nextBasicBlock)*/) 
 	{
-	    currentCodeBlock.setLevelTargets(currentLevel);
+	    currentBasicBlock.setLevelTargets(currentLevel);
 	    /* this is probably not necessary */
 	    /*
-	       if (!currentCodeBlock.targets(nextCodeBlock)) {
-	       currentCodeBlock.setLevelTargets(currentLevel-1);
+	       if (!currentBasicBlock.targets(nextBasicBlock)) {
+	       currentBasicBlock.setLevelTargets(currentLevel-1);
 	       }
 	       else {
-	       currentCodeBlock.setLevelTargets(currentLevel);
+	       currentBasicBlock.setLevelTargets(currentLevel);
 	       }
 	       */
 	}
-	else if (currentCodeBlock.getNrOfTargets() > 1) {
-	    currentCodeBlock.setLevelTargets(currentLevel + 1);
+	else if (currentBasicBlock.getNrOfTargets() > 1) {
+	    currentBasicBlock.setLevelTargets(currentLevel + 1);
 	}
 
 	/*
-	   if (currentCodeBlock.getNrOfTargets() == 2) {
+	   if (currentBasicBlock.getNrOfTargets() == 2) {
 	   System.out.printf("1 targets 2: %b\n", 
-	   currentCodeBlock.getTarget(0).
-	   targets(currentCodeBlock.getTarget(1)));
+	   currentBasicBlock.getTarget(0).
+	   targets(currentBasicBlock.getTarget(1)));
 	   }
 	   */
 
-	if (currentCodeBlock.getNrOfTargets() == 2) {
-	    CodeBlock target1 = currentCodeBlock.getTarget(0);
-	    CodeBlock target2 = currentCodeBlock.getTarget(1);
+	if (currentBasicBlock.getNrOfTargets() == 2) {
+	    BasicBlock target1 = currentBasicBlock.getTarget(0);
+	    BasicBlock target2 = currentBasicBlock.getTarget(1);
 	    if (target1.targets(target2) 
-		    /*|| target1.targets(currentCodeBlock)*/) {
+		    /*|| target1.targets(currentBasicBlock)*/) {
 		/* probably not necessary */
-		currentCodeBlock.setLevelTarget(1, currentLevel);
+		currentBasicBlock.setLevelTarget(1, currentLevel);
 		    }
 	}
     }
 
 
-    private void setLevelsCodeBlocks() {
-	for (int i = 0; i < codeBlocks.size(); i++) {
-	    CodeBlock currentCodeBlock = codeBlocks.get(i);
+    private void setLevelsBasicBlocks() {
+	for (int i = 0; i < basicBlocks.size(); i++) {
+	    BasicBlock currentBasicBlock = basicBlocks.get(i);
 	    if (i == 0) {
-		currentCodeBlock.setLevel(0);
+		currentBasicBlock.setLevel(0);
 	    }
-	    if (!currentCodeBlock.allLevelsTargetsSet()) {
-		setLevels(i, codeBlocks.get(i));
+	    if (!currentBasicBlock.allLevelsTargetsSet()) {
+		setLevels(i, basicBlocks.get(i));
 	    }
 	}
     }
@@ -226,32 +235,32 @@ public class CodeBlockGraph {
 
 
 
-    /* set the targets of the codeblocks right */
+    /* set the targets of the basic blocks right */
 
 
-    private CodeBlock findCodeBlock(InstructionContext startInstruction) {
-	for (CodeBlock codeBlock : codeBlocks) {
-	    if ((codeBlock.getStart()).equals(startInstruction)) {
-		return codeBlock;
+    private BasicBlock findBasicBlock(InstructionContext startInstruction) {
+	for (BasicBlock basicBlock : basicBlocks) {
+	    if ((basicBlock.getStart()).equals(startInstruction)) {
+		return basicBlock;
 	    }
 	}
-	throw new Error("start instruction of codeblock not found");
+	throw new Error("start instruction of basic block not found");
     }
 
 
-    private void setTargets(CodeBlock codeBlock) {
-	InstructionContext[] successors = codeBlock.getEnd().getSuccessors();
+    private void setTargets(BasicBlock basicBlock) {
+	InstructionContext[] successors = basicBlock.getEnd().getSuccessors();
 	for (int i = 0; i < successors.length; i++) {
-	    CodeBlock target = findCodeBlock(successors[i]);
-	    codeBlock.setTarget(i, target);
+	    BasicBlock target = findBasicBlock(successors[i]);
+	    basicBlock.setTarget(i, target);
 	}
     }
 
 
     /* set the target(s), set the level */
-    private void setTargetsCodeBlocks() {
-	for (CodeBlock codeBlock : codeBlocks) {
-	    setTargets(codeBlock);
+    private void setTargetsBasicBlocks() {
+	for (BasicBlock basicBlock : basicBlocks) {
+	    setTargets(basicBlock);
 	}
     }
 
@@ -261,18 +270,18 @@ public class CodeBlockGraph {
 
 
 
-    /* construct basic codeblocks (without the targets right) */
+    /* construct basic basic blocks (without the targets right) */
 
-    private void addCodeBlock(Path codeBlocks, 
+    private void addBasicBlock(Path basicBlocks, 
 	    InstructionContext start, 
 	    ArrayList<InstructionContext> instructions, 
 	    InstructionContext end,
 	    ConstantPool constantPool) {
 	if (start == null || instructions == null || end == null) {
-	    throw new Error("CodeBlock start/end out of sync");
+	    throw new Error("BasicBlock start/end out of sync");
 	} else {
-	    codeBlocks.add(new CodeBlock(start, instructions, end, 
-			codeBlocks.size(), constantPool));
+	    basicBlocks.add(new BasicBlock(start, instructions, end, 
+			basicBlocks.size(), constantPool));
 	}
     }
 
@@ -290,13 +299,13 @@ public class CodeBlockGraph {
     }
 
 
-    private boolean isEndOfCodeBlock(InstructionContext currentContext, ArrayList<InstructionContext> targets, InstructionContext nextContext,
+    private boolean isEndOfBasicBlock(InstructionContext currentContext, ArrayList<InstructionContext> targets, InstructionContext nextContext,
 	    InstructionContext[] successors) {
 	return hasOneSuccessorNotBeingNext(nextContext, successors) || successors.length > 1 || isTarget(nextContext, targets) || isEndInstruction(currentContext);
     }
 
 
-    private boolean isStartOfCodeBlock(int i, InstructionContext currentContext, 
+    private boolean isStartOfBasicBlock(int i, InstructionContext currentContext, 
 	    ArrayList<InstructionContext> targets) {
 	return i == 0 || targets.contains(currentContext);
     }
@@ -313,14 +322,6 @@ public class CodeBlockGraph {
 		targets.add(handlerContext);
 	    }
 	}
-    }
-
-
-    private <T> void add(T[] ts, ArrayList<T> arrayList) {
-	for (T t : ts) {
-	    arrayList.add(t);
-	}
-
     }
 
 
@@ -346,7 +347,7 @@ public class CodeBlockGraph {
 		targets.add(successors[0]);
 	    }
 	    else if (successors.length > 1) {
-		add(successors, targets);
+		addAll(successors, targets);
 		/*
 		   for (InstructionContext successor : successors) {
 		   targets.add(successor);
@@ -368,7 +369,8 @@ public class CodeBlockGraph {
 	return graph.contextsOf(instructionHandles);
     }
 
-    void checkSet(InstructionContext start, ArrayList<InstructionContext> instructions, boolean shouldBeNull) {
+
+    void checkIfSet(InstructionContext start, ArrayList<InstructionContext> instructions, boolean shouldBeNull) {
 	if (start == null && instructions == null && shouldBeNull) {
 	    // ok
 	}
@@ -376,12 +378,14 @@ public class CodeBlockGraph {
 	    // ok
 	}
 	else {
-	    throw new Error("CodeBlock start/end out of sync");
+	    throw new Error("BasicBlock start/end out of sync");
 	}
     }
 
-    private Path constructBasicCodeBlocks(MethodGen methodGen) {
-	Path codeBlocks = new Path();
+
+
+    private Path constructBasicBasicBlocks(MethodGen methodGen) {
+	Path basicBlocks = new Path();
 
 	ControlFlowGraph graph = new ControlFlowGraph(methodGen);
 	InstructionContext[] contexts = getContexts(methodGen, graph);
@@ -397,27 +401,45 @@ public class CodeBlockGraph {
 		null;
 	    InstructionContext[] successors = currentContext.getSuccessors();
 
-	    if (isStartOfCodeBlock(i, currentContext, targets)) {
-		checkSet(start, instructions, SHOULD_BE_NULL);
+	    if (isStartOfBasicBlock(i, currentContext, targets)) {
+		checkIfSet(start, instructions, SHOULD_BE_NULL);
 		start = currentContext;
 		instructions = new ArrayList<InstructionContext>();
 	    }
 
-	    System.out.printf("%s\n", currentContext);
-	    System.out.printf("targets.contains(currentContext): %b\n", targets.contains(currentContext));
-	    System.out.println(targets);
 	    instructions.add(currentContext);
 
-	    if (isEndOfCodeBlock(currentContext, targets, nextContext, successors)) {
-		checkSet(start, instructions, !SHOULD_BE_NULL);
-		addCodeBlock(codeBlocks, start, instructions, currentContext, 
+	    if (isEndOfBasicBlock(currentContext, targets, nextContext, successors)) {
+		checkIfSet(start, instructions, !SHOULD_BE_NULL);
+		addBasicBlock(basicBlocks, start, instructions, currentContext, 
 			methodGen.getConstantPool().getConstantPool());
 		start = null;
 		instructions = null;
 	    }
 	}
-	return codeBlocks;
+	return basicBlocks;
     }
+
+
+
+
+
+
+
+    /* for other classes */
+
+
+    private <T> void addAll(T[] ts, ArrayList<T> arrayList) {
+	for (T t : ts) {
+	    arrayList.add(t);
+	}
+
+    }
+
+
+
+
+
 }
 
 
@@ -437,7 +459,7 @@ public class CodeBlockGraph {
        ArrayList<Path> paths = 
        new ArrayList<Path>();
 
-       CodeBlock start = codeBlocks.get(index);
+       BasicBlock start = basicBlocks.get(index);
        Path visited = new Path();
 
        fillPaths(paths, start, visited);
@@ -449,8 +471,8 @@ public class CodeBlockGraph {
 
 
     /*
-       private boolean canReach(CodeBlock target1, CodeBlock target2, 
-       CodeBlock parent) {
+       private boolean canReach(BasicBlock target1, BasicBlock target2, 
+       BasicBlock parent) {
        return target1.targets(target2) || target1.targets(parent);
        }
        */
@@ -458,7 +480,7 @@ public class CodeBlockGraph {
 
     /*
        private void fillPaths(ArrayList<Path> paths, 
-       CodeBlock current, Path visited) {
+       BasicBlock current, Path visited) {
        if (visited.contains(current)) {
        return; // loop
        }

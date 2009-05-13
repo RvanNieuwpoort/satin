@@ -66,13 +66,12 @@ public class EarliestLoad implements Analyzer {
     private InstructionHandle getLoadInstruction(InstructionList il, 
 	    SpawnableCall spawnableCall) throws SyncInsertionProposalFailure {
 
-	InstructionHandle ih = spawnableCall.getInstructionHandle();
+	InstructionHandle ih = spawnableCall.getInvokeInstruction();
 	while ((ih = ih.getNext()) != null) {
 	    try {
 		LoadInstruction loadInstruction = 
 		    (LoadInstruction) (ih.getInstruction());
-		if (loadInstruction.getIndex() == 
-			spawnableCall.getResultIndex()) {
+		if (spawnableCall.storesIn(loadInstruction.getIndex())) {
 		    return ih;
 			}
 	    }
