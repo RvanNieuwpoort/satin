@@ -1,11 +1,10 @@
-package ibis.satin.impl.syncrewriter;
+package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 
 public class NeverReadException extends Exception {
 
 
-    public static final String MESSAGE = "WARNING: inserting sync failed," + 
-	"result of spawnable method is never read";
+    public static final String MESSAGE = "The result is never read";
 
 
     public NeverReadException() {

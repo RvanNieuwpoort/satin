@@ -56,7 +56,7 @@ public class Debug {
     }
 
     public void error(String warningMessage, Object... arguments) {
-	print("WARNING: ", 0, String.format(warningMessage, arguments));
+	print("ERROR: ", 0, String.format(warningMessage, arguments));
     }
 
 

@@ -110,15 +110,15 @@ class ControlFlowViewer {
 	out.println("Control flow:");
 	MethodGen methodGen = new MethodGen(method, javaClass.getClassName(), 
 		new ConstantPoolGen(javaClass.getConstantPool()));
-	CodeBlockGraph codeBlockGraph = new CodeBlockGraph(methodGen);
-	out.println(codeBlockGraph);
+	BasicBlockGraph basicBlockGraph = new BasicBlockGraph(methodGen);
+	out.println(basicBlockGraph);
 	out.println();
 
 
 	
 	/*
 	out.println("Ending paths:");
-	ArrayList<Path> paths = codeBlockGraph.getEndingPathsFrom(0);
+	ArrayList<Path> paths = basicBlockGraph.getEndingPathsFrom(0);
 	printPaths(paths);
 	*/
     }

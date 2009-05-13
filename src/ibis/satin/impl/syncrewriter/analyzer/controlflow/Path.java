@@ -5,70 +5,79 @@ import java.util.ArrayList;
 import org.apache.bcel.generic.InstructionHandle;
 
 
-public class Path extends ArrayList<CodeBlock> {
+public class Path extends ArrayList<BasicBlock> {
 
+
+    /* public methods */
 
     public Path() {
     }
 
 
-    Path(Path path) {
-	super((ArrayList<CodeBlock>) path);
-    }
-
-
-    public CodeBlock getLastCodeBlock() {
+    public BasicBlock getLastBasicBlock() {
 	return get(size() - 1);
     }
 
 
-    public Path getSubPathIncluding(int indexCodeBlock) {
+    public Path getSubPathIncluding(int indexBasicBlock) {
 	for (int i = 0; i < size(); i++) {
-	    if (get(i).getIndex() == indexCodeBlock) {
+	    if (get(i).getIndex() == indexBasicBlock) {
 		return (Path) subList(0, i + 1);
 	    }
 	}
-	throw new Error("Codeblock " + indexCodeBlock + " not in this path");
+	throw new Error("Codeblock " + indexBasicBlock + " not in this path");
     }
 
 
-    public Path getCommonSubPathFromEnd(Path rhs) {
-	Path path = new Path();
+    public Path getCommonSubPathFromEnd(Path path) {
+	Path commonSubPath = new Path();
 
-	if (rhs.size() == 0 || size() == 0) {
-	    return path;
+	if (path.size() == 0 || size() == 0) {
+	    return commonSubPath;
 	}
 	int i = size() - 1;
-	int j = rhs.size() - 1;
-	while (i >= 0 && j >= 0 && get(i).equals(rhs.get(j))) {
-	    path.add(0, get(i));
+	int j = path.size() - 1;
+	while (i >= 0 && j >= 0 && get(i).equals(path.get(j))) {
+	    commonSubPath.add(0, get(i));
 	    i--; 
 	    j--;
 	}
-	return path;
+	return commonSubPath;
     }
 
 
 
-    public Path getCommonSubPathFromStart(Path rhs) {
-	Path path = new Path();
+    public static Path getLatestCommonSubPath(Path[] paths) {
+	Path latestCommonSubPath = getCommonSubPathFromEnd(paths);
+	if (latestCommonSubPath.size() == 0) {
+	    latestCommonSubPath = getCommonSubPathFromStart(paths);
+	}
+
+	return latestCommonSubPath;
+    }
+
+
+
+    public Path getCommonSubPathFromStart(Path path) {
+	Path commonSubPath = new Path();
 
 	/*
-	System.out.printf("0 < size(): %b\n", 0 < size());
-	System.out.printf("0 < path.size(): %b\n", 0 < size());
-	System.out.printf("0 < size(): %b\n", 0 < size());
-	System.out.printf("0 < size(): %b\n", 0 < size());
-	*/
-	for (int i = 0; i < size() && i < rhs.size() && get(i).equals(rhs.get(i)); i++) {
-	    path.add(get(0));
+	   System.out.printf("0 < size(): %b\n", 0 < size());
+	   System.out.printf("0 < commonSubPath.size(): %b\n", 0 < size());
+	   System.out.printf("0 < size(): %b\n", 0 < size());
+	   System.out.printf("0 < size(): %b\n", 0 < size());
+	   */
+	for (int i = 0; i < size() && i < path.size() && get(i).equals(path.get(i)); i++) {
+	    commonSubPath.add(get(i));
 	}
-	return path;
+	return commonSubPath;
     }
 
 
 
     public String toString() {
 	StringBuilder sb = new StringBuilder();
+	if (size() == 0) return "";
 	for (int i = 0; i < size() - 1; i++) {
 	    sb.append(get(i).getIndex());
 	    sb.append(" ");
@@ -78,19 +87,59 @@ public class Path extends ArrayList<CodeBlock> {
     }
 
 
-    public void removeLast(CodeBlock codeBlock) {
-	remove(lastIndexOf(codeBlock));
+    public void removeLast(BasicBlock basicBlock) {
+	remove(lastIndexOf(basicBlock));
     }
 
 
-    int nrOfOccurences(CodeBlock codeBlock) {
+
+
+
+
+    /* package methods */
+
+    Path(Path path) {
+	super((ArrayList<BasicBlock>) path);
+    }
+
+
+    int nrOfOccurences(BasicBlock basicBlock) {
 	int nrOfOccurences = 0;
-	for (CodeBlock i : this) {
-	    if (i.equals(codeBlock)) {
+	for (BasicBlock i : this) {
+	    if (i.equals(basicBlock)) {
 		nrOfOccurences++;
 	    }
 	}
-	
+
 	return nrOfOccurences;
+    }
+
+
+
+
+    /* private methods */
+
+
+    private static Path getCommonSubPathFromEnd(Path[] paths) {
+	if (paths.length == 0) {
+	    return new Path();
+	}
+	Path subPath = paths[0];
+	for (int i = 1; i < paths.length; i++) {
+	    subPath = subPath.getCommonSubPathFromEnd(paths[i]);
+	}
+	return subPath;
+    }
+
+
+    private static Path getCommonSubPathFromStart(Path[] paths) {
+	if (paths.length == 0) {
+	    return new Path();
+	}
+	Path subPath = paths[0];
+	for (int i = 1; i < paths.length; i++) {
+	    subPath = subPath.getCommonSubPathFromStart(paths[i]);
+	}
+	return subPath;
     }
 }

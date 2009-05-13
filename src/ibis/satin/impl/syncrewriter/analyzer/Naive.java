@@ -25,7 +25,7 @@ public class Naive implements Analyzer {
 
 	for (int i = 0; i < spawnableCalls.size(); i++) {
 	    SpawnableCall call = spawnableCalls.get(i);
-	    InstructionHandle invoke = call.getInstructionHandle();
+	    InstructionHandle invoke = call.getInvokeInstruction();
 	    InstructionHandle store = invoke.getNext();
 	    InstructionHandle rightAfterStore = store.getNext();
 
