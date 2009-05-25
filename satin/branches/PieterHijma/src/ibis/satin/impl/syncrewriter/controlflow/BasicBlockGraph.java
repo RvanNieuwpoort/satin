@@ -388,9 +388,6 @@ public class BasicBlockGraph {
 
 
 
-
-
-
     /* for other classes */
 
 
@@ -400,73 +397,4 @@ public class BasicBlockGraph {
 	}
 
     }
-
-
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*
-       public ArrayList<Path> getEndingPathsFrom2(int index) {
-       ArrayList<Path> paths = 
-       new ArrayList<Path>();
-
-       BasicBlock start = basicBlocks.get(index);
-       Path visited = new Path();
-
-       fillPaths(paths, start, visited);
-
-       return paths;
-       }
-       */
-
-
-
-    /*
-       private boolean canReach(BasicBlock target1, BasicBlock target2, 
-       BasicBlock parent) {
-       return target1.targets(target2) || target1.targets(parent);
-       }
-       */
-
-
-    /*
-       private void fillPaths(ArrayList<Path> paths, 
-       BasicBlock current, Path visited) {
-       if (visited.contains(current)) {
-       return; // loop
-       }
-       else if (current.isEnding()) {
-       visited.add(current);
-       paths.add((Path)visited.clone());
-       visited.remove(current);
-       return;
-       }
-       else {
-       visited.add(current);
-       for (int i = 0; i < current.getNrOfTargets(); i++) {
-       fillPaths(paths, current.getTarget(i), visited);
-       }
-       visited.remove(current);
-       return;
-       }
-       }
-       */
-
-
-
-
-

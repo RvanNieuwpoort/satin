@@ -37,6 +37,12 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 
 
 
+    /** Instantiate from an existing method.
+     *
+     * @param method method
+     * @param className class name containing this method
+     * @param constantPoolGen constant pool
+     */
     public MethodGen(Method method, String className, ConstantPoolGen constantPoolGen) {
 	super(method, className, constantPoolGen);
     }
@@ -159,22 +165,12 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	ConstantPoolGen constantPoolGen = getConstantPool();
 
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
-	//System.out.printf("Does consumer %s, consume %s\n", consumer, consumee);
 
 	ControlFlowGraph controlFlowGraph = new ControlFlowGraph(this);
 	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph);
 
-	/*
-	System.out.printf("The consumers are: %s\n", consumers);
-	System.out.printf("So consumer %s consumes %s?: %b\n", consumer, consumee, consumers.contains(consumer));
-	*/
-
 	return consumers.contains(consumer);
     }
-
-
-
-
 
 
     /** Get the object reference load instruction of an instruction invoked on
@@ -200,6 +196,17 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     }
 
 
+    /** Returns the index of the variable of a store instruction. 
+     *
+     * When the store is a store into an array or a putfield instruction, then
+     * the index of the local variable which contains the object reference is
+     * returned.
+     *
+     * @param instructionHandle The instruction that is a store instruction.
+     * @return The index of the local variable in which is stored.
+     * @throws ClassCastException The instructionHandle is not a store
+     * instruction. 
+     */
     public int getIndexStore(InstructionHandle instructionHandle) throws ClassCastException {
 	try {
 	    StoreInstruction storeInstruction = (StoreInstruction) 
@@ -210,7 +217,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	}
 	try {
 	    ArrayInstruction arrayStoreInstruction = (ArrayInstruction)
-		/*((StackConsumer)(*/instructionHandle.getInstruction()/*))*/;
+		instructionHandle.getInstruction();
 	    InstructionHandle ih  = getObjectReferenceLoadInstruction
 		(instructionHandle);
 	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
@@ -228,6 +235,11 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 
 
 
+    /** Returns the end of an exception handler.
+     *
+     * @param codeException The codeException which end is returned.
+     * @return The instructionHandle that is the end of the exception handler.
+     */
     public InstructionHandle getEndExceptionHandler(CodeExceptionGen codeException) {
 	LocalVariableGen[] localVars = getLocalVariables();
 	InstructionHandle startHandler = codeException.getHandlerPC();
@@ -236,12 +248,6 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    InstructionHandle startScope = localVar.getStart();
 	    InstructionHandle endScope = localVar.getEnd();
 
-	    /*
-	       System.out.printf("var: %s\n", localVar);
-	       System.out.printf("startScope: %s\n", startScope);
-	       System.out.printf("endScope: %s\n", endScope);
-	       */
-
 	    if (startScope == startHandler || startScope == startHandler.getNext() || 
 		    startScope == startHandler.getNext().getNext() &&
 		    localVar.getType().equals(codeException.getCatchType()))
@@ -249,9 +255,6 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	}
 	throw new Error("no end exceptionhandler...");
     }
-
-
-
 
 
     private ArrayList<InstructionHandle> getAllObjectLoadInstructions(InstructionList il) {
@@ -274,31 +277,20 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
 
 	ArrayList<InstructionHandle> consumers = new ArrayList<InstructionHandle>();
-	//System.out.printf("We're at %s\n", current);
-
 	int wordsOnStack = nrWords;
-	/*
-	System.out.printf("  We want to know if this consumes %d words\n", wordsOnStack);
-	*/
-
 	wordsOnStack -= current.getInstruction().consumeStack(constantPoolGen);
-//	System.out.printf("  After this instruction consumed the stack, the stack is %d\n", wordsOnStack);
 
 	if (wordsOnStack <= 0) {
-	    //System.out.printf("  The stack is consumed by %s!!\n", current);
 	    consumers.add(current);
 	    return consumers;
 	}
 
 	wordsOnStack += current.getInstruction().produceStack(constantPoolGen);
-	//System.out.printf("  After this instruction produced the stack, the stack is %d\n", wordsOnStack);
 
 	InstructionContext currentContext = controlFlowGraph.contextOf(current);
 	for (InstructionContext successorContext : currentContext.getSuccessors()) {
 	    InstructionHandle successor = successorContext.getInstruction();
-	    //System.out.printf("  This instruction goes to %s, checking out..\n", successor);
 	    consumers.addAll(getInstructionsConsuming(wordsOnStack, successor, constantPoolGen, controlFlowGraph));
-	    //System.out.printf("  Done checking out %s\n", successor);
 	}
 
 	return consumers;
@@ -311,75 +303,4 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 		instruction instanceof FASTORE || instruction instanceof IASTORE ||
 		instruction instanceof LASTORE || instruction instanceof SASTORE;
     }
-
-
-
-
-
-
 }
-
-
-
-    /*
-    public static InstructionHandle[] findInstructionConsumers(InstructionHandle ih, ConstantPoolGen constantPoolGen) throws ConsumerNotFoundException {
-	int stackConsumption = 0;
-	int targetBalance = ih.getInstruction().produceStack(constantPoolGen);
-	int lastProducedOnStack = 0;
-	InstructionHandle current = ih;
-	do {
-	    current = current.getNext();
-	    if (current.getInstruction() instanceof BranchInstruction) {
-		throw new ConsumerNotFoundException();
-	    }
-	    Instruction currentInstruction = current.getInstruction();
-	    lastProducedOnStack = currentInstruction.produceStack(constantPoolGen);
-	    stackConsumption-=lastProducedOnStack;
-	    stackConsumption+=currentInstruction.consumeStack(constantPoolGen);
-	}
-	// ignoring the fact that the current instruction might also produce
-	// something
-	while (stackConsumption + lastProducedOnStack < targetBalance);
-
-	return current;
-    }
-    */
-
-
-
-
-
-    /* FOR OTHER CLASSES */
-
-    /* what instruction consumes what ih produces on the stack */
-    /*
-    private InstructionHandle findInstructionConsumer(InstructionHandle ih, ConstantPoolGen constantPoolGen) {
-	int stackConsumption = 0;
-	int targetBalance = ih.getInstruction().produceStack(constantPoolGen);
-	System.out.printf("targetBalance: %d\n", targetBalance);
-	int lastProducedOnStack = 0;
-	InstructionHandle current = ih;
-	do {
-	    current = current.getNext();
-	    System.out.printf("\ncurrent instruction: %s\n", current);
-	    System.out.printf("stackConsumption: %d\n", stackConsumption);
-	    System.out.println("OK, what is consumed...");
-	    Instruction currentInstruction = current.getInstruction();
-	    lastProducedOnStack = currentInstruction.produceStack(constantPoolGen);
-	    System.out.printf("lastProducedOnStack: %d\n", lastProducedOnStack);
-	    stackConsumption-=lastProducedOnStack;
-	    System.out.printf("stackConsumption: %d\n", stackConsumption);
-	    stackConsumption+=currentInstruction.consumeStack(constantPoolGen);
-	    System.out.printf("stackConsumption: %d\n", stackConsumption);
-	    System.out.printf("stackConsumption + lastProducedOnStack: %d\n", stackConsumption + lastProducedOnStack);
-	}
-	// ignoring the fact that the current instruction might also produce
-	// something
-	while (stackConsumption + lastProducedOnStack != targetBalance);
-
-	return current;
-    }
-    */
-
-
-
