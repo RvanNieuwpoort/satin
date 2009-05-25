@@ -1,5 +1,7 @@
 package ibis.satin.impl.syncrewriter;
 
+import ibis.satin.impl.syncrewriter.bcel.MethodGen;
+import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.io.PrintStream;
 
@@ -12,11 +14,13 @@ import org.apache.bcel.classfile.Method;
 import org.apache.bcel.classfile.CodeException;
 import org.apache.bcel.Repository;
 
+import org.apache.bcel.verifier.structurals.ControlFlowGraph;
+import org.apache.bcel.verifier.structurals.InstructionContext;
+
 import org.apache.bcel.generic.CodeExceptionGen;
 import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.MethodGen;
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.InstructionHandle;
@@ -50,6 +54,11 @@ public class SpawnableMethod extends MethodGen {
     private Debug d;
 
 
+    public ArrayList<SpawnableCall> getSpawnableCalls() {
+	return spawnableCalls;
+    }
+
+
     SpawnableMethod (Method method, String className, ConstantPoolGen constantPoolGen, 
 	    Method spawnSignature, int indexSync, Debug d) 
 	throws NoSpawnableMethodException, AssumptionFailure {
@@ -80,11 +89,6 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    public ArrayList<SpawnableCall> getSpawnableCalls() {
-	return spawnableCalls;
-    }
-
-
     private void insertSync(Analyzer analyzer) throws MethodRewriteFailure {
 	d.log(1, "trying to insert sync statement(s)\n");
 	InstructionHandle[] ihs = 
@@ -106,77 +110,53 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    private InstructionHandle findStackConsumer(InstructionHandle start, int consumingWords, ConstantPoolGen constantPoolGen) {
-	int stackConsumption = 0;
-	InstructionHandle current = start;
-	do {
-	    Instruction currentInstruction = current.getInstruction();
-	    stackConsumption-=currentInstruction.produceStack(constantPoolGen);
-	    stackConsumption+=currentInstruction.consumeStack(constantPoolGen);
-	}
-	while (stackConsumption < consumingWords && (current = current.getNext()) != null);
-
-	if (stackConsumption < consumingWords) throw new Error("stack is not consumed");
-	return current;
-    }
-
-
-    private boolean contains(ObjectType type, ObjectType[] types) {
+    private boolean containsType(ObjectType type, ObjectType[] types) {
 	/*
-	System.out.printf("Looking for type: %s\n", type);
-	System.out.println("The method has the following exception types:");
-	*/
+	   System.out.printf("Looking for type: %s\n", type);
+	   System.out.println("The method has the following exception types:");
+	   */
 	for (ObjectType i : types) {
 	    /*
-	    System.out.printf("  type: %s\n", i);
-	    System.out.printf("  type.subclassOf(i): %b\n", type.subclassOf(i));
-	    */
+	       System.out.printf("  type: %s\n", i);
+	       System.out.printf("  type.subclassOf(i): %b\n", type.subclassOf(i));
+	       */
 	    if (i.equals(type) || type.subclassOf(i)) return true;
 	}
 	return false;
     }
 
-
     private boolean hasRightType(CodeExceptionGen codeException, MethodGen method) {
 	ObjectType catchType = codeException.getCatchType();
 	/*
-	System.out.printf("The catchType: %s\n", catchType);
-	*/
+	   System.out.printf("The catchType: %s\n", catchType);
+	   */
 	if (catchType == null) return false;
 	String[] exceptionTypeNames = method.getExceptions();
 	ObjectType[] exceptionTypes = new ObjectType[exceptionTypeNames.length];
 	for (int i = 0; i < exceptionTypeNames.length; i++) {
 	    exceptionTypes[i] = new ObjectType(exceptionTypeNames[i]);
 	}
-	return contains(catchType, exceptionTypes);
+	return containsType(catchType, exceptionTypes);
     }
 
-
-    /* codeException.containsTarget(ih) has a BUG!! */
-    private boolean containsTarget(CodeExceptionGen codeException, InstructionHandle ih) {
-	int startPositionHandler = codeException.getStartPC().getPosition();
-	int endPositionHandler = codeException.getEndPC().getPosition();
-	int positionInstruction = ih.getPosition();
-	return positionInstruction >= startPositionHandler && positionInstruction <= endPositionHandler;
-    }
 
     private ArrayList<CodeExceptionGen> getExceptionHandlers(InstructionHandle ih, MethodGen spawnSignature) {
 	CodeExceptionGen[] codeExceptions = getExceptionHandlers();
 	/*
-	System.out.printf("codeExceptions.length: %d\n", codeExceptions.length);
-	System.out.printf("ih: %s\n", ih);
-	*/
+	   System.out.printf("codeExceptions.length: %d\n", codeExceptions.length);
+	   System.out.printf("ih: %s\n", ih);
+	   */
 	ArrayList<CodeExceptionGen> result = new ArrayList<CodeExceptionGen>();
 
 
 	for (CodeExceptionGen codeException : codeExceptions) {
 	    /*
-	    System.out.printf("codeException: %s\n", codeException);
-	    System.out.printf("codeException.getStartPC(): %s\n", codeException.getStartPC());
-	    System.out.printf("codeException.getEndPC(): %s\n", codeException.getEndPC());
-	    System.out.printf("codeException.containsTarget(ih): %b\n", codeException.containsTarget(ih));
-	    */
-	    if (containsTarget(codeException, ih) && hasRightType(codeException, spawnSignature)) {
+	       System.out.printf("codeException: %s\n", codeException);
+	       System.out.printf("codeException.getStartPC(): %s\n", codeException.getStartPC());
+	       System.out.printf("codeException.getEndPC(): %s\n", codeException.getEndPC());
+	       System.out.printf("codeException.containsTarget(ih): %b\n", codeException.containsTarget(ih));
+	       */
+	    if (codeException.containsTarget(ih) && hasRightType(codeException, spawnSignature)) {
 		result.add(codeException);
 	    }
 	}
@@ -186,52 +166,28 @@ public class SpawnableMethod extends MethodGen {
 
 
 
-    private InstructionHandle getEndExceptionHandler(CodeExceptionGen codeException) {
-	LocalVariableGen[] localVars = getLocalVariables();
-	InstructionHandle startHandler = codeException.getHandlerPC();
-
-	for (LocalVariableGen localVar : localVars) {
-	    InstructionHandle startScope = localVar.getStart();
-	    InstructionHandle endScope = localVar.getEnd();
-
-	    /*
-	       System.out.printf("var: %s\n", localVar);
-	       System.out.printf("startScope: %s\n", startScope);
-	       System.out.printf("endScope: %s\n", endScope);
-	       */
-
-	    if (startScope == startHandler || startScope == startHandler.getNext() || 
-		    startScope == startHandler.getNext().getNext() &&
-		    localVar.getType().equals(codeException.getCatchType()))
-		return localVar.getEnd().getPrev();
-	}
-	throw new Error("geen einde exceptionhandler...");
-    }
-
-
     private void getIndicesStores(InstructionHandle start,
-	    InstructionHandle end, 
-	    ConstantPoolGen constantPoolGen, ArrayList<Integer> resultIndices) {
+	    InstructionHandle end, ArrayList<Integer> resultIndices) {
 
 	/*
-	System.out.printf("getLocalVariableIndexResults()\n");
-	System.out.printf("  begin: %d\n", start.getPosition());
-	System.out.printf("  end: %d\n", end.getPosition());
-	*/
+	   System.out.printf("getLocalVariableIndexResults()\n");
+	   System.out.printf("  begin: %d\n", start.getPosition());
+	   System.out.printf("  end: %d\n", end.getPosition());
+	   */
 	// boolean firstLeftOut = false;
 	// TODO
 
 	for (InstructionHandle current = start.getNext() ;current != end.getNext(); current = current.getNext()) {
 	    /*
-	    System.out.printf("current (exception handler): %s\n", current);
-	    */
+	       System.out.printf("current (exception handler): %s\n", current);
+	       */
 	    try {
-		int indexStore = getIndexStore(current, constantPoolGen);
+		int indexStore = getIndexStore(current);
 		if (!resultIndices.contains(indexStore) /*&& !firstLeftOut*/) {
 		    //firstLeftOut = true;
 		    /*
-		    System.out.printf("%d, ", indexStore);
-		    */
+		       System.out.printf("%d, ", indexStore);
+		       */
 		    resultIndices.add(indexStore);
 		}
 	    }
@@ -248,68 +204,47 @@ public class SpawnableMethod extends MethodGen {
 
 
 
-    private int getIndexStore(InstructionHandle instructionHandle, ConstantPoolGen constantPoolGen) throws ClassCastException {
-	try {
-	    StoreInstruction storeInstruction = (StoreInstruction) 
-		(instructionHandle.getInstruction());
-	    return storeInstruction.getIndex();
-	}
-	catch (ClassCastException e) {
-	}
-	try {
-	    ArrayInstruction arrayStoreInstruction = (ArrayInstruction)
-		/*((StackConsumer)(*/instructionHandle.getInstruction()/*))*/;
-	    InstructionHandle ih  = getObjectReferenceLoadInstruction
-		(instructionHandle, constantPoolGen);
-	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
-	    return objectLoadInstruction.getIndex();
-	}
-	catch (ClassCastException e) {
+
+    private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, 
+	    ArrayList<CodeExceptionGen> exceptionHandlers) {
+
+	ArrayList<Integer> resultIndices = new ArrayList<Integer>();
+	for (CodeExceptionGen exceptionHandler : exceptionHandlers) {
+	    InstructionHandle start = exceptionHandler.getHandlerPC(); 
+	    InstructionHandle end = getEndExceptionHandler(exceptionHandler);
+	    getIndicesStores(start, end, resultIndices);
 	}
 
-	PUTFIELD putFieldInstruction = (PUTFIELD) instructionHandle.getInstruction();
-	InstructionHandle ih  = getObjectReferenceLoadInstruction
-	    (instructionHandle, constantPoolGen);
-	ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
-	return objectLoadInstruction.getIndex();
+	Integer[] dummy = new Integer[resultIndices.size()];
+
+	return new SpawnableCall(invokeInstruction,
+		getObjectReferenceLoadInstruction(invokeInstruction),
+		resultIndices.toArray(dummy));
     }
 
 
+    private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, MethodGen spawnSignatureGen) {
+	ArrayList<CodeExceptionGen> exceptionHandlers = getExceptionHandlers(invokeInstruction, spawnSignatureGen);
 
-
-
-
-    /* Get the local variable index of the result of the spawnable methode
-     * invoke.
-     */
-    // assumption that the result needs to be stored and that it happens right
-    // after the invoke of the spawnable call
-    private Integer[] getIndexStore(InstructionHandle spawnableMethodInvoke,
-	    InstructionList instructionList, ConstantPoolGen constantPoolGen) throws ResultNotStored {
-
-	/*
-	   System.err.printf("spawnableMethodInvoke: %s\n", spawnableMethodInvoke);
-	   */
-	int producedOnStack = spawnableMethodInvoke.getInstruction().produceStack(constantPoolGen);
-	/*
-	   System.err.printf("producedOnStack: %d\n", producedOnStack);
-	   */
-	if (producedOnStack <= 0) {
-	    throw new Error("The spawnable invoke doesn't return anything");
+	if (exceptionHandlers.size() == 0) {
+	    return new SpawnableCall(invokeInstruction, getObjectReferenceLoadInstruction(invokeInstruction), 
+		    SpawnableCall.Type.EXCEPTIONS_NOT_HANDLED);
 	}
-	InstructionHandle stackConsumer = findStackConsumer(spawnableMethodInvoke.getNext(), producedOnStack, constantPoolGen);
+	else {
+	    return getSpawnableCallWithException(invokeInstruction, exceptionHandlers);
+	}
+    }
 
 
-	/* assumption that the next instruction is going to be the store
-	 * instruction
-	 */
-	/*
-	   InstructionHandle stackConsumer = spawnableMethodInvoke.getNext();
-	   */
-
+    private Integer[] findIndexStore(InstructionHandle spawnableMethodInvoke) throws ResultNotStored {
+	InstructionHandle[] stackConsumers = findInstructionConsumers(spawnableMethodInvoke);
+	if (stackConsumers.length != 1) {
+	    throw new Error("The spawnable invoke doesn't return anything");
+	    /* TODO */ /* throw ResultNotStored?????*/
+	}
 	try {
 	    Integer[] indices = new Integer[1];
-	    indices[0] = getIndexStore(stackConsumer, constantPoolGen);
+	    indices[0] = getIndexStore(stackConsumers[0]);
 	    return indices;
 	}
 	catch (ClassCastException e) {
@@ -318,75 +253,16 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    /* Get the corresponding object reference load instruction of instruction
-     * ih.
-     */
-    private InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
-	    ConstantPoolGen constantPoolGen) {
-	Instruction instruction = ih.getInstruction();
-	int stackConsumption = instruction.consumeStack(constantPoolGen);
-	//stackConsumption--; // we're interested in the first one
 
-	while (stackConsumption != 0) {
-	    ih = ih.getPrev();
-	    Instruction previousInstruction = ih.getInstruction();
-	    //out.println(instruction);
-	    //if (instruction instanceof StackProducer) {
-	    stackConsumption -= 
-		previousInstruction.produceStack(constantPoolGen);
-	    //}
-	    //if (instruction instanceof StackConsumer) {
-	    stackConsumption += 
-		previousInstruction.consumeStack(constantPoolGen);
-	    //}
-	}
-	return ih;
-    }
-
-
-    private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, ConstantPoolGen constantPoolGen, 
-	    ArrayList<CodeExceptionGen> exceptionHandlers) {
-
-	ArrayList<Integer> resultIndices = new ArrayList<Integer>();
-	for (CodeExceptionGen exceptionHandler : exceptionHandlers) {
-	    InstructionHandle start = exceptionHandler.getHandlerPC(); 
-	    InstructionHandle end = getEndExceptionHandler(exceptionHandler);
-	    getIndicesStores(start, end, constantPoolGen, resultIndices);
-	}
-
-	Integer[] dummy = new Integer[resultIndices.size()];
-
-	return new SpawnableCall(invokeInstruction,
-		getObjectReferenceLoadInstruction(invokeInstruction, constantPoolGen),
-		resultIndices.toArray(dummy));
-    }
-
-
-    private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, InstructionList il, ConstantPoolGen constantPoolGen, 
-	    MethodGen spawnSignatureGen) {
-	ArrayList<CodeExceptionGen> exceptionHandlers = getExceptionHandlers(invokeInstruction, spawnSignatureGen);
-
-	if (exceptionHandlers.size() == 0) {
-	    return new SpawnableCall(invokeInstruction, getObjectReferenceLoadInstruction(invokeInstruction, constantPoolGen), 
-		    SpawnableCall.Type.EXCEPTIONS_NOT_HANDLED);
-	}
-	else {
-	    return getSpawnableCallWithException(invokeInstruction, constantPoolGen, exceptionHandlers);
-	}
-    }
-
-
-
-    private SpawnableCall getSpawnableCallReturningValue(InstructionHandle invokeInstruction, InstructionList il, 
-	    ConstantPoolGen constantPoolGen) {
+    private SpawnableCall getSpawnableCallReturningValue(InstructionHandle invokeInstruction) {
 	try {
 	    return new SpawnableCall(invokeInstruction, 
-		    getObjectReferenceLoadInstruction(invokeInstruction, constantPoolGen), 
-		    getIndexStore(invokeInstruction, il, constantPoolGen));
+		    getObjectReferenceLoadInstruction(invokeInstruction), 
+		    findIndexStore(invokeInstruction));
 	}
 	catch (ResultNotStored e) {
 	    return new SpawnableCall(invokeInstruction,
-		    getObjectReferenceLoadInstruction(invokeInstruction, constantPoolGen),
+		    getObjectReferenceLoadInstruction(invokeInstruction),
 		    SpawnableCall.Type.RESULT_NOT_STORED);
 	}
     }
@@ -406,23 +282,15 @@ public class SpawnableMethod extends MethodGen {
 
 	    InstructionHandle ih = il.getStart();
 
-	    /*
-	       System.out.println("HIEROOO");
-	       for (String s : spawnSignatureGen.getExceptions()) {
-	       System.out.println(s);
-	       }
-	       System.out.printf("de lengte :%d\n", spawnSignatureGen.getExceptions().length);
-	       */
-
 	    do {
 		Instruction instruction = ih.getInstruction();
 		if (instruction.equals(spawnableInvoke) && (instruction.produceStack(constantPoolGen) > 0)) {
-		    spawnableCalls.add(getSpawnableCallReturningValue(ih, il, constantPoolGen));
+		    spawnableCalls.add(getSpawnableCallReturningValue(ih));
 		}
 		else if (instruction.equals(spawnableInvoke) && 
 			(instruction.produceStack(constantPoolGen) == 0) &&
 			spawnSignatureGen.getExceptions().length > 0) {
-		    spawnableCalls.add(getSpawnableCallWithException(ih, il, constantPoolGen, spawnSignatureGen));
+		    spawnableCalls.add(getSpawnableCallWithException(ih, spawnSignatureGen));
 			}
 		else if (instruction.equals(spawnableInvoke) && (instruction.produceStack(constantPoolGen) == 0)) {
 		    throw new AssumptionFailure("Not satisfying assumption that spawnable method returns something or throws something");
@@ -435,3 +303,137 @@ public class SpawnableMethod extends MethodGen {
 	    return spawnableCalls;
 	}
 }
+
+
+
+
+/* Get the corresponding object reference load instruction of instruction
+ * ih.
+ */
+/*
+   private InstructionHandle getObjectReferenceLoadInstruction2(InstructionHandle ih, 
+   ConstantPoolGen constantPoolGen) {
+   Instruction instruction = ih.getInstruction();
+   int stackConsumption = instruction.consumeStack(constantPoolGen);
+//stackConsumption--; // we're interested in the first one
+
+while (stackConsumption != 0) {
+ih = ih.getPrev();
+Instruction previousInstruction = ih.getInstruction();
+//out.println(instruction);
+//if (instruction instanceof StackProducer) {
+stackConsumption -= 
+previousInstruction.produceStack(constantPoolGen);
+//}
+//if (instruction instanceof StackConsumer) {
+stackConsumption += 
+previousInstruction.consumeStack(constantPoolGen);
+//}
+}
+return ih;
+   }
+   */
+
+
+/*
+   private ArrayList<InstructionHandle> getAllObjectLoadInstructions(InstructionList il) {
+   ArrayList<InstructionHandle> objectLoadInstructions = new ArrayList<InstructionHandle>();
+
+   InstructionHandle current = il.getStart();
+   while(current != null) {
+   Instruction instruction = current.getInstruction();
+   if (instruction instanceof ALOAD) {
+   objectLoadInstructions.add(current);
+   }
+   current = current.getNext();
+   }
+
+   return objectLoadInstructions;
+   }
+
+   private ArrayList<InstructionHandle> getInstructionsConsuming(int nrWords, InstructionHandle current, 
+   ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
+
+   ArrayList<InstructionHandle> consumers = new ArrayList<InstructionHandle>();
+   System.out.printf("We're at %s\n", current);
+
+   int wordsOnStack = nrWords;
+   System.out.printf("  We want to know if this consumes %d words\n", wordsOnStack);
+
+   wordsOnStack -= current.getInstruction().consumeStack(constantPoolGen);
+   System.out.printf("  After this instruction consumed the stack, the stack is %d\n", wordsOnStack);
+
+   if (wordsOnStack <= 0) {
+   System.out.printf("  The stack is consumed by %s!!\n", current);
+   consumers.add(current);
+   return consumers;
+   }
+
+   wordsOnStack += current.getInstruction().produceStack(constantPoolGen);
+   System.out.printf("  After this instruction produced the stack, the stack is %d\n", wordsOnStack);
+
+   InstructionContext currentContext = controlFlowGraph.contextOf(current);
+   for (InstructionContext successorContext : currentContext.getSuccessors()) {
+   InstructionHandle successor = successorContext.getInstruction();
+   System.out.printf("  This instruction goes to %s, checking out..\n", successor);
+   consumers.addAll(getInstructionsConsuming(wordsOnStack, successor, constantPoolGen, controlFlowGraph));
+   System.out.printf("  Done checking out %s\n", successor);
+   }
+
+   return consumers;
+   }
+
+
+   private boolean consumes(InstructionHandle consumer, InstructionHandle consumee, ConstantPoolGen constantPoolGen) {
+   int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
+   System.out.printf("Does consumer %s, consume %s\n", consumer, consumee);
+
+   ControlFlowGraph controlFlowGraph = new ControlFlowGraph(this);
+   ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph);
+
+   System.out.printf("The consumers are: %s\n", consumers);
+   System.out.printf("So consumer %s consumes %s?: %b\n", consumer, consumee, consumers.contains(consumer));
+
+   return consumers.contains(consumer);
+   }
+   */
+
+
+
+/* Get the corresponding object reference load instruction of instruction
+ * ih.
+ */
+/*
+   private InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih, 
+   ConstantPoolGen constantPoolGen) {
+   ArrayList<InstructionHandle> objectLoadInstructions = getAllObjectLoadInstructions(getInstructionList());
+
+   for (InstructionHandle objectLoadInstruction : objectLoadInstructions) {
+   if (consumes(ih, objectLoadInstruction, constantPoolGen)) {
+   return objectLoadInstruction;
+   }
+   }
+   throw new Error("Can't find the object reference load instruction");
+   }
+   */
+
+
+/*
+   private InstructionHandle findStackConsumer(InstructionHandle start, int consumingWords, ConstantPoolGen constantPoolGen) {
+   int stackConsumption = 0;
+   InstructionHandle current = start;
+   do {
+   Instruction currentInstruction = current.getInstruction();
+   stackConsumption-=currentInstruction.produceStack(constantPoolGen);
+   stackConsumption+=currentInstruction.consumeStack(constantPoolGen);
+   }
+   while (stackConsumption < consumingWords && (current = current.getNext()) != null);
+
+   if (stackConsumption < consumingWords) throw new Error("stack is not consumed");
+   return current;
+   }
+   */
+
+
+
+

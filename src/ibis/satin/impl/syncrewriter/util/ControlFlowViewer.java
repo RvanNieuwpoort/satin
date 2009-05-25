@@ -1,6 +1,6 @@
 package ibis.satin.impl.syncrewriter.util;
 
-import ibis.satin.impl.syncrewriter.analyzer.controlflow.*;
+import ibis.satin.impl.syncrewriter.controlflow.*;
 
 import java.io.PrintStream;
 import java.io.File;
@@ -8,12 +8,13 @@ import java.io.FileNotFoundException;
 
 import java.util.ArrayList;
 
+import ibis.satin.impl.syncrewriter.bcel.MethodGen;
+
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.Repository;
 
 import org.apache.bcel.generic.ConstantPoolGen;
-import org.apache.bcel.generic.MethodGen;
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.InstructionHandle;

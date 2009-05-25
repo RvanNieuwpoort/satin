@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableCall;
 import ibis.satin.impl.syncrewriter.SpawnableMethod;
-import ibis.satin.impl.syncrewriter.Debug;
+import ibis.satin.impl.syncrewriter.util.Debug;
 
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
