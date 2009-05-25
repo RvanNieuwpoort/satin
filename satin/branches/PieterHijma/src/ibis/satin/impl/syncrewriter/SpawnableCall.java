@@ -6,27 +6,64 @@ import org.apache.bcel.generic.InstructionHandle;
 
 public class SpawnableCall {
 
-    public enum Type { NORMAL, RESULT_NOT_STORED, EXCEPTIONS_NOT_HANDLED };
+
+    enum Type { NORMAL, RESULT_NOT_STORED, EXCEPTIONS_NOT_HANDLED };
 
 
 
     private InstructionHandle invokeInstruction;
     private InstructionHandle objectReference;
-    /*
-    private int resultIndex;
-    */
 
     private Integer[] indicesStores;
     private Type type;
 
 
-    /*
-    private boolean throwsException;
-    */
-    /*
-    private InstructionHandle endExceptionHandler;
-    private InstructionHandle startExceptionHandler;
-    */
+    public boolean exceptionsHandled() {
+	return type != Type.EXCEPTIONS_NOT_HANDLED;
+    }
+
+
+    public boolean resultIsStored() {
+	return type != Type.RESULT_NOT_STORED;
+    }
+
+
+    public Integer[] getIndicesStores() {
+	return indicesStores;
+    }
+
+
+    public InstructionHandle getInvokeInstruction() {
+	return invokeInstruction;
+    }
+
+
+    public boolean storesIn(int index) {
+	    return contains(indicesStores, index);
+    }
+
+
+    public InstructionHandle getObjectReference() {
+	return objectReference;
+    }
+
+
+    public String toString() {
+	StringBuilder sb = new StringBuilder(String.format("%s, resultIndices: ", invokeInstruction));
+	if (indicesStores == null) {
+	    sb.append("(none), exceptions are not handled");
+	}
+	else {
+	    for (Integer i : indicesStores) {
+		sb.append(i);
+		sb.append(", ");
+	    }
+	    sb.delete(sb.length()-2, sb.length());
+	}
+	return sb.toString();
+    }
+
+
 
 
     SpawnableCall(InstructionHandle invokeInstruction, 
@@ -45,6 +82,15 @@ public class SpawnableCall {
 	this.type = type;
     }
 
+
+    /* eigenlijk voor andere class */
+    private boolean contains(Integer[] array, int x) {
+	for (int i = 0; i < array.length; i++) {
+	    if (array[i] == x) return true;
+	}
+	return false;
+    }
+}
 
 
 
@@ -71,31 +117,30 @@ public class SpawnableCall {
     */
 
 
-    public boolean exceptionsHandled() {
-	return type != Type.EXCEPTIONS_NOT_HANDLED;
-    }
 
-
-    public boolean resultIsStored() {
-	return type != Type.RESULT_NOT_STORED;
-    }
-
-
+    /*
+       public String toString() {
+       StringBuilder sb = new StringBuilder(String.format("%s, resultInd", invokeInstruction));
+       if (throwsException) {
+       sb.append("ices: ");
+       for (Integer i : indicesStores) {
+       sb.append(i);
+       sb.append(", ");
+       }
+       sb.delete(sb.length()-2, sb.length());
+       }
+       else {
+       sb.append("ex: ");
+       sb.append(resultIndex);
+       }
+       return sb.toString();
+       }
+       *
     /*
     public boolean throwsException() {
 	return throwsException;
     }
     */
-
-
-    public Integer[] getIndicesStores() {
-	return indicesStores;
-    }
-
-
-    public InstructionHandle getInvokeInstruction() {
-	return invokeInstruction;
-    }
 
     /*
     public InstructionHandle getStartExceptionHandler() {
@@ -116,20 +161,6 @@ public class SpawnableCall {
     }
     */
 
-
-    private boolean contains(Integer[] array, int x) {
-	for (int i = 0; i < array.length; i++) {
-	    if (array[i] == x) return true;
-	}
-	return false;
-    }
-
-
-    public boolean storesIn(int index) {
-	    return contains(indicesStores, index);
-    }
-
-
     /*
     public Integer[] getResultIndices() {
 	return indicesStores;
@@ -137,42 +168,4 @@ public class SpawnableCall {
     */
 
 
-    public InstructionHandle getObjectReference() {
-	return objectReference;
-    }
 
-    public String toString() {
-	StringBuilder sb = new StringBuilder(String.format("%s, resultIndices: ", invokeInstruction));
-	if (indicesStores == null) {
-	    sb.append("(none), exceptions are not handled");
-	}
-	else {
-	    for (Integer i : indicesStores) {
-		sb.append(i);
-		sb.append(", ");
-	    }
-	    sb.delete(sb.length()-2, sb.length());
-	}
-	return sb.toString();
-    }
-
-
-    /*
-       public String toString() {
-       StringBuilder sb = new StringBuilder(String.format("%s, resultInd", invokeInstruction));
-       if (throwsException) {
-       sb.append("ices: ");
-       for (Integer i : indicesStores) {
-       sb.append(i);
-       sb.append(", ");
-       }
-       sb.delete(sb.length()-2, sb.length());
-       }
-       else {
-       sb.append("ex: ");
-       sb.append(resultIndex);
-       }
-       return sb.toString();
-       }
-       */
-}

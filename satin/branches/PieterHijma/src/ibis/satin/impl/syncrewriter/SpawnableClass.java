@@ -1,5 +1,6 @@
 package ibis.satin.impl.syncrewriter;
 
+import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.io.PrintStream;
 

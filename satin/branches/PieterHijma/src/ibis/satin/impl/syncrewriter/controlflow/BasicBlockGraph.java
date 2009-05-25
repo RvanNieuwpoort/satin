@@ -1,8 +1,9 @@
-package ibis.satin.impl.syncrewriter.analyzer.controlflow;
+package ibis.satin.impl.syncrewriter.controlflow;
 
 import java.util.ArrayList;
 
-import org.apache.bcel.generic.MethodGen;
+import ibis.satin.impl.syncrewriter.bcel.MethodGen;
+
 import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.ReturnInstruction;
@@ -76,13 +77,6 @@ public class BasicBlockGraph {
 	    sb.append(basicBlock);
 	}
 	sb.append("\n");
-	/*
-	   for (BasicBlock basicBlock : basicBlocks) {
-	   sb.append(basicBlock.toStringNoInstructions());
-	   }
-	   sb.append("\n");
-	   */
-
 	return sb.toString();
     }
 
@@ -95,43 +89,31 @@ public class BasicBlockGraph {
 
     private void fillPaths(ArrayList<Path> paths, 
 	    BasicBlock current, Path visited) {
-	//	System.out.printf("fillPaths() for %d\n", current.getIndex());
-	//	System.out.printf("\tvisited: %s\n", visited);
 	if (current.isEnding()) {
 	    visited.add(current);
-	    //	    System.out.printf("\tending, found a path: %s\n", visited);
 	    paths.add((Path)visited.clone());
 	    visited.removeLast(current);
-	    //	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
 	    return;
 	}
 
 	int nrOfOccurences = visited.nrOfOccurences(current);
 	if (nrOfOccurences == current.getNrOfTargets()) { // all posibilities done
-	    ///	    System.out.printf("\tnrOfOccurences (%d) == nrOfTargets\n", 
-	    //		    nrOfOccurences);
-	    //	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
 	    return; // all loops handled
 	}
 	else if (nrOfOccurences == 0) { // do every target
-	    //	    System.out.println("\tnrOfOccurences == 0\n");
 	    visited.add(current);
 	    for (int i = 0; i < current.getNrOfTargets(); i++) {
 		fillPaths(paths, current.getTarget(i), visited);
 	    }
 	    visited.removeLast(current);
-	    //	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
 	    return;
 	}
 	else { // already visited current, now take the other route
-	    //	    System.out.printf("\tnrOfOccurences: %d\n", nrOfOccurences);
 	    visited.add(current);
 	    fillPaths(paths, current.getTarget(nrOfOccurences), visited);
 	    visited.removeLast(current);
-	    //	    System.out.printf("end fillPaths() for %d\n", current.getIndex());
 	    return;
 	}
-	//System.out.printf("HEEEEEEE\n");
     }
 
 
@@ -181,31 +163,16 @@ public class BasicBlockGraph {
 	BasicBlock nextBasicBlock = index < basicBlocks.size() - 1 ? 
 	    basicBlocks.get(index + 1) : null;
 
-	if (currentBasicBlock.getNrOfTargets() == 1 /*&& 
-						     currentBasicBlock.targets(nextBasicBlock)*/) 
+	if (currentBasicBlock.getNrOfTargets() == 1 
+		/*&& 
+		currentBasicBlock.targets(nextBasicBlock)*/) 
 	{
 	    currentBasicBlock.setLevelTargets(currentLevel);
-	    /* this is probably not necessary */
-	    /*
-	       if (!currentBasicBlock.targets(nextBasicBlock)) {
-	       currentBasicBlock.setLevelTargets(currentLevel-1);
-	       }
-	       else {
-	       currentBasicBlock.setLevelTargets(currentLevel);
-	       }
-	       */
 	}
 	else if (currentBasicBlock.getNrOfTargets() > 1) {
 	    currentBasicBlock.setLevelTargets(currentLevel + 1);
 	}
 
-	/*
-	   if (currentBasicBlock.getNrOfTargets() == 2) {
-	   System.out.printf("1 targets 2: %b\n", 
-	   currentBasicBlock.getTarget(0).
-	   targets(currentBasicBlock.getTarget(1)));
-	   }
-	   */
 
 	if (currentBasicBlock.getNrOfTargets() == 2) {
 	    BasicBlock target1 = currentBasicBlock.getTarget(0);
@@ -276,12 +243,12 @@ public class BasicBlockGraph {
 	    InstructionContext start, 
 	    ArrayList<InstructionContext> instructions, 
 	    InstructionContext end,
-	    ConstantPool constantPool) {
+	    MethodGen methodGen) {
 	if (start == null || instructions == null || end == null) {
 	    throw new Error("BasicBlock start/end out of sync");
 	} else {
 	    basicBlocks.add(new BasicBlock(start, instructions, end, 
-			basicBlocks.size(), constantPool));
+			basicBlocks.size(), methodGen));
 	}
     }
 
@@ -301,7 +268,10 @@ public class BasicBlockGraph {
 
     private boolean isEndOfBasicBlock(InstructionContext currentContext, ArrayList<InstructionContext> targets, InstructionContext nextContext,
 	    InstructionContext[] successors) {
-	return hasOneSuccessorNotBeingNext(nextContext, successors) || successors.length > 1 || isTarget(nextContext, targets) || isEndInstruction(currentContext);
+	return hasOneSuccessorNotBeingNext(nextContext, successors) || 
+	    successors.length > 1 || 
+	    isTarget(nextContext, targets) || 
+	    isEndInstruction(currentContext);
     }
 
 
@@ -348,11 +318,6 @@ public class BasicBlockGraph {
 	    }
 	    else if (successors.length > 1) {
 		addAll(successors, targets);
-		/*
-		   for (InstructionContext successor : successors) {
-		   targets.add(successor);
-		   }
-		   */
 	    }
 	    addExceptionHandlers(currentContext, targets, graph);
 	}
@@ -412,7 +377,7 @@ public class BasicBlockGraph {
 	    if (isEndOfBasicBlock(currentContext, targets, nextContext, successors)) {
 		checkIfSet(start, instructions, !SHOULD_BE_NULL);
 		addBasicBlock(basicBlocks, start, instructions, currentContext, 
-			methodGen.getConstantPool().getConstantPool());
+			methodGen);
 		start = null;
 		instructions = null;
 	    }
