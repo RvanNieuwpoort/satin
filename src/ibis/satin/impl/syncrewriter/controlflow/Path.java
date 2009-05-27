@@ -40,25 +40,25 @@ public class Path extends ArrayList<BasicBlock> {
     }
 
 
-    /** Returns a subpath from the beginning to a basic block which has index
-     * indexBasicBlock.
+    /** Returns a subpath from the beginning to a basic block which has id
+     * idBasicBlock.
      *
      * Note that this is not the index of the basic block in the path (given by
      * get(index), but the index of the basic block in the method.
      * The last basic block will be the basic block with index indexBasicBlock.
      *
-     * @param indexBasicBlock the index of the basic block.
+     * @param idBasicBlock the id of the basic block.
      *
      * @return a path from the first basic block until and including the basic
-     * block which has an index equal to indexBasicBlock.
+     * block which has an id equal to idBasicBlock.
      */
-    public Path getSubPathIncluding(int indexBasicBlock) {
+    public Path getSubPathIncluding(int idBasicBlock) {
 	for (int i = 0; i < size(); i++) {
-	    if (get(i).getIndex() == indexBasicBlock) {
+	    if (get(i).getId() == idBasicBlock) {
 		return (Path) subList(0, i + 1);
 	    }
 	}
-	throw new Error("Codeblock " + indexBasicBlock + " not in this path");
+	throw new Error("Codeblock " + idBasicBlock + " not in this path");
     }
 
 
@@ -114,12 +114,6 @@ public class Path extends ArrayList<BasicBlock> {
     public Path getCommonSubPathFromStart(Path path) {
 	Path commonSubPath = new Path();
 
-	/*
-	   System.out.printf("0 < size(): %b\n", 0 < size());
-	   System.out.printf("0 < commonSubPath.size(): %b\n", 0 < size());
-	   System.out.printf("0 < size(): %b\n", 0 < size());
-	   System.out.printf("0 < size(): %b\n", 0 < size());
-	   */
 	for (int i = 0; i < size() && i < path.size() && get(i).equals(path.get(i)); i++) {
 	    commonSubPath.add(get(i));
 	}
@@ -128,19 +122,21 @@ public class Path extends ArrayList<BasicBlock> {
 
 
 
+    /** Returns a string representation of the path.
+     */
     public String toString() {
 	StringBuilder sb = new StringBuilder();
 	if (size() == 0) return "";
 	for (int i = 0; i < size() - 1; i++) {
-	    sb.append(get(i).getIndex());
+	    sb.append(get(i).getId());
 	    sb.append(" ");
 	}
-	sb.append(get(size() - 1).getIndex());
+	sb.append(get(size() - 1).getId());
 	return sb.toString();
     }
 
 
-    /** Removes the last basic block.
+    /** Removes the last occurence of a basic block.
      *
      * @param basicBlock the basic block that is being removed. 
      */
@@ -149,6 +145,14 @@ public class Path extends ArrayList<BasicBlock> {
     }
 
 
+    /** Tests whether a basicblock is before another basic block in the path.
+     *
+     * @param basicBlock The basicBlock that is to be tested to be in front of
+     * endPoint
+     * @param endPoint The basicBlock before which basicBlock should be.
+     *
+     * @return true if basicBlock is in front of endPoint; false otherwise.
+     */
     public boolean containsBefore(BasicBlock basicBlock, BasicBlock endPoint) {
 	int indexBasicBlock = indexOf(basicBlock);
 	int indexEndPoint = indexOf(endPoint);

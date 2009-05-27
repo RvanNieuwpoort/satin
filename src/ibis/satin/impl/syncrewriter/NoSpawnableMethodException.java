@@ -1,18 +1,18 @@
 package ibis.satin.impl.syncrewriter;
 
 
-public class NoSpawnableMethodException extends Exception {
+class NoSpawnableMethodException extends Exception {
 
 
-    public static final String MESSAGE = "No spawnable method";
+    static final String MESSAGE = "No spawnable method";
 
 
-    public NoSpawnableMethodException() {
+    NoSpawnableMethodException() {
 	super(MESSAGE);
     }
 
 
-    public NoSpawnableMethodException(String message) {
+    NoSpawnableMethodException(String message) {
 	super(MESSAGE + ", " + message);
     }
 }
