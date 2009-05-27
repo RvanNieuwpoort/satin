@@ -34,15 +34,13 @@ import org.apache.bcel.classfile.ConstantPool;
 public class BasicBlock {
 
 
-    private static final boolean IGNORE_FIRST_INSTRUCTIONS = true;
-
-    private MethodGen methodGen;
+    protected MethodGen methodGen;
 
     private InstructionContext start;
-    private ArrayList<InstructionContext> instructions;
+    protected ArrayList<InstructionContext> instructions;
     private InstructionContext end;
 
-    private int index;
+    private int id;
     private BasicBlock[] targets;
     private int level;
 
@@ -52,7 +50,7 @@ public class BasicBlock {
 
 
 
-    /** Tests if this basic block contains {@link InstructionHandle} ih
+    /** Tests whether this basic block contains {@link InstructionHandle} ih
      *
      * @param ih the instruction handle that will be tested
      * @return true if this basic block contains ih; false otherwise
@@ -67,9 +65,11 @@ public class BasicBlock {
     }
 
 
+    /** Returns a string representation of the basic block.
+     */
     public String toString() {
 	StringBuilder sb = new StringBuilder();
-	sb.append(String.format("BEGIN BASIC BLOCK: %d\n", index));
+	sb.append(String.format("BEGIN BASIC BLOCK: %d\n", id));
 	sb.append(String.format("LEVEL: %d\n", level));
 	sb.append(getTargetString());
 	for (InstructionContext context : instructions) {
@@ -78,22 +78,22 @@ public class BasicBlock {
 	    sb.append(context.getInstruction().getInstruction().toString(methodGen.getConstantPool().getConstantPool()));
 	    sb.append('\n');
 	}
-	sb.append(String.format("END BASIC BLOCK: %d\n", index));
+	sb.append(String.format("END BASIC BLOCK: %d\n", id));
 
 	return sb.toString();
     }
 
 
-    /** Returns the index of the basic block.
+    /** Returns the id of the basic block.
      *
-     * This is the index of the basic block in the method. So, basic block with
-     * index + 1 is the following basic block in the instruction list of the
-     * method. It is not necessarily targeted by the previous one.
+     * Note: This is the index of the basic block in the method. So, basic
+     * block with id + 1 is the following basic block in the instruction list
+     * of the method. It is not necessarily targeted by the previous one.
      *
-     * @return the index of the basic block in the method.
+     * @return the id, which is the index of the basic block in the method.
      */
-    public int getIndex() {
-	return index;
+    public int getId() {
+	return id;
     }
 
 
@@ -117,43 +117,21 @@ public class BasicBlock {
     }
 
 
-    /** Tests if this basic block contains a load instruction with a local
-     * variable index.
-     *
-     * This method uses 
-     * {@link Util#instructionLoadsTo(InstructionHandle, int,ConstantPoolGen)}.
-     * 
-     * @param localVarIndex The local variable index of the variable that is to
-     * tested. 
-     * @return true if the basic block contains a load of the local variable
-     * with index localVarIndex.
-     * @see Util
-     */
-    public boolean containsLoadWithIndex(int localVarIndex) {
-	return containsLoadWithIndexAfter(null, localVarIndex, 
-		!IGNORE_FIRST_INSTRUCTIONS);
+    /* protected methods */
+
+
+    protected BasicBlock(BasicBlock basicBlock) {
+
+	this.methodGen = basicBlock.methodGen;
+
+	this.start = basicBlock.start;
+	this.instructions = basicBlock.instructions;
+	this.end = basicBlock.end;
+
+	this.id = basicBlock.id;
+	this.targets = basicBlock.targets;
+	this.level = basicBlock.level;
     }
-
-
-    /** Tests if this basic block contains a load instruction with a local
-     * variable index after {@link InstructionHandle} ih. 
-     **
-     * This method uses 
-     * {@link Util#instructionLoadsTo(InstructionHandle, int,ConstantPoolGen)}.
-     * 
-     * @param localVarIndex The local variable index of the variable that is to
-     * tested. 
-     * @param ih the instruction handle after which the load may happen
-     * @return true if the basic block contains a load of the local variable
-     * with index localVarIndex.
-     * @see Util
-     */
-    public boolean containsLoadWithIndexAfter(InstructionHandle ih, int localVarIndex) {
-	return containsLoadWithIndexAfter(ih, localVarIndex, 
-		IGNORE_FIRST_INSTRUCTIONS);
-    }
-
-
 
 
 
@@ -163,12 +141,12 @@ public class BasicBlock {
 
     BasicBlock(InstructionContext start, 
 	    ArrayList<InstructionContext> instructions, 
-	    InstructionContext end, int index, 
+	    InstructionContext end, int id, 
 	    MethodGen methodGen) {
 	this.start = start;
 	this.instructions = instructions;
 	this.end = end;
-	this.index = index;
+	this.id = id;
 
 	this.targets = new BasicBlock[end.getSuccessors().length];
 	this.level = -1;
@@ -187,13 +165,13 @@ public class BasicBlock {
     }
 
 
-    void setTarget(int index, BasicBlock target) {
-	targets[index] = target;
+    void setTarget(int id, BasicBlock target) {
+	targets[id] = target;
     }
 
 
-    BasicBlock getTarget(int index) {
-	return targets[index];
+    BasicBlock getTarget(int id) {
+	return targets[id];
     }
 
 
@@ -226,9 +204,9 @@ public class BasicBlock {
     }
 
 
-    void setLevelTarget(int index, int level) {
-	if (!targets[index].levelIsSet()) {
-	    targets[index].setLevel(level);
+    void setLevelTarget(int id, int level) {
+	if (!targets[id].levelIsSet()) {
+	    targets[id].setLevel(level);
 	}
     }
 
@@ -255,38 +233,17 @@ public class BasicBlock {
 
     String toStringNoInstructions() {
 	StringBuilder sb = new StringBuilder();
-	sb.append(String.format("BEGIN BASICBLOCK: %d\n", index));
+	sb.append(String.format("BEGIN BASICBLOCK: %d\n", id));
 	sb.append(String.format("LEVEL: %d\n", level));
 	sb.append(getTargetString());
-	sb.append(String.format("END BASICBLOCK %d\n", index));
+	sb.append(String.format("END BASICBLOCK %d\n", id));
 
 	return sb.toString();
     }
 
 
 
-
-
-
-
     /* private methods */
-
-
-    private boolean containsLoadWithIndexAfter(InstructionHandle ih, 
-	    int localVarIndex, boolean ignoreInstructions) {
-	for (InstructionContext ic : instructions) {
-	    InstructionHandle current = ic.getInstruction();
-	    if (ignoreInstructions) { 
-		ignoreInstructions = !current.equals(ih);
-	    }
-	    else if (methodGen.instructionLoadsTo(current, localVarIndex)) {
-		return true;
-	    }
-	}
-	return false;
-    }
-
-
 
     private StringBuilder getTargetString() {
 	StringBuilder sb = new StringBuilder();
@@ -295,10 +252,10 @@ public class BasicBlock {
 	    sb.append("ending Basic block\n");
 	}
 	else {
-	    sb.append(String.format("Basic block %d\n", targets[0].getIndex()));
+	    sb.append(String.format("Basic block %d\n", targets[0].getId()));
 	    for (int i = 1; i < targets.length; i++) {
 		sb.append(String.format("         Basic block %d\n", 
-			    targets[i].getIndex()));
+			    targets[i].getId()));
 	    }
 	}
 	return sb;

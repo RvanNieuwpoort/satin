@@ -1,18 +1,18 @@
 package ibis.satin.impl.syncrewriter;
 
 
-public class ClassRewriteFailure extends Exception {
+class ClassRewriteFailure extends Exception {
 
 
-    public static final String MESSAGE = "Failed to rewrite a spawnable class";
+    static final String MESSAGE = "Failed to rewrite a spawnable class";
 
 
-    public ClassRewriteFailure() {
+    ClassRewriteFailure() {
 	super(MESSAGE);
     }
 
 
-    public ClassRewriteFailure(String message) {
+    ClassRewriteFailure(String message) {
 	super(MESSAGE + ", " + message);
     }
 }

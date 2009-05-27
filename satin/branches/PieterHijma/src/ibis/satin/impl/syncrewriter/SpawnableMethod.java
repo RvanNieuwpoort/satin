@@ -40,6 +40,10 @@ import org.apache.bcel.generic.DASTORE;
 import org.apache.bcel.generic.ALOAD;
 
 
+/** This class represents a spawnable method. 
+ *
+ * A spawnable method contains spawnable calls.
+ */
 public class SpawnableMethod extends MethodGen {
 
 
@@ -54,10 +58,20 @@ public class SpawnableMethod extends MethodGen {
     private Debug d;
 
 
+
+    /* public methods */
+
+    /** Returns the spawnable calls in this spawnable method.
+     *
+     * @return The spawnable calls in this method.
+     */
     public ArrayList<SpawnableCall> getSpawnableCalls() {
 	return spawnableCalls;
     }
 
+
+
+    /* package methods */
 
     SpawnableMethod (Method method, String className, ConstantPoolGen constantPoolGen, 
 	    Method spawnSignature, int indexSync, Debug d) 
@@ -67,8 +81,7 @@ public class SpawnableMethod extends MethodGen {
 
 	MethodGen spawnSignatureGen = new MethodGen(spawnSignature, className, constantPoolGen);
 
-	ArrayList<SpawnableCall> spawnableCalls = 
-	    getSpawnableCalls(getInstructionList(), constantPoolGen, spawnSignatureGen);
+	ArrayList<SpawnableCall> spawnableCalls = getSpawnableCalls(constantPoolGen, spawnSignatureGen);
 
 	if (spawnableCalls.size() > 0) {
 	    this.spawnableCalls = spawnableCalls;
@@ -88,6 +101,9 @@ public class SpawnableMethod extends MethodGen {
 	d.log(0, "rewrote %s\n", getName());
     }
 
+
+
+    /* private methods */
 
     private void insertSync(Analyzer analyzer) throws MethodRewriteFailure {
 	d.log(1, "trying to insert sync statement(s)\n");
@@ -109,6 +125,11 @@ public class SpawnableMethod extends MethodGen {
 	d.log(1, "inserted sync statement(s)\n");
     }
 
+
+
+
+
+    /* determine the spawnable calls */
 
     private boolean containsType(ObjectType type, ObjectType[] types) {
 	for (ObjectType i : types) {
@@ -134,6 +155,7 @@ public class SpawnableMethod extends MethodGen {
 	ArrayList<CodeExceptionGen> result = new ArrayList<CodeExceptionGen>();
 
 	for (CodeExceptionGen codeException : codeExceptions) {
+	    // codeException.containsTarget has a BUG????
 	    if (codeException.containsTarget(ih) && hasRightType(codeException, spawnSignature)) {
 		result.add(codeException);
 	    }
@@ -141,7 +163,6 @@ public class SpawnableMethod extends MethodGen {
 
 	return result;
     }
-
 
 
     private void getIndicesStores(InstructionHandle start,
@@ -155,12 +176,10 @@ public class SpawnableMethod extends MethodGen {
 		}
 	    }
 	    catch (ClassCastException e) {
-		// no problem, just not a store we're looking for
+		// no problem, just not a store 
 	    }
 	}
     }
-
-
 
 
     private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, 
@@ -194,14 +213,24 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
+    /* Find the index of the variable in which a spawnable call stores.
+     */
     private Integer[] findIndexStore(InstructionHandle spawnableMethodInvoke) throws ResultNotStored {
 	InstructionHandle[] stackConsumers = findInstructionConsumers(spawnableMethodInvoke);
 	if (stackConsumers.length != 1) {
-	    throw new Error("The spawnable invoke doesn't return anything");
-	    /* TODO */ /* throw ResultNotStored?????*/
+	    /*
+	    throw new Error("Uncovered situation, invoke instruction's " + 
+		    "result is consumed by multiple instructions. " + 
+		    "Is there controlflow right after the spawnable invoke???");
+		    */
+	    throw new ResultNotStored();
+	    // I think this is a better solution. Controlflow right after the
+	    // invoke is something that is hard to analyze and rare. Better to
+	    // just mark it as a result that isn't stored.
 	}
 	try {
 	    Integer[] indices = new Integer[1];
+	    //System.err.printf("the stackConsumer is: %s\n", stackConsumers[0]);
 	    indices[0] = getIndexStore(stackConsumers[0]);
 	    return indices;
 	}
@@ -209,7 +238,6 @@ public class SpawnableMethod extends MethodGen {
 	    throw new ResultNotStored();
 	}
     }
-
 
 
     private SpawnableCall getSpawnableCallReturningValue(InstructionHandle invokeInstruction) {
@@ -226,10 +254,10 @@ public class SpawnableMethod extends MethodGen {
     }
 
 
-    private ArrayList<SpawnableCall> getSpawnableCalls(InstructionList il, 
-	    ConstantPoolGen constantPoolGen, MethodGen spawnSignatureGen) throws 
+    private ArrayList<SpawnableCall> getSpawnableCalls(ConstantPoolGen constantPoolGen, MethodGen spawnSignatureGen) throws 
 	AssumptionFailure {
 
+	    InstructionList il = getInstructionList(); 
 	    int indexSpawnableCall = 
 		constantPoolGen.lookupMethodref(spawnSignatureGen);
 	    INVOKEVIRTUAL spawnableInvoke = 

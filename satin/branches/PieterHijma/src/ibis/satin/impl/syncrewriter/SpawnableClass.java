@@ -39,6 +39,8 @@ class SpawnableClass extends ClassGen {
     private Debug d;
 
 
+    /* package methods */
+
     SpawnableClass (JavaClass javaClass, Debug d) throws NoSpawnableClassException {
 	super(javaClass);
 
@@ -68,6 +70,12 @@ class SpawnableClass extends ClassGen {
     }
 
 
+
+
+    /* private methods */
+
+    /* Rewrite for a specific spawn signature.
+     */
     private void rewriteForSpawnSignature(Method spawnSignature, Analyzer analyzer) 
 	throws MethodRewriteFailure {
 	boolean throwRewriteFailure = false;
@@ -109,19 +117,6 @@ class SpawnableClass extends ClassGen {
     }
 
 
-    private boolean isSpawnable(JavaClass javaClass) {
-	JavaClass[] interfaces = javaClass.getAllInterfaces();
-
-	for (JavaClass javaInterface : interfaces) {
-	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
-		return true;
-	    }
-	}
-
-	return false;
-    }
-
-
     private Method[] getSpawnSignatures(JavaClass spawnableClass) {
 	Method[] spawnableMethods = null;
 
@@ -138,5 +133,18 @@ class SpawnableClass extends ClassGen {
 	}
 
 	return spawnableMethods;
+    }
+
+
+    private boolean isSpawnable(JavaClass javaClass) {
+	JavaClass[] interfaces = javaClass.getAllInterfaces();
+
+	for (JavaClass javaInterface : interfaces) {
+	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
+		return true;
+	    }
+	}
+
+	return false;
     }
 }

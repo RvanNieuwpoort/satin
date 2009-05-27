@@ -1,5 +1,7 @@
 package ibis.satin.impl.syncrewriter.controlflow;
 
+
+
 import java.util.ArrayList;
 
 import ibis.satin.impl.syncrewriter.bcel.MethodGen;
@@ -14,6 +16,10 @@ import org.apache.bcel.verifier.structurals.ControlFlowGraph;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 import org.apache.bcel.verifier.structurals.ExceptionHandler;
 
+
+
+/** A basic block graph is a graph of basic blocks of a method. 
+ */
 public class BasicBlockGraph {
 
 
@@ -27,6 +33,10 @@ public class BasicBlockGraph {
 
     /* public methods */
 
+    /** Instantiates a basic block graph from a method.
+     *
+     * @param methodGen method
+     */
     public BasicBlockGraph(MethodGen methodGen) {
 	basicBlocks = constructBasicBasicBlocks(methodGen);
 	setTargetsBasicBlocks();
@@ -34,43 +44,67 @@ public class BasicBlockGraph {
     }
 
 
-    public BasicBlock getBasicBlock(int i) {
-	return basicBlocks.get(i);
+    /** Returns the basic block with identifier id in the graph.
+     *
+     * @param id the identifier of the basic block in the graph.
+     * @return the basic block with identifier id.
+     */
+    public BasicBlock getBasicBlock(int id) {
+	return basicBlocks.get(id);
     }
 
 
-    public boolean isPartOfLoop(int index) {
-	BasicBlock start = basicBlocks.get(index);
+    /** Tests whether basic block with id id is part of a loop.
+     *
+     * @param id The id of the basic block.
+     * @return true if basic block with identifier id is part of a loop; false
+     * otherwise.
+     */
+    public boolean isPartOfLoop(int id) {
+	BasicBlock start = basicBlocks.get(id);
 	Path visited = new Path();
 
 	return isPartOfLoop(start, visited);
     }
 
 
-    public ArrayList<Path> getEndingPathsFrom(int index) {
+    /** Returns the ending paths from the basic block with identifier id.
+     *
+     * @param id the identifier of the basic block from which all ending paths
+     * have to be calculated.
+     * @return a list of paths that exit the method.
+     */
+    public ArrayList<Path> getEndingPathsFrom(int id) {
 	ArrayList<Path> paths = 
 	    new ArrayList<Path>();
 
-	BasicBlock start = basicBlocks.get(index);
+	BasicBlock start = basicBlocks.get(id);
 	Path visited = new Path();
 
-	fillPaths(paths, start, visited);
+	calculateEndingPaths(paths, start, visited);
 
 	return paths;
     }
 
 
 
-    public int getIndexBasicBlock(InstructionHandle ih) {
+    /** Returns the id of the basic block that contains an instruction.
+     *
+     * @param ih the instruction that is part of a basic block.
+     * @return the id of the basic block that contains instruction ih.
+     */
+    public int getIdBasicBlock(InstructionHandle ih) {
 	for (BasicBlock basicBlock : basicBlocks) {
 	    if (basicBlock.contains(ih)) {
-		return basicBlock.getIndex();
+		return basicBlock.getId();
 	    }
 	}
-	throw new Error("getIndexBasicBlock(), can't find instruction");
+	throw new Error("getIdBasicBlock(), can't find instruction");
     }
 
 
+    /** Returns a string representation of the basic block graph.
+     */
     public String toString() {
 	StringBuilder sb = new StringBuilder();
 	for (BasicBlock basicBlock : basicBlocks) {
@@ -87,7 +121,7 @@ public class BasicBlockGraph {
     /* private methods */
 
 
-    private void fillPaths(ArrayList<Path> paths, 
+    private void calculateEndingPaths(ArrayList<Path> paths, 
 	    BasicBlock current, Path visited) {
 	if (current.isEnding()) {
 	    visited.add(current);
@@ -103,14 +137,14 @@ public class BasicBlockGraph {
 	else if (nrOfOccurences == 0) { // do every target
 	    visited.add(current);
 	    for (int i = 0; i < current.getNrOfTargets(); i++) {
-		fillPaths(paths, current.getTarget(i), visited);
+		calculateEndingPaths(paths, current.getTarget(i), visited);
 	    }
 	    visited.removeLast(current);
 	    return;
 	}
 	else { // already visited current, now take the other route
 	    visited.add(current);
-	    fillPaths(paths, current.getTarget(nrOfOccurences), visited);
+	    calculateEndingPaths(paths, current.getTarget(nrOfOccurences), visited);
 	    visited.removeLast(current);
 	    return;
 	}
@@ -156,6 +190,7 @@ public class BasicBlockGraph {
 
 
     /* set the levels of the basic blocks */
+    /* this could be improved, not really used */
 
     private void setLevels(int index, BasicBlock currentBasicBlock) {
 
@@ -224,7 +259,6 @@ public class BasicBlockGraph {
     }
 
 
-    /* set the target(s), set the level */
     private void setTargetsBasicBlocks() {
 	for (BasicBlock basicBlock : basicBlocks) {
 	    setTargets(basicBlock);
@@ -275,20 +309,35 @@ public class BasicBlockGraph {
     }
 
 
+    /* just a check for consistency for beginnings and endings of basic blocks
+     */ 
+    void checkIfSet(InstructionContext start, ArrayList<InstructionContext> instructions, boolean shouldBeNull) {
+	if (start == null && instructions == null && shouldBeNull) {
+	    // ok
+	}
+	else if (start != null && instructions != null && !shouldBeNull) {
+	    // ok
+	}
+	else {
+	    throw new Error("BasicBlock start/end out of sync");
+	}
+    }
+
+
     private boolean isStartOfBasicBlock(int i, InstructionContext currentContext, 
 	    ArrayList<InstructionContext> targets) {
 	return i == 0 || targets.contains(currentContext);
     }
 
 
-
+    /* add the exception handlers to the targets */
     private void addExceptionHandlers(InstructionContext instructionContext, 
 	    ArrayList<InstructionContext> targets, ControlFlowGraph graph) {
 	ExceptionHandler[] handlers = instructionContext.getExceptionHandlers();
 	for (ExceptionHandler handler : handlers) {
 	    InstructionContext handlerContext = graph.contextOf(
 		    handler.getHandlerStart());
-	    if (!targets.contains(handlerContext)) {
+	    if (!targets.contains(handlerContext)) { 
 		targets.add(handlerContext);
 	    }
 	}
@@ -300,6 +349,7 @@ public class BasicBlockGraph {
     }
 
 
+    /* get all the instruction contexts that are targeted by any instruction */
     private ArrayList<InstructionContext> getTargets(InstructionContext[] 
 	    contexts, ControlFlowGraph graph) {
 
@@ -327,6 +377,7 @@ public class BasicBlockGraph {
 
 
 
+    /* get the intstruction contexts in the right order */
     private InstructionContext[] getContexts(MethodGen methodGen, 
 	    ControlFlowGraph graph) {
 	InstructionList il = methodGen.getInstructionList();
@@ -335,20 +386,9 @@ public class BasicBlockGraph {
     }
 
 
-    void checkIfSet(InstructionContext start, ArrayList<InstructionContext> instructions, boolean shouldBeNull) {
-	if (start == null && instructions == null && shouldBeNull) {
-	    // ok
-	}
-	else if (start != null && instructions != null && !shouldBeNull) {
-	    // ok
-	}
-	else {
-	    throw new Error("BasicBlock start/end out of sync");
-	}
-    }
-
-
-
+    /* constructs basic basic blocks, without the targets and the levels 
+     * set right.
+     */
     private Path constructBasicBasicBlocks(MethodGen methodGen) {
 	Path basicBlocks = new Path();
 
