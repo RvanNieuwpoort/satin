@@ -80,6 +80,21 @@ public interface Config {
             + "deleteClusterTime";
 
     static final String s_kill_time = PROPERTY_PREFIX + "killTime";
+    
+    //[KRIS]
+    static final String s_cpt = PROPERTY_PREFIX + "cpt";
+    
+    static final String s_cpt_push = PROPERTY_PREFIX + "cpt.push";
+    
+    static final String s_cpt_interval = PROPERTY_PREFIX + "cpt.interval";
+    
+    static final String s_cpt_first = PROPERTY_PREFIX + "cpt.first";
+    
+    static final String s_cpt_file = PROPERTY_PREFIX + "cpt.file";
+    
+    static final String s_cpt_maxFileSize = PROPERTY_PREFIX + "cpt.maxfilesize";
+    
+    static final String s_cpt_quit = PROPERTY_PREFIX + "cpt.quit";
 
     static final String[] sysprops = { s_stats, s_queue_steals,
             s_detailed_stats, s_client, s_closed, s_unreliable, s_asserts,
@@ -88,7 +103,9 @@ public interface Config {
             s_so_delay, s_so_size, s_alg, s_so_lrmc, s_close_connections,
             s_max_connections, s_so_wait_time, s_steal_wait_timeout,
             s_connections_on_demand, s_keep_intra_connections,
-            s_throttle_steals, s_max_steal_throttle };
+            s_throttle_steals, s_max_steal_throttle,
+            s_cpt, s_cpt_push, s_cpt_interval, s_cpt_first, s_cpt_file,
+            s_cpt_maxFileSize, s_cpt_quit};
 
     /** Enable or disable asserts. */
     static final boolean ASSERTS = properties.getBooleanProperty(s_asserts,
@@ -135,6 +152,30 @@ public interface Config {
      */
     static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive,
             false);
+
+    public static final boolean CHECKPOINTING = properties.getBooleanProperty(
+            s_cpt, false);
+    
+    public static final boolean CHECKPOINT_PUSH = properties.getBooleanProperty(
+            s_cpt_push, true);
+
+    //[KRIS]
+    public static final int CHECKPOINT_INTERVAL
+            = properties.getIntProperty(s_cpt_interval, 5000);
+    
+    public static final int CHECKPOINT_FIRST
+            = properties.getIntProperty(s_cpt_first, CHECKPOINT_INTERVAL);
+    
+    public static final String CHECKPOINT_FILE
+            = properties.getProperty(s_cpt_file, "checkpoints.txt");
+    
+    public static final int CHECKPOINT_MAXFILESIZE
+            = properties.getIntProperty(s_cpt_maxFileSize, 0);
+    
+    public static final int CHECKPOINT_QUITTIME
+            = properties.getIntProperty(s_cpt_quit, 0);
+    
+    public static final int COORDINATOR_QUIT_DELAY_TIME = 10000;
 
     /** Enable or disable an optimization for handling delayed messages. */
     static final boolean HANDLE_MESSAGES_IN_LATENCY = properties

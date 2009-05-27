@@ -17,6 +17,7 @@ import ibis.ipl.SendPortIdentifier;
 import ibis.ipl.WriteMessage;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
+import ibis.satin.impl.checkPointing.Checkpoint;
 import ibis.satin.impl.communication.Protocol;
 import ibis.satin.impl.loadBalancing.Victim;
 import ibis.satin.impl.spawnSync.InvocationRecord;
@@ -25,6 +26,7 @@ import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 
 final class FTCommunication implements Config, ReceivePortConnectUpcall,
@@ -348,6 +350,33 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                 s.notifyAll();
             }
             
+            //[KRIS]
+            // this part will only be executed for nodes which join later on
+            // nodes which are available from the beginning need to be informed
+            // seperately
+            if (CHECKPOINTING && s.ft.coordinator && s.ft.resumeOld){
+                try {
+                    WriteMessage w = v.newMessage();
+                    w.writeByte(Protocol.CHECKPOINT_INFO);
+                    w.writeInt(s.ft.globalResultTable.size());
+                    w.finish();
+                } catch (Exception e){
+                    System.out.println("Exception while sending CHECKPOINT_INFO to " + joiner + ": " + e);
+                }
+            }
+
+            if (CHECKPOINTING && s.ft.coordinator){
+                try {
+                    WriteMessage w = v.newMessage();
+                    w.writeByte(Protocol.COORDINATOR_INFO);
+                    w.writeObject(s.ident);
+                    w.finish();
+                } catch (Exception e){
+                    System.out.println(s.ident + " failed to send COORDINATOR_INFO to " + joiner + ": " + e);
+                }
+            }
+
+            
             ftLogger.debug("SATIN '" + s.ident + "': " + joiner + " JOINED");
         }
     }
@@ -473,5 +502,142 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
 
     public void electionResult(String electionName, IbisIdentifier winner) {
         // TODO Use this result?
+    }
+
+    public void handleCoordinatorInfo(ReadMessage m) {
+        Timer createCoordinatorTimer = Timer.createTimer();
+        createCoordinatorTimer.start();
+
+        try {
+            s.ft.coordinatorIdent = (IbisIdentifier) m.readObject();
+            m.finish();
+        } catch (Exception e){
+            System.out.println("HandleCoordinatorInfo failed: " + e);
+            System.exit(1);
+        }
+
+        if (s.ft.coordinatorIdent.equals(s.ident)){
+            s.ft.becomeCoordinator = true;
+        }
+
+        createCoordinatorTimer.stop();
+        synchronized (s){
+            s.stats.createCoordinatorTimer.add(createCoordinatorTimer);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void handleCheckpoint(ReadMessage m) {
+        Timer receiveCheckpointTimer = Timer.createTimer();
+        receiveCheckpointTimer.start();
+
+        ArrayList<ReturnRecord> checkpoints = null;
+        IbisIdentifier origin = m.origin().ibisIdentifier();
+        try {
+            checkpoints = (ArrayList<ReturnRecord>) m.readObject();
+            m.finish();
+        } catch (Exception e){
+            System.out.println("handleCheckpoint failed:" + e);
+            System.exit(1);
+        }
+
+        if (s.ft.coordinator) {
+            for (ReturnRecord r : checkpoints) {
+                s.ft.checkpoints.add(new Checkpoint(r, origin));
+            }
+            s.ft.gotCheckpoints = true;
+        } else {
+            //ignore checkpoint
+        }
+
+        if (CHECKPOINT_INTERVAL == 0) {
+            System.out.println("coordinator received ckpt from " + origin);
+        }
+
+        receiveCheckpointTimer.stop();
+        synchronized (s){
+            s.stats.receiveCheckpointTimer.add(receiveCheckpointTimer);
+        }    
+    }
+
+    public void handleFileWriteTimeReq(ReadMessage m) {
+        
+        Timer createCoordinatorTimer = Timer.createTimer();
+        createCoordinatorTimer.start();
+
+        IbisIdentifier src = m.origin().ibisIdentifier();
+        try {
+            m.finish();
+        } catch (Exception e){}
+
+        Victim v = s.victims.getVictim(src);
+        try {
+            WriteMessage w = v.newMessage();
+            w.writeByte(Protocol.FILE_WRITE_TIME);
+            w.writeInt(computeConnectionSpeed());
+            w.finish();
+        } catch (Exception e){
+            System.out.println("Error while sending FILE_WRITE_TIME: " + e);
+        }
+
+        createCoordinatorTimer.stop();
+        synchronized (s){
+            s.stats.createCoordinatorTimer.add(createCoordinatorTimer);
+        } 
+    }
+
+    private int computeConnectionSpeed() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    public void handleFileWriteTime(ReadMessage m) {
+        Timer createCoordinatorTimer = Timer.createTimer();
+        createCoordinatorTimer.start();
+
+        int time = 0;
+        IbisIdentifier source = m.origin().ibisIdentifier();
+        try {
+            time = m.readInt();
+            m.finish();
+        } catch (Exception e){
+            System.out.println("handleFileWriteTime failed: " + e);
+            System.exit(1);
+        }
+
+        // possibly update fastest node
+        if (time < s.ft.fileWriteMinimum){
+            s.ft.fileWriteMinimum = time;
+            s.ft.tempCoordinatorIdent = source;
+        }
+
+        // did we receive enough information, and do we actuall need it?
+        s.ft.totalFileWriteInfoMsgs++;
+        if (s.ft.totalFileWriteInfoMsgs >= s.victims.size() / 2 &&
+            s.ft.coordinatorIdent == null &&
+            s.ft.tempCoordinatorIdent != null){
+            s.ft.setCoordinator = true;
+        }
+
+        createCoordinatorTimer.stop();
+        synchronized (s){
+            s.stats.createCoordinatorTimer.add(createCoordinatorTimer);
+        }    
+    }
+
+    public void handleCheckpointInfo(ReadMessage m) {
+        int grtSize = 0;;
+        try {
+            grtSize = m.readInt();
+            m.finish();
+        } catch (Exception e){
+            System.out.println("HandleCheckpointInfo failed: " + e);
+            System.exit(1);
+        }
+
+        s.ft.resumeOld = true;
+        if (grtSize <= s.ft.globalResultTable.size()){
+            s.ft.getTable = false;
+        }    
     }
 }

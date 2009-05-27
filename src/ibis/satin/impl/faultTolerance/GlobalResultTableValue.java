@@ -27,11 +27,26 @@ public class GlobalResultTableValue implements java.io.Serializable, Config {
 
     protected IbisIdentifier owner;
 
-    protected GlobalResultTableValue(int type, InvocationRecord r) {
+    public GlobalResultTableValue(int type, InvocationRecord r) {
         this.type = type;
         this.owner = Satin.getSatin().ident;
         if (type == TYPE_RESULT) {
             result = r.getReturnRecord();
+        }
+    }
+    
+    // this new function solves the ambiguity of Value(type, null)
+    // so always use Value(int type) instead of Value(int type, null)
+    public GlobalResultTableValue(int type){
+        this.type = type;
+        this.owner = Satin.getSatin().ident;
+    }
+
+    public GlobalResultTableValue(int type, ReturnRecord rr){
+        this.type = type;
+        this.owner = Satin.getSatin().ident;
+        if (type == TYPE_RESULT){
+            result = rr;
         }
     }
 

@@ -98,6 +98,25 @@ public final class MessageHandler implements MessageUpcall, Protocol, Config {
             case RESUME:
                 s.comm.gotResume();
                 break;
+            case CHECKPOINT_REQUEST:
+                m.finish();
+                s.ft.takeAndSendCheckpoint();
+                break;
+            case CHECKPOINT:
+                s.ft.handleCheckpoint(m);
+                break;
+            case CHECKPOINT_INFO:
+                s.ft.handleCheckpointInfo(m);
+                break;
+            case FILE_WRITE_TIME:
+                s.ft.handleFileWriteTime(m);
+                break;
+            case COORDINATOR_INFO:
+                s.ft.handleCoordinatorInfo(m);
+                break;
+            case FILE_WRITE_TIME_REQ:
+                s.ft.handleFileWriteTimeReq(m);
+                break;               
             default:
                 commLogger.error("SATIN '" + s.ident + "': Illegal opcode "
                     + opcode + " in MessageHandler");

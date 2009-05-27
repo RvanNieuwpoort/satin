@@ -82,6 +82,8 @@ public final class Satin implements Config {
     public InvocationRecord parent;
 
     public volatile boolean currentVictimCrashed;
+    
+    public boolean takeCheckpoint = false;
 
     /** All victims, myself NOT included. The elements are Victims. */
     public final VictimTable victims;
@@ -206,6 +208,8 @@ public final class Satin implements Config {
         comm.closeReceivePort();
 
         comm.end();
+        
+        ft.end();
 
         if (commLogger.isDebugEnabled()) {
             commLogger.debug("SATIN '" + ident + "': exited");

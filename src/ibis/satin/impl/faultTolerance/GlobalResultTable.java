@@ -10,6 +10,7 @@ import ibis.satin.impl.Satin;
 import ibis.satin.impl.communication.Protocol;
 import ibis.satin.impl.loadBalancing.Victim;
 import ibis.satin.impl.spawnSync.InvocationRecord;
+import ibis.satin.impl.spawnSync.ReturnRecord;
 import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
@@ -18,7 +19,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
-final class GlobalResultTable implements Config, Protocol {
+public final class GlobalResultTable implements Config, Protocol {
     private Satin s;
 
     /** The entries in the global result table. Entries are of type
@@ -30,7 +31,7 @@ final class GlobalResultTable implements Config, Protocol {
     private Map<Stamp, GlobalResultTableValue> toSend;
 
     private GlobalResultTableValue pointerValue = new GlobalResultTableValue(
-        GlobalResultTableValue.TYPE_POINTER, null);
+        GlobalResultTableValue.TYPE_POINTER);
 
     protected GlobalResultTable(Satin s) {
         this.s = s;
@@ -67,18 +68,13 @@ final class GlobalResultTable implements Config, Protocol {
             s.stats.lookupTimer.stop();
         }
     }
-
-    protected void storeResult(InvocationRecord r) {
+    
+    private void update(Stamp key, GlobalResultTableValue value) {
         Satin.assertLocked(s);
 
         s.stats.updateTimer.start();
 
         try {
-
-            GlobalResultTableValue value = new GlobalResultTableValue(
-                GlobalResultTableValue.TYPE_RESULT, r);
-
-            Stamp key = r.getStamp();
             Object oldValue = entries.get(key);
             entries.put(key, value);
             s.stats.tableResultUpdates++;
@@ -99,6 +95,16 @@ final class GlobalResultTable implements Config, Protocol {
         }
     }
 
+    public void storeResult(InvocationRecord r) {
+        update(r.getStamp(), new GlobalResultTableValue(
+                GlobalResultTableValue.TYPE_RESULT, r));
+    }
+    
+    public void storeResult(ReturnRecord r) {
+        update(r.getStamp(), new GlobalResultTableValue(
+                GlobalResultTableValue.TYPE_RESULT, r));
+    }
+    
     protected void updateAll(Map<Stamp, GlobalResultTableValue> updates) {
         Satin.assertLocked(s);
         s.stats.updateTimer.start();
@@ -115,7 +121,7 @@ final class GlobalResultTable implements Config, Protocol {
         s.ft.updatesToSend = true;
     }
 
-    protected void sendUpdates() {
+    public void sendUpdates() {
         Timer updateTimer = null;
         Timer tableSerializationTimer = null;
         int size = 0;
@@ -254,5 +260,9 @@ final class GlobalResultTable implements Config, Protocol {
             }
             out.println("=end of GRT " + s.ident + "=");            
         }
+    }
+    
+    public int size() {
+        return entries.size();
     }
 }
