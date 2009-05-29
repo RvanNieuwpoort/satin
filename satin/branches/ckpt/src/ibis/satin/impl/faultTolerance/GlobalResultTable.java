@@ -20,7 +20,7 @@ import java.util.Hashtable;
 import java.util.Map;
 
 public final class GlobalResultTable implements Config, Protocol {
-    private Satin s;
+    public Satin s;
 
     /** The entries in the global result table. Entries are of type
      * GlobalResultTableValue. */
