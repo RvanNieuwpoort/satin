@@ -363,6 +363,7 @@ public class CheckpointFile {
      **/
     private void fatal(Exception e){
 	System.out.println("CheckpointFile: Fatal Exception: " + e);
+        e.printStackTrace(System.out);
 	close();
 	delete(filename + "_TMP");
 	fileStream = null;
