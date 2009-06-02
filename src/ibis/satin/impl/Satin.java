@@ -83,8 +83,6 @@ public final class Satin implements Config {
 
     public volatile boolean currentVictimCrashed;
     
-    public boolean takeCheckpoint = false;
-
     /** All victims, myself NOT included. The elements are Victims. */
     public final VictimTable victims;
 

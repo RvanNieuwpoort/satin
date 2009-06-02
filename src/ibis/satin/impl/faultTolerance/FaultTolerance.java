@@ -89,7 +89,7 @@ public final class FaultTolerance implements Config {
 
     private boolean gotCheckpointAndQuit;
 
-    private boolean takeCheckpoint;
+    public boolean takeCheckpoint;
 
     boolean coordinator = false;
     
@@ -101,7 +101,7 @@ public final class FaultTolerance implements Config {
     
     private CheckpointFile checkpointFile = null;
     
-    ArrayList<Checkpoint> checkpoints;
+    ArrayList<Checkpoint> checkpoints = new ArrayList<Checkpoint>();
     
     CheckpointThread cpThread = null;
 
@@ -121,6 +121,36 @@ public final class FaultTolerance implements Config {
             (new DeleteClusterThread(DELETE_CLUSTER_TIME)).start();
         }
         
+
+    }
+
+    public void electClusterCoordinator() {
+        ftComm.electClusterCoordinator();    	
+    }
+    
+    public void init() {
+
+        if(!FT_NAIVE) {
+            globalResultTable = new GlobalResultTable(s);
+        }
+        abortAndStoreList = new StampVector();
+
+        if (FT_NAIVE) {
+            ftLogger.info("naive FT on");
+        } else {
+            ftLogger.info("FT on, with GRT enabled");
+        }
+
+        if (s.isMaster()) {
+            getTable = false;
+        }
+
+        s.comm.ibis.registry().enableEvents();
+
+        if (CLOSED) {
+            s.comm.waitForAllNodes();
+        }
+
         //[KRIS]
         if (CHECKPOINTING){
             // in case of a CHECKPOINT_PUSH, every node has to decide when
@@ -150,7 +180,10 @@ public final class FaultTolerance implements Config {
                     }   
                 }
             } else {
-                Victim v = s.victims.getVictim(s.getMasterIdent());
+                Victim v;
+                synchronized(s) {
+                    v = s.victims.getVictim(s.getMasterIdent());
+                }
                 try {
                     WriteMessage w = v.newMessage();
                     w.writeByte(Protocol.FILE_WRITE_TIME);
@@ -161,35 +194,6 @@ public final class FaultTolerance implements Config {
                                        s.getMasterIdent() + ": " + e);
                 }
             }  
-        }
-
-    }
-
-    public void electClusterCoordinator() {
-        ftComm.electClusterCoordinator();    	
-    }
-    
-    public void init() {
-
-        if(!FT_NAIVE) {
-            globalResultTable = new GlobalResultTable(s);
-        }
-        abortAndStoreList = new StampVector();
-
-        if (FT_NAIVE) {
-            ftLogger.info("naive FT on");
-        } else {
-            ftLogger.info("FT on, with GRT enabled");
-        }
-
-        if (s.isMaster()) {
-            getTable = false;
-        }
-
-        s.comm.ibis.registry().enableEvents();
-
-        if (CLOSED) {
-            s.comm.waitForAllNodes();
         }
     }
 
@@ -268,11 +272,11 @@ public final class FaultTolerance implements Config {
         }
         //[KRIS]
         if (CHECKPOINTING && coordinator){
-            s.stats.useCheckpointTimer.start();
-            synchronized(this){
+            synchronized(s) {
+                s.stats.useCheckpointTimer.start();
                 checkpointFile.read(crashedCopy, globalResultTable);
+                s.stats.useCheckpointTimer.stop();
             }
-            s.stats.useCheckpointTimer.stop();
         }
     }
 
@@ -441,8 +445,11 @@ public final class FaultTolerance implements Config {
             if (gotCheckpoints){
                 synchronized (s){
                     s.stats.writeCheckpointTimer.start();
-                    checkpointFile.write(checkpoints);
-                    s.stats.writeCheckpointTimer.stop();
+                    try {
+                        checkpointFile.write(checkpoints);
+                    } finally {
+                        s.stats.writeCheckpointTimer.stop();
+                    }
                 }
                 gotCheckpoints = false;
             }
@@ -490,28 +497,32 @@ public final class FaultTolerance implements Config {
         gotCheckpointAndQuit = true;
     }
 
-    synchronized void handleCheckpointAndQuit() {
-        if (coordinator) {
-            takeCoordinatorCheckpoint();
-            System.out.println("SATIN '" + s.ident
-                               + "': checkpoint taken");
-            /*wait for a while and receive checkpoints from other nodes*/
-            try {
-                wait(COORDINATOR_QUIT_DELAY_TIME);
-            } catch (InterruptedException e) {
-                //ignore
+    void handleCheckpointAndQuit() {
+        synchronized(s) {
+            if (coordinator) {
+                takeCoordinatorCheckpoint();
+                System.out.println("SATIN '" + s.ident
+                                   + "': checkpoint taken");
+                /*wait for a while and receive checkpoints from other nodes*/
+                try {
+                    wait(COORDINATOR_QUIT_DELAY_TIME);
+                } catch (InterruptedException e) {
+                    //ignore
+                }
+                if (gotCheckpoints) {
+                    synchronized(s) {
+                        s.stats.writeCheckpointTimer.start();
+                        checkpointFile.write(checkpoints);
+                        s.stats.writeCheckpointTimer.stop();
+                    }
+                }
+                System.out.println("SATIN '" + s.ident
+                                   + "': coordinator quits");
+            } else {
+                takeAndSendCheckpoint();
+                System.out.println("SATIN '" + s.ident
+                                   + "': checkpoint taken");
             }
-            if (gotCheckpoints) {
-                s.stats.writeCheckpointTimer.start();
-                checkpointFile.write(checkpoints);
-                s.stats.writeCheckpointTimer.stop();
-            }
-            System.out.println("SATIN '" + s.ident
-                               + "': coordinator quits");
-        } else {
-            takeAndSendCheckpoint();
-            System.out.println("SATIN '" + s.ident
-                               + "': checkpoint taken");
         }
         System.exit(0);
     }
@@ -583,7 +594,7 @@ public final class FaultTolerance implements Config {
 
         s.stats.makeCheckpointTimer.start();
         ArrayList<ReturnRecord> myCheckpoints;
-        synchronized(this){
+        synchronized(s){
             myCheckpoints = s.onStack.peekFinishedJobs();
         }
         for (ReturnRecord r : myCheckpoints) {
@@ -614,16 +625,19 @@ public final class FaultTolerance implements Config {
             return;
         }
 
-        Victim co = s.victims.getVictim(coordinatorIdent);
-        if (co == null) {
-            return;
+        Victim co;
+        synchronized(s) {
+            co = s.victims.getVictim(coordinatorIdent);
+            if (co == null) {
+                return;
+            }
         }
 
         s.stats.makeCheckpointTimer.start();
         try {
             WriteMessage w = co.newMessage();
             w.writeByte(Protocol.CHECKPOINT);
-            synchronized (this){
+            synchronized (s){
                 w.writeObject(s.onStack.peekFinishedJobs());
             }
             w.finish();
@@ -637,7 +651,10 @@ public final class FaultTolerance implements Config {
     public void broadcastCheckpointInfo(){
         int size = s.victims.size();
         for (int i = 0; i < size; i++) {
-            Victim v = s.victims.getVictim(i);
+            Victim v;
+            synchronized(s) {
+                v = s.victims.getVictim(i);
+            }
             try {
                 WriteMessage w = v.newMessage();
                 w.writeByte(Protocol.CHECKPOINT_INFO);
@@ -696,9 +713,12 @@ public final class FaultTolerance implements Config {
         // let other nodes know about new coordinator
         int size = s.victims.size();
         for (int i = 0; i < size; i++) {
-            Victim v = s.victims.getVictim(i);
-            if (v == null){
-                continue;
+            Victim v;
+            synchronized(s) {
+                v = s.victims.getVictim(i);
+                if (v == null){
+                    continue;
+                }
             }
             try {
                 WriteMessage w = v.newMessage();
@@ -748,7 +768,7 @@ public final class FaultTolerance implements Config {
             // otherwise, all the checkpoints in the file need to be inserted
             // in the globalResultTable
             int reusable;
-            synchronized(this){
+            synchronized(s){
                 reusable = checkpointFile.init(globalResultTable);
             }
             if (reusable > 0){

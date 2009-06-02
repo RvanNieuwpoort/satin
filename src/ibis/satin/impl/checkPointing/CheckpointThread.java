@@ -32,7 +32,7 @@ public class CheckpointThread extends Thread {
 	    if (stopped){
 		return;
 	    } else {
-		satin.takeCheckpoint = true;
+		satin.ft.takeCheckpoint = true;
 	    }
 	    try {
 		sleep(milis);

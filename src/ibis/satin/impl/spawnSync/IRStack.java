@@ -151,8 +151,11 @@ public final class IRStack implements Config {
             child = curr.getFinishedChild();
             while (child != null){
                 if (!child.checkpointed){
-                    result.add(child.getReturnRecord());
-                    child.checkpointed = true;
+                    ReturnRecord r = child.getReturnRecord();
+                    if (r != null) {
+                        result.add(child.getReturnRecord());
+                        child.checkpointed = true;
+                    }
                 }
                 child = child.getFinishedSibling();
             }

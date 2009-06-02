@@ -9,11 +9,11 @@
 
     <target name="build"
             description="Build with included IPL"
-            depends="clean,copy-included-ipl,compile,javadoc" />
+            depends="clean,copy-included-ipl,copy-external-javagat,compile,javadoc" />
 
     <target name="build-external-ipl"
             description="Build with external IPL"
-            depends="clean,copy-external-ipl,compile,javadoc" />
+            depends="clean,copy-external-ipl,copy-external-javagat,compile,javadoc" />
 
     <property name="src" location="src" />
     <property name="tmp" location="tmp" />
@@ -36,6 +36,18 @@
 	<!-- Import environment properties -->
 	<property environment="env" />
 	<property name="ipl" location="${env.IPL_HOME}" />
+        <mkdir dir="${lib}" />
+        <copy todir="${lib}">
+            <fileset dir="${ipl}/lib" />
+        </copy>
+    </target>
+
+    <!-- copy external dependancies to lib, includig IPL 
+         specified by $IPL_HOME -->
+    <target name="copy-external-javagat">
+	<!-- Import environment properties -->
+	<property environment="env" />
+	<property name="ipl" location="${env.GAT_LOCATION}" />
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
             <fileset dir="${ipl}/lib" />

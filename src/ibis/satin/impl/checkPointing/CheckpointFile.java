@@ -136,7 +136,7 @@ public class CheckpointFile {
                 Checkpoint cp = (Checkpoint) tempReader.readObject();
                 if (id == null || id.contains(cp.sender)) {
                     ReturnRecord record = cp.rr;
-                    synchronized (this){
+                    synchronized(grt.s) {
                         grt.storeResult(record);
                     }
                     result++;
@@ -290,7 +290,9 @@ public class CheckpointFile {
 		tempWriter.writeObject(cp);
 		tempWriter.flush();
 		if (grt != null){
-		    grt.storeResult(cp.rr);
+                    synchronized(grt.s) {
+                        grt.storeResult(cp.rr);
+                    }
 		    // propagate updates after every 1000 updates
 		    try {
 			if (checkpoints.size() % 1000 == 999){
