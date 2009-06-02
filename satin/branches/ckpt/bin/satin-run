@@ -25,5 +25,8 @@ add_to_libclasspath () {
 # Add the jar files in the Ibis lib dir to the classpath.
 add_to_libclasspath "${SATIN_HOME}"/lib
 
+GAT_LIB_LOCATION=$SATIN_HOME/lib
+GAT_ADAPTOR_LOCATION=$GAT_LIB_LOCATION/adaptors
+
 # And finally, run ...
-java -classpath "$CLASSPATH:$LIBCLASSPATH" -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties "$@"
+java -classpath "$CLASSPATH:$LIBCLASSPATH" -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties -Djava.endorsed.dirs=$GAT_ADAPTOR_LOCATION/GridsamAdaptor/endorsed -Dgat.adaptor.path=$GAT_ADAPTOR_LOCATION "$@"

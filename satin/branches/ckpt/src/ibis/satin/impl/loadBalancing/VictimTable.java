@@ -85,7 +85,7 @@ public final class VictimTable implements Config {
     }
 
     public int size() {
-        Satin.assertLocked(satin);
+        // Satin.assertLocked(satin);
         return victims.size();
     }
 
