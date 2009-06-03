@@ -557,29 +557,34 @@ public final class Statistics implements java.io.Serializable, Config {
         
         //[KRIS]
         if (CHECKPOINTING) {
-            out.println("SATIN: REQUEST_CHECKPOINT_TIME:  total "
-                        + Timer.format(requestCheckpointTime));
- 
-            out.println("SATIN: MAKE_CHECKPOINT_TIME:     total "
-                        + Timer.format(makeCheckpointTime));
- 
+            out.println("SATIN: REQUEST_CHECKPOINT_TIME:    total "
+                    + Timer.format(requestCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(requestCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: MAKE_CHECKPOINT_TIME:       total "
+                    + Timer.format(makeCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(makeCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    total "
+                    + Timer.format(receiveCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(receiveCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: WRITE_CHECKPOINT_TIME:      total "
+                    + Timer.format(writeCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(writeCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: USE_CHECKPOINT_TIME:        total "
+                        + Timer.format(useCheckpointTime));
+            out.println("SATIN: CREATE_COORDINATOR_TIME:    total "
+                        + Timer.format(createCoordinatorTime));
+            out.println("SATIN: TOTAL_CHECKPOINT_TIME:      total "
+                        + Timer.format(totalCheckpointTime));
             out.println("SATIN: NUM_CHECKPOINTS_TAKEN:    "
                         + nf.format(numCheckpointsTaken));
- 
-            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:  total "
-                        + Timer.format(receiveCheckpointTime));
- 
-            out.println("SATIN: WRITE_CHECKPOINT_TIME:    total "
-                        + Timer.format(writeCheckpointTime));
- 
-            out.println("SATIN: USE_CHECKPOINT_TIME       total "
-                        + Timer.format(useCheckpointTime));
- 
-            out.println("SATIN: CREATE_COORDINATOR_TIME   total "
-                        + Timer.format(createCoordinatorTime));
- 
-            out.println("SATIN: TOTAL_CHECKPOINT_TIME     total "
-                        + Timer.format(totalCheckpointTime));
         }
 
 

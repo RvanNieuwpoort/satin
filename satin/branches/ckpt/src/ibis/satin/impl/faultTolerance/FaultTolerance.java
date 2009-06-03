@@ -598,6 +598,9 @@ public final class FaultTolerance implements Config {
             myCheckpoints = s.onStack.peekFinishedJobs();
         }
         for (ReturnRecord r : myCheckpoints) {
+            if (r == null) {
+                System.out.println("OOPS1: returnrecord is null!");
+            }
             checkpoints.add(new Checkpoint(r, s.ident));
         }
         gotCheckpoints = true;

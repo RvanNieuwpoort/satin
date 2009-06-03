@@ -88,13 +88,16 @@ public class CheckpointFile {
 	    return;
 	}
 
-	int i = 0;
 	try {
 	    while(newCheckpoints.size() > 0){	
 		Checkpoint cp = newCheckpoints.remove(0);
 		fileWriter.writeObject(cp);
+                if (cp == null) {
+                    System.out.println("OOPS2: cp = null");
+                } else if (cp.rr == null) {
+                    System.out.println("OOPS3: cp.rr = null");
+                }
 		checkpoints.add(cp.rr.getStamp());
-		i++;
 	    }
 	} catch (IOException e){
 	    System.out.println("iox while writing checkpoints: " + e);

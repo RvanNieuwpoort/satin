@@ -47,10 +47,10 @@
     <target name="copy-external-javagat">
 	<!-- Import environment properties -->
 	<property environment="env" />
-	<property name="ipl" location="${env.GAT_LOCATION}" />
+	<property name="gat" location="${env.GAT_LOCATION}" />
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
-            <fileset dir="${ipl}/lib" />
+            <fileset dir="${gat}/lib" />
         </copy>
     </target>
 
