@@ -543,6 +543,9 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
 
         if (s.ft.coordinator) {
             for (ReturnRecord r : checkpoints) {
+                if (r == null) {
+                    System.out.println("OOPS! return record is null");
+                }
                 s.ft.checkpoints.add(new Checkpoint(r, origin));
             }
             s.ft.gotCheckpoints = true;
@@ -570,7 +573,10 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             m.finish();
         } catch (Exception e){}
 
-        Victim v = s.victims.getVictim(src);
+        Victim v;
+        synchronized(s) {
+            v = s.victims.getVictim(src);
+        }
         try {
             WriteMessage w = v.newMessage();
             w.writeByte(Protocol.FILE_WRITE_TIME);

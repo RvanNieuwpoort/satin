@@ -153,7 +153,7 @@ public final class IRStack implements Config {
                 if (!child.checkpointed){
                     ReturnRecord r = child.getReturnRecord();
                     if (r != null) {
-                        result.add(child.getReturnRecord());
+                        result.add(r);
                         child.checkpointed = true;
                     }
                 }
