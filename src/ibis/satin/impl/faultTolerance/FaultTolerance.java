@@ -388,13 +388,21 @@ public final class FaultTolerance implements Config {
     }
 
     public void handleDelete() {
-        Victim victim = s.victims.getRandomLocalVictim();
+        Victim victim;
+        
+        synchronized(s) {
+            victim = s.victims.getRandomLocalVictim();
+        }
         pushJobs(victim);
         System.exit(0);
     }
 
     public void handleDeleteCluster() {
-        Victim victim = s.victims.getRandomRemoteVictim();
+        Victim victim;
+        
+        synchronized(s) {
+            Victim victim = s.victims.getRandomRemoteVictim();
+        }
         pushJobs(victim);
         System.exit(0);
     }
