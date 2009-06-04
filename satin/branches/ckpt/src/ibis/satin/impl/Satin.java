@@ -251,11 +251,10 @@ public final class Satin implements Config {
         // If so, we don't have to do it again.
         // Ouch, this cannot be the right place: there is no stamp allocated
         // yet for the job! --Ceriel
-        // Fixed by first allocating stamp.
-        r.allocateStamp(parent);
+        // Fixed by first calling r.spawn.
+        r.spawn(ident, parent);
         if (ft.checkForDuplicateWork(parent, r)) return;
 
-        r.spawn(ident, parent);
         q.addToHead(r);
         algorithm.jobAdded();
     }

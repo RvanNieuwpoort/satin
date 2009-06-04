@@ -421,10 +421,6 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
         }
     }
     
-    public final void allocateStamp(InvocationRecord parent) {
-        stamp = Stamp.createStamp(parent == null ? null : parent.stamp);
-    }
-
     public final void spawn(IbisIdentifier ident, InvocationRecord parent) {
         owner = ident;
         this.parent = parent;
@@ -434,7 +430,8 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
         } else {
             parentStamp = parent.stamp;
             parentOwner = parent.owner;
-        }        
+        }  
+        stamp = Stamp.createStamp(parentStamp);
         spawnCounter.incr(this);
     }
 
