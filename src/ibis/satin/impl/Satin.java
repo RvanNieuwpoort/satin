@@ -486,6 +486,11 @@ public final class Satin implements Config {
             r.decrSpawnCounter();
             return;
         }
+        if (ftLogger.isDebugEnabled()) {
+            if (r.isReDone()) {
+                ftLogger.debug("Redoing job " + r.getStamp());
+            }
+        }
 
         InvocationRecord oldParent = parent;
         onStack.push(r);

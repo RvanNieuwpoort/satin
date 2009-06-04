@@ -401,7 +401,7 @@ public final class FaultTolerance implements Config {
         Victim victim;
         
         synchronized(s) {
-            Victim victim = s.victims.getRandomRemoteVictim();
+            victim = s.victims.getRandomRemoteVictim();
         }
         pushJobs(victim);
         System.exit(0);
@@ -838,7 +838,7 @@ public final class FaultTolerance implements Config {
 
         return false;
     }
-
+    
     public void storeResult(InvocationRecord r) {
         globalResultTable.storeResult(r);
     }
