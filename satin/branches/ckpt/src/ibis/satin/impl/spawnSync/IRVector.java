@@ -188,6 +188,9 @@ public final class IRVector implements Config {
 
         for (int i = count - 1; i >= 0; i--) {
             if (crashedIbis.equals(l[i].getStealer())) {
+                if (ftLogger.isDebugEnabled()) {
+                    ftLogger.debug("Found a job to restart: " + l[i].getStamp());
+                }
                 l[i].setReDone(true);
                 l[i].setStealer(null);
                 satin.q.addToTail(l[i]);
