@@ -72,6 +72,7 @@ public final class GlobalResultTable implements Config, Protocol {
             
             return value;
         } finally {
+            s.stats.tableLookups++;
             s.stats.lookupTimer.stop();
         }
     }
