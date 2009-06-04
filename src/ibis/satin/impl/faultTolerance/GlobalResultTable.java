@@ -58,6 +58,7 @@ public final class GlobalResultTable implements Config, Protocol {
                 if (value.type == GlobalResultTableValue.TYPE_POINTER) {
                     if (!s.deadIbises.contains(value.owner)) {
                         s.stats.tableSuccessfulLookups++;
+                        s.stats.tableRemoteLookups++;
                     }
                 } else {
                     s.stats.tableSuccessfulLookups++;
@@ -68,7 +69,7 @@ public final class GlobalResultTable implements Config, Protocol {
                         .debug("SATIN '" + s.ident + "': lookup failed " + key);
                 }
             }
-            s.stats.tableRemoteLookups++;
+            
             return value;
         } finally {
             s.stats.lookupTimer.stop();
