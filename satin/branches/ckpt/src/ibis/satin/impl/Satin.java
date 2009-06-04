@@ -249,6 +249,10 @@ public final class Satin implements Config {
 
         // Maybe this job is already in the global result table.
         // If so, we don't have to do it again.
+        // Ouch, this cannot be the right place: there is no stamp allocated
+        // yet for the job! --Ceriel
+        // Fixed by first allocating stamp.
+        r.allocateStamp(parent);
         if (ft.checkForDuplicateWork(parent, r)) return;
 
         r.spawn(ident, parent);
