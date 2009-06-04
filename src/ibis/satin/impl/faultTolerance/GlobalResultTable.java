@@ -51,15 +51,21 @@ public final class GlobalResultTable implements Config, Protocol {
             GlobalResultTableValue value = entries.get(key);
 
             if (value != null) {
-                grtLogger
-                    .debug("SATIN '" + s.ident + "': lookup successful " + key);
+                if (grtLogger.isDebugEnabled()) {
+                    grtLogger
+                        .debug("SATIN '" + s.ident + "': lookup successful " + key);
+                }
                 if (value.type == GlobalResultTableValue.TYPE_POINTER) {
                     if (!s.deadIbises.contains(value.owner)) {
                         s.stats.tableSuccessfulLookups++;
-                        s.stats.tableRemoteLookups++;
                     }
                 } else {
                     s.stats.tableSuccessfulLookups++;
+                }
+            } else {
+                if (grtLogger.isDebugEnabled()) {
+                    grtLogger
+                        .debug("SATIN '" + s.ident + "': lookup failed " + key);
                 }
             }
             s.stats.tableRemoteLookups++;
@@ -114,6 +120,12 @@ public final class GlobalResultTable implements Config, Protocol {
             s.stats.tableResultUpdates += updates.size();
             if (entries.size() > s.stats.tableMaxEntries) {
                 s.stats.tableMaxEntries = entries.size();
+            }
+            if (grtLogger.isDebugEnabled()) {
+                for (Stamp key : updates.keySet()) {
+                    grtLogger.debug("SATIN '" + s.ident + "': update: " + key
+                        + "," + updates.get(key));
+                }
             }
         } finally {
             s.stats.updateTimer.stop();
