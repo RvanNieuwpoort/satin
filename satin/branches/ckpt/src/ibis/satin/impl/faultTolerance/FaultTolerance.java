@@ -827,10 +827,16 @@ public final class FaultTolerance implements Config {
         if (FT_NAIVE) return false;
 
         if (parent != null && parent.isReDone() || parent == null && restarted) {
+            if (ftLogger.isDebugEnabled()) {
+                ftLogger.debug("Parent is redone, setting redone of job " + r.getStamp());
+            }
             r.setReDone(true);
         }
 
         if (r.isReDone() || resumeOld) {
+            if (ftLogger.isDebugEnabled()) {
+                ftLogger.debug("Looking for job result of " + r.getStamp());
+            }
             if (ftComm.askForJobResult(r)) {
                 return true;
             }
