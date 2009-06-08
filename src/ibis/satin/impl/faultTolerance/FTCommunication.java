@@ -581,11 +581,9 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             WriteMessage w = v.newMessage();
             w.writeByte(Protocol.FILE_WRITE_TIME);
             if (! CHECKPOINT_CLUSTER) {
-                System.out.println("handleFileWriteTimeReq: ! CHECKPOINT_CLUSTER! Returning maxint");
                 w.writeInt(Integer.MAX_VALUE);
             } else {
                 int tm = s.ft.computeConnectionSpeed();
-                System.out.println("handleFileWriteTimeReq returning " + tm);
                 w.writeInt(tm);
             }
             w.finish();
