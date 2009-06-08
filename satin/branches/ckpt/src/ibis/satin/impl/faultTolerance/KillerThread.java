@@ -2,7 +2,10 @@
 
 package ibis.satin.impl.faultTolerance;
 
-class KillerThread extends Thread {
+import ibis.satin.impl.Config;
+import ibis.satin.impl.Satin;
+
+class KillerThread extends Thread implements Config {
 
     private int milis; //wait that long before dying
 
@@ -22,6 +25,9 @@ class KillerThread extends Thread {
         // Satin satin = Satin.this_satin;
         // if (satin.allIbises.indexOf(satin.ident)
         //         >= (satin.allIbises.size() / 2)) {
+        if (STATS && DETAILED_STATS) {
+            Satin.getSatin().stats.printDetailedStats(Satin.getSatin().ident);
+        }
         System.exit(1); // Kills this satin on purpose, this is a killerthread!
     }
 
