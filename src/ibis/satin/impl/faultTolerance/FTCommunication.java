@@ -580,7 +580,11 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         try {
             WriteMessage w = v.newMessage();
             w.writeByte(Protocol.FILE_WRITE_TIME);
-            w.writeInt(computeConnectionSpeed());
+            if (! CHECKPOINT_CLUSTER) {
+                w.writeInt(Integer.MAX_VALUE);
+            } else {
+                w.writeInt(s.ft.computeConnectionSpeed());
+            }
             w.finish();
         } catch (Exception e){
             System.out.println("Error while sending FILE_WRITE_TIME: " + e);
@@ -590,11 +594,6 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
         synchronized (s){
             s.stats.createCoordinatorTimer.add(createCoordinatorTimer);
         } 
-    }
-
-    private int computeConnectionSpeed() {
-        // TODO Auto-generated method stub
-        return 0;
     }
 
     public void handleFileWriteTime(ReadMessage m) {

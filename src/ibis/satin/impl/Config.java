@@ -92,6 +92,8 @@ public interface Config {
     
     static final String s_cpt_file = PROPERTY_PREFIX + "cpt.file";
     
+    static final String s_cpt_cluster = PROPERTY_PREFIX + "cpt.cluster";
+        
     static final String s_cpt_maxFileSize = PROPERTY_PREFIX + "cpt.maxfilesize";
     
     static final String s_cpt_quit = PROPERTY_PREFIX + "cpt.quit";
@@ -105,7 +107,7 @@ public interface Config {
             s_connections_on_demand, s_keep_intra_connections,
             s_throttle_steals, s_max_steal_throttle,
             s_cpt, s_cpt_push, s_cpt_interval, s_cpt_first, s_cpt_file,
-            s_cpt_maxFileSize, s_cpt_quit};
+            s_cpt_maxFileSize, s_cpt_quit, s_cpt_cluster};
 
     /** Enable or disable asserts. */
     static final boolean ASSERTS = properties.getBooleanProperty(s_asserts,
@@ -168,6 +170,9 @@ public interface Config {
     
     public static final String CHECKPOINT_FILE
             = properties.getProperty(s_cpt_file, "checkpoints.txt");
+    
+    public static final boolean CHECKPOINT_CLUSTER
+            = properties.getBooleanProperty(s_cpt_cluster, true);
     
     public static final int CHECKPOINT_MAXFILESIZE
             = properties.getIntProperty(s_cpt_maxFileSize, 0);
