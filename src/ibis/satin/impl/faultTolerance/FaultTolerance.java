@@ -394,6 +394,9 @@ public final class FaultTolerance implements Config {
             victim = s.victims.getRandomLocalVictim();
         }
         pushJobs(victim);
+        if (STATS && DETAILED_STATS) {
+            s.stats.printDetailedStats(s.ident);
+        }
         System.exit(0);
     }
 
@@ -404,6 +407,9 @@ public final class FaultTolerance implements Config {
             victim = s.victims.getRandomRemoteVictim();
         }
         pushJobs(victim);
+        if (STATS && DETAILED_STATS) {
+            s.stats.printDetailedStats(s.ident);
+        }
         System.exit(0);
     }
 
