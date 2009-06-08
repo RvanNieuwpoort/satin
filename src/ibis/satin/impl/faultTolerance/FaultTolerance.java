@@ -811,7 +811,10 @@ public final class FaultTolerance implements Config {
         // ask all nodes for new measure information
         int size = s.victims.size();
         for (int i = 0; i < size; i++) {
-            Victim v = s.victims.getVictim(i);
+            Victim v;
+            synchronized(s) {
+                v = s.victims.getVictim(i);
+            }
             if (v == null){
                 continue;
             }
