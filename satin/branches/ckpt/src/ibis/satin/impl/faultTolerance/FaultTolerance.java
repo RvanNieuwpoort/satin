@@ -187,7 +187,11 @@ public final class FaultTolerance implements Config {
                 try {
                     WriteMessage w = v.newMessage();
                     w.writeByte(Protocol.FILE_WRITE_TIME);
-                    w.writeInt(computeConnectionSpeed());
+                    if (CHECKPOINT_CLUSTER) {
+                        w.writeInt(computeConnectionSpeed());
+                    } else {
+                        w.writeInt(Integer.MAX_VALUE);
+                    }
                     w.finish();
                 } catch (Exception e){
                     System.out.println("Sending FILE_WRITE_TIME failed to " +
