@@ -109,19 +109,6 @@ public final class FaultTolerance implements Config {
         this.s = s;
 
         ftComm = new FTCommunication(s); // must be created first, it handles registry upcalls.
-
-        /* the threads below are used for debugging */
-        if (KILL_TIME > 0) {
-            (new KillerThread(KILL_TIME)).start();
-        }
-        if (DELETE_TIME > 0) {
-            (new DeleteThread(DELETE_TIME)).start();
-        }
-        if (DELETE_CLUSTER_TIME > 0) {
-            (new DeleteClusterThread(DELETE_CLUSTER_TIME)).start();
-        }
-        
-
     }
 
     public void electClusterCoordinator() {
@@ -149,7 +136,18 @@ public final class FaultTolerance implements Config {
 
         if (CLOSED) {
             s.comm.waitForAllNodes();
+        }        
+
+        /* the threads below are used for debugging */
+        if (KILL_TIME > 0) {
+            (new KillerThread(KILL_TIME)).start();
         }
+        if (DELETE_TIME > 0) {
+            (new DeleteThread(DELETE_TIME)).start();
+        }
+        if (DELETE_CLUSTER_TIME > 0) {
+            (new DeleteClusterThread(DELETE_CLUSTER_TIME)).start();
+        }       
 
         //[KRIS]
         if (CHECKPOINTING){
