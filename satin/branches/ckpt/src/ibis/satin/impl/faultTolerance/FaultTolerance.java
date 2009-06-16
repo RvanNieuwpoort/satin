@@ -362,6 +362,7 @@ public final class FaultTolerance implements Config {
     public void killSubtreeOf(IbisIdentifier targetOwner) {
         s.onStack.killSubtreesOf(targetOwner);
         s.q.killSubtreeOf(targetOwner);
+        s.outstandingJobs.killSubtreeOf(targetOwner);
     }
 
     public void addToAbortAndStoreList(Stamp stamp) {
@@ -910,6 +911,10 @@ public final class FaultTolerance implements Config {
 
     public void sendAbortAndStoreMessage(InvocationRecord r) {
         ftComm.sendAbortAndStoreMessage(r);
+    }
+    
+    public void sendAbortMessage(InvocationRecord r) {
+        ftComm.sendAbortMessage(r);
     }
     
     public void handleGRTUpdate(ReadMessage m) {
