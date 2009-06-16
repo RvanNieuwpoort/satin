@@ -259,6 +259,8 @@ public final class FaultTolerance implements Config {
                         // abort all jobs stolen from id or descendants of jobs
                         // stolen from id
                         killAndStoreSubtreeOf(id);
+                    } else {
+                        killSubtreeOf(id);
                     }
 
                     s.outstandingJobs.redoStolenBy(id);
@@ -354,6 +356,12 @@ public final class FaultTolerance implements Config {
 
         s.q.killSubtreeOf(targetOwner);
         s.outstandingJobs.killAndStoreSubtreeOf(targetOwner);
+    }
+    
+
+    public void killSubtreeOf(IbisIdentifier targetOwner) {
+        s.onStack.killSubtreesOf(targetOwner);
+        s.q.killSubtreeOf(targetOwner);
     }
 
     public void addToAbortAndStoreList(Stamp stamp) {
