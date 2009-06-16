@@ -175,6 +175,39 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             // Let's continue...
         }
     }
+    
+    protected void sendAbortMessage(InvocationRecord r) {
+        Satin.assertLocked(s);
+
+        abortLogger.debug("SATIN '" + s.ident
+                + ": sending abort message to: " + r.getStealer()
+                + " for job " + r.getStamp());
+
+        if (s.deadIbises.contains(r.getStealer())) {
+            /* don't send abort and store messages to crashed ibises */
+            return;
+        }
+
+        WriteMessage writeMessage = null;
+        try {
+            Victim v = s.victims.getVictim(r.getStealer());
+            if (v == null)
+                return; // probably crashed
+
+            writeMessage = v.newMessage();
+            writeMessage.writeByte(Protocol.ABORT);
+            writeMessage.writeObject(r.getParentStamp());
+            v.finish(writeMessage);
+        } catch (IOException e) {
+            if (writeMessage != null) {
+                writeMessage.finish(e);
+            }
+            ftLogger.warn("SATIN '" + s.ident
+                    + "': Got Exception while sending abort message: " + e);
+            // This should not be a real problem, it is just inefficient.
+            // Let's continue...
+        }
+    }
 
     // connect upcall functions
     public boolean gotConnection(ReceivePort me, SendPortIdentifier applicant) {

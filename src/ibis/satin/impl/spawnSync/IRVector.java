@@ -149,6 +149,34 @@ public final class IRVector implements Config {
             }
         }
     }
+    
+    // Abort every job that was spawned on targetOwner
+    // or is a child of a job spawned on targetOwner.
+    public void killSubtreeOf(IbisIdentifier targetOwner) {
+        if (ASSERTS) {
+            Satin.assertLocked(satin);
+        }
+
+        for (int i = 0; i < count; i++) {
+            InvocationRecord curr = l[i];
+            if ((curr.getParent() != null && curr.getParent().aborted)
+                || curr.isDescendentOf(targetOwner)
+                || curr.getOwner().equals(targetOwner)) {
+                //this shouldnt happen, actually
+                curr.aborted = true;
+                if (abortLogger.isDebugEnabled()) {
+                    abortLogger.debug("found stolen child: " + curr.getStamp()
+                        + ", it depends on " + targetOwner);
+                }
+                curr.decrSpawnCounter();
+                satin.stats.abortedJobs++;
+                satin.stats.abortMessages++;
+                removeIndex(i);
+                i--;
+                satin.ft.sendAbortMessage(curr);
+            }
+        }
+    }
 
     public void killAll() {
         if (ASSERTS) {
