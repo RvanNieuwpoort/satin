@@ -287,8 +287,11 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
     }
 
     public final void decrSpawnCounter() {
-        spawnCounter.decr(this);
-    }
+        if (spawnCounter != null) {     
+            // Can be null in case of stolen job.
+            spawnCounter.decr(this);
+        }
+    }        
 
     public final void incrSpawnCounter() {
         spawnCounter.incr(this);
