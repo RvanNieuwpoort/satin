@@ -291,7 +291,7 @@ public final class FaultTolerance implements Config {
         // master has crashed, let's elect a new one
         IbisIdentifier newMaster = null;
         try {
-            newMaster = s.comm.ibis.registry().elect("satin master");
+            newMaster = s.comm.ibis.registry().elect("satin.master");
         } catch (Exception e) {
             ftLogger.error("SATIN '" + s.ident
                 + "' :exception while electing a new master " + e, e);
