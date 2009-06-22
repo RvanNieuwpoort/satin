@@ -125,21 +125,21 @@ public final class Victim implements Config {
                 throw new IOException("SATIN '" + sendPort.identifier().ibisIdentifier()
                         + "': Could not connect to " + ident);
             }
+            return send.newMessage();
         }
-        return send.newMessage();
     }
 
     public long finish(WriteMessage m) throws IOException {
-        try {
-            long cnt = m.finish();
-            if (inDifferentCluster) {
-                Satin.addInterClusterStats(cnt);
-            } else {
-                Satin.addIntraClusterStats(cnt);
-            }
-            return cnt;
-        }  finally {
-            synchronized (sendPort) {
+        synchronized(sendPort) {
+            try {
+                long cnt = m.finish();
+                if (inDifferentCluster) {
+                    Satin.addInterClusterStats(cnt);
+                } else {
+                    Satin.addIntraClusterStats(cnt);
+                }
+                return cnt;
+            }  finally {
                 referenceCount--;
                 optionallyDropConnection();
             }
