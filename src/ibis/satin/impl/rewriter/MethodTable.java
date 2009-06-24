@@ -319,7 +319,11 @@ final class MethodTable {
         // For now, if they occur in an inlet handler, they will not be
         // rewritten!
         ArrayList<Integer> newLocals = new ArrayList<Integer>();
-        for (InstructionHandle h = m.getInstructionList().getStart(); h != null;
+        InstructionList il = m.getInstructionList();
+        if (il == null) {
+            return;
+        }
+        for (InstructionHandle h = il.getStart(); h != null;
                 h = h.getNext()) {
             Instruction ins = h.getInstruction();
             if (ins instanceof LocalVariableInstruction) {
