@@ -171,14 +171,17 @@ public final class GlobalResultTable implements Config, Protocol {
                     continue;
                     //always happens after a crash
                 }
+                grtLogger.warn("Updating " + v.getIdent());
 
                 tableSerializationTimer = Timer.createTimer();
                 tableSerializationTimer.start();
+                IOException ex = null;
                 try {
                     m.writeByte(GRT_UPDATE);
                     m.writeObject(toSend);
                 } catch (IOException e) {
                     grtLogger.info("Got exception in writeObject()", e);
+                    ex = e;
                     //always happens after a crash
                 } finally {
                     tableSerializationTimer.stop();
@@ -186,6 +189,10 @@ public final class GlobalResultTable implements Config, Protocol {
                 }
 
                 try {
+                    if (ex != null) {
+                        v.finish(m, ex);
+                        return;
+                    }
                     long msgSize = v.finish(m);
 
                     grtLogger.debug("SATIN '" + s.ident + "': " + msgSize
