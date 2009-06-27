@@ -44,7 +44,7 @@ import org.apache.bcel.generic.ALOAD;
  *
  * A spawnable method contains spawnable calls.
  */
-public class SpawnableMethod extends MethodGen {
+public class SpawningMethod extends MethodGen {
 
 
 
@@ -53,7 +53,7 @@ public class SpawnableMethod extends MethodGen {
 
     private ArrayList<SpawnableCall> spawnableCalls;
     private int indexSync;
-    private Method spawnSignature;
+    private SpawnSignature spawnSignature;
 
     private Debug d;
 
@@ -73,13 +73,14 @@ public class SpawnableMethod extends MethodGen {
 
     /* package methods */
 
-    SpawnableMethod (Method method, String className, ConstantPoolGen constantPoolGen, 
-	    Method spawnSignature, int indexSync, Debug d) 
-	throws NoSpawnableMethodException, AssumptionFailure {
+    SpawningMethod (Method method, String className, ConstantPoolGen constantPoolGen, 
+	    SpawnSignature spawnSignature, int indexSync, Debug d) 
+	throws NoSpawningMethodException, AssumptionFailure {
 
 	super(method, className, constantPoolGen);
 
-	MethodGen spawnSignatureGen = new MethodGen(spawnSignature, className, constantPoolGen);
+	//System.out.printf("De spawnSignatureGen wordt gemaakt van className: %s\n", spawnSignature.getClassName());
+	MethodGen spawnSignatureGen = new MethodGen(spawnSignature.getMethod(), spawnSignature.getClassName(), constantPoolGen);
 
 	ArrayList<SpawnableCall> spawnableCalls = getSpawnableCalls(constantPoolGen, spawnSignatureGen);
 
@@ -90,7 +91,7 @@ public class SpawnableMethod extends MethodGen {
 	    this.d = d;
 	}
 	else {
-	    throw new NoSpawnableMethodException();
+	    throw new NoSpawningMethodException();
 	}
     }
 
@@ -118,8 +119,8 @@ public class SpawnableMethod extends MethodGen {
 			new INVOKEVIRTUAL(indexSync));
 	    InstructionHandle newTarget = instructionList.insert(syncInvoke, 
 		    spawnableCalls.get(0).getObjectReference().getInstruction());
-	    instructionList.redirectBranches(ih, newTarget);
 	    // the same objectReference for every sync insertion
+	    instructionList.redirectBranches(ih, newTarget);
 	    d.log(2, "inserted sync()\n");
 	}
 	d.log(1, "inserted sync statement(s)\n");
@@ -242,6 +243,7 @@ public class SpawnableMethod extends MethodGen {
 
     private SpawnableCall getSpawnableCallReturningValue(InstructionHandle invokeInstruction) {
 	try {
+	    //System.out.println("ik ben hier toch?");
 	    return new SpawnableCall(invokeInstruction, 
 		    getObjectReferenceLoadInstruction(invokeInstruction), 
 		    findIndexStore(invokeInstruction));
@@ -257,14 +259,20 @@ public class SpawnableMethod extends MethodGen {
     private ArrayList<SpawnableCall> getSpawnableCalls(ConstantPoolGen constantPoolGen, MethodGen spawnSignatureGen) throws 
 	AssumptionFailure {
 
+	    ArrayList<SpawnableCall> spawnableCalls = 
+		new ArrayList<SpawnableCall>();
+
 	    InstructionList il = getInstructionList(); 
+	    //System.out.printf("De spawnSignature: %s\n", spawnSignatureGen);
+	    //System.out.println(constantPoolGen);
 	    int indexSpawnableCall = 
 		constantPoolGen.lookupMethodref(spawnSignatureGen);
+	    //System.out.printf("De index is: %d\n\n", indexSpawnableCall);
+	    if (indexSpawnableCall < 0) return spawnableCalls;
+
 	    INVOKEVIRTUAL spawnableInvoke = 
 		new INVOKEVIRTUAL(indexSpawnableCall);
 
-	    ArrayList<SpawnableCall> spawnableCalls = 
-		new ArrayList<SpawnableCall>();
 
 	    InstructionHandle ih = il.getStart();
 

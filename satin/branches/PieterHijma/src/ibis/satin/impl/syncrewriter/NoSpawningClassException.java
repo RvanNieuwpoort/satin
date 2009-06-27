@@ -1,18 +1,18 @@
 package ibis.satin.impl.syncrewriter;
 
 
-class NoSpawnableClassException extends Exception {
+class NoSpawningClassException extends Exception {
 
 
     static final String MESSAGE = "No spawnable class";
 
 
-    NoSpawnableClassException() {
+    NoSpawningClassException() {
 	super(MESSAGE);
     }
 
 
-    NoSpawnableClassException(String message) {
+    NoSpawningClassException(String message) {
 	super(MESSAGE + ", " + message);
     }
 }

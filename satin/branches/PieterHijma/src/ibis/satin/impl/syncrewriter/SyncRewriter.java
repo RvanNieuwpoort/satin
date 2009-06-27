@@ -85,6 +85,73 @@ class SyncRewriter {
     }
 
 
+    void rewrite(String className, SpawnSignature[] spawnSignatures) throws NoSpawningClassException, 
+	 ClassRewriteFailure {
+
+	JavaClass javaClass = getClassFromName(className);
+	SpawningClass spawnableClass = 
+	    new SpawningClass(javaClass, spawnSignatures, new Debug(d.turnedOn(), 2));
+	d.log(0, "%s is a spawning class\n", className);
+	d.log(1, "it contains calls with spawnsignatures:\n");
+	print(spawnableClass.getSpawnSignatures(), 2);
+	d.log(1, "backing up spawning class %s\n", className);
+	backup(javaClass);
+	d.log(1, "rewriting %s\n", className);
+	spawnableClass.rewrite(analyzer);
+	d.log(1, "dumping %s\n", className);
+	dump(spawnableClass.getJavaClass());
+    }
+
+
+    /*
+    void addAll(Method[] methods, ArrayList<Method> methodList) {
+	if (methods == null) return;
+
+	for (Method method : methods) {
+	    if (!methodList.contains(method)) methodList.add(method);
+	}
+    }
+    */
+
+
+    void print(SpawnSignature[] spawnSignatures, int level) {
+	for (SpawnSignature spawnSignature : spawnSignatures) {
+	    d.log(level, "%s\n", spawnSignature);
+	}
+    }
+
+
+    void getSpawnSignatures(String className, Method[] interfaceMethods, ArrayList<SpawnSignature> spawnSignatures) {
+	for (Method method : interfaceMethods) {
+	    SpawnSignature spawnSignature = new SpawnSignature(method, className);
+	    if (!spawnSignatures.contains(spawnSignature)) spawnSignatures.add(spawnSignature);
+	}
+    }
+
+
+    private boolean isSpawnable(JavaClass javaClass) {
+	JavaClass[] interfaces = javaClass.getAllInterfaces();
+
+	for (JavaClass javaInterface : interfaces) {
+	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
+		return true;
+	    }
+	}
+
+	return false;
+    }
+
+
+    void getSpawnSignatures(JavaClass javaClass, ArrayList<SpawnSignature> spawnSignatures) {
+	JavaClass[] interfaces = javaClass.getInterfaces();
+	for (JavaClass javaInterface : interfaces) {
+	    if (isSpawnable(javaInterface)) {
+		getSpawnSignatures(javaClass.getClassName(), javaInterface.getMethods(), spawnSignatures);
+	    }
+	}
+    }
+
+
     JavaClass getClassFromName(String className) {
 	JavaClass javaClass = Repository.lookupClass(className);
 
@@ -97,25 +164,21 @@ class SyncRewriter {
     }
 
 
-    void rewrite(String className) throws NoSpawnableClassException, 
-	 ClassRewriteFailure {
-
-	JavaClass javaClass = getClassFromName(className);
-	SpawnableClass spawnableClass = 
-	    new SpawnableClass(javaClass, new Debug(d.turnedOn(), 2));
-	d.log(0, "%s is a spawnable class\n", className);
-	d.log(1, "backing up spawnable class %s\n", className);
-	backup(javaClass);
-	d.log(1, "rewriting %s\n", className);
-	spawnableClass.rewrite(analyzer);
-	d.log(1, "dumping %s\n", className);
-	dump(spawnableClass.getJavaClass());
-    }
-
-
     String getClassName(String fileName) {
 	return fileName.endsWith(".class") ? 
 	    fileName.substring(0, fileName.length() - 6) : fileName;
+    }
+
+
+    SpawnSignature[] getSpawnSignatures(ArrayList<String> classFileNames) {
+	ArrayList<SpawnSignature> spawnSignatures = new ArrayList<SpawnSignature>();
+	for (String classFileName : classFileNames) {
+	    String className = getClassName(classFileName);
+	    JavaClass javaClass = getClassFromName(className);
+	    if (javaClass.isClass()) getSpawnSignatures(javaClass, spawnSignatures);
+	}
+	SpawnSignature[] spawnSignaturesArray = new SpawnSignature[spawnSignatures.size()];
+	return spawnSignatures.toArray(spawnSignaturesArray);
     }
 
 
@@ -222,13 +285,17 @@ class SyncRewriter {
 	ArrayList<String> classFileNames = processArguments(argv);
 	if (analyzer == null) setAnalyzer("ControlFlow");
 
+	d.log(0, "rewriting for following spawnsignatures:\n");
+	SpawnSignature[] spawnSignatures = getSpawnSignatures(classFileNames);
+	print(spawnSignatures, 1);
+
 	for (String classFileName : classFileNames) {
 	    String className = getClassName(classFileName);
 	    try {
-		rewrite(className);
+		rewrite(className, spawnSignatures);
 	    }
-	    catch (NoSpawnableClassException e) {
-		d.log(0, "%s is not a spawnable class\n", className);
+	    catch (NoSpawningClassException e) {
+		d.log(0, "%s is not a spawning class\n", className);
 	    }
 	    catch (ClassRewriteFailure e) {
 		d.error("Failed to rewrite %s\n", className);

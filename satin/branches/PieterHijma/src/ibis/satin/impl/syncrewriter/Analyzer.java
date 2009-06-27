@@ -25,7 +25,7 @@ public interface Analyzer {
      * insert sync statements.
      * @throws SyncInsertionProposalFailure When the analysis fails.
      */
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod method, Debug debug) 
+    public InstructionHandle[] proposeSyncInsertion(SpawningMethod method, Debug debug) 
 	throws SyncInsertionProposalFailure;
 
 }
