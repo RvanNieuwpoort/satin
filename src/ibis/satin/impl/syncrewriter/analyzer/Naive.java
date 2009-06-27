@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableCall;
-import ibis.satin.impl.syncrewriter.SpawnableMethod;
+import ibis.satin.impl.syncrewriter.SpawningMethod;
 import ibis.satin.impl.syncrewriter.SyncInsertionProposalFailure;
 import ibis.satin.impl.syncrewriter.util.Debug;
 
@@ -16,7 +16,7 @@ import org.apache.bcel.generic.MethodGen;
 public class Naive implements Analyzer {
 
 
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod spawnableMethod, Debug d)
+    public InstructionHandle[] proposeSyncInsertion(SpawningMethod spawnableMethod, Debug d)
 	throws SyncInsertionProposalFailure {
 	ArrayList<SpawnableCall> spawnableCalls = 
 	    spawnableMethod.getSpawnableCalls();

@@ -247,9 +247,20 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      */
     public InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih) {
 	ArrayList<InstructionHandle> objectLoadInstructions = getAllObjectLoadInstructions(getInstructionList());
+	/*
+	System.out.println("getObjectReferenceLoadInstruction()");
+	System.out.println("the instructionHandle:");
+	System.out.println(ih);
+	System.out.println("all objectLoadInstructions:");
+	System.out.println(objectLoadInstructions);
+	*/
 
 	for (InstructionHandle objectLoadInstruction : objectLoadInstructions) {
 	    if (consumesExtensively(ih, objectLoadInstruction)) {
+		/*
+		System.out.println("this is the objectLoadInstruction:");
+		System.out.println(objectLoadInstruction);
+		*/
 		return objectLoadInstruction;
 	    }
 	}

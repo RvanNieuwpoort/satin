@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import ibis.satin.impl.syncrewriter.Analyzer; 
 import ibis.satin.impl.syncrewriter.SyncInsertionProposalFailure; 
 import ibis.satin.impl.syncrewriter.SpawnableCall; 
-import ibis.satin.impl.syncrewriter.SpawnableMethod;
+import ibis.satin.impl.syncrewriter.SpawningMethod;
 
 import org.apache.bcel.generic.InstructionHandle; 
 import org.apache.bcel.verifier.structurals.InstructionContext; 
@@ -82,7 +82,7 @@ public class ControlFlow implements Analyzer {
      * inserted.
      * @param d A debug instance for logging error, warning and debug messages.
      */
-    public InstructionHandle[] proposeSyncInsertion(SpawnableMethod
+    public InstructionHandle[] proposeSyncInsertion(SpawningMethod
 	    spawnableMethod, Debug d) throws SyncInsertionProposalFailure {
 
 	this.d = d;
@@ -147,7 +147,7 @@ public class ControlFlow implements Analyzer {
      *					// this is the one that is returned
      */
     private void addLoadsWithSpawnableCallsAfter(InstructionHandle earliestLoad, 
-	    BasicBlock basicBlock, SpawnableMethod spawnableMethod,
+	    BasicBlock basicBlock, SpawningMethod spawnableMethod,
 	    ArrayList<SpawnableCall> spawnableCalls, 
 	    ArrayList<InstructionHandle> earliestLoads) {
 
@@ -195,7 +195,7 @@ public class ControlFlow implements Analyzer {
      * Array stores and putfield methods are not seen as load instructions.
      */
     private InstructionHandle getLoadInstruction(BasicBlock basicBlock, SpawnableCall spawnableCall, 
-	    SpawnableMethod spawnableMethod) throws ResultNotLoadedException {
+	    SpawningMethod spawnableMethod) throws ResultNotLoadedException {
 	if (!spawnableCall.exceptionsHandled()) {
 	    throw new ResultNotLoadedException();
 	}
@@ -231,7 +231,7 @@ public class ControlFlow implements Analyzer {
      * read(result1);
      */
     private InstructionHandle getEarliestLoadInstruction(BasicBlock basicBlock, 
-	    ArrayList<SpawnableCall> spawnableCalls, SpawnableMethod spawnableMethod) throws ResultNotLoadedException {
+	    ArrayList<SpawnableCall> spawnableCalls, SpawningMethod spawnableMethod) throws ResultNotLoadedException {
 
 	InstructionHandle earliestLoadInstruction = null;
 
@@ -264,7 +264,7 @@ public class ControlFlow implements Analyzer {
      * If no earliest load is found, default to the last instruction of the
      * basic block.
      */
-    private ArrayList<InstructionHandle> tryEarliestLoadInstructions(BasicBlock basicBlock, SpawnableMethod spawnableMethod) {
+    private ArrayList<InstructionHandle> tryEarliestLoadInstructions(BasicBlock basicBlock, SpawningMethod spawnableMethod) {
 	ArrayList<SpawnableCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
 	ArrayList<InstructionHandle> earliestLoads = new ArrayList<InstructionHandle>();
 
@@ -292,7 +292,7 @@ public class ControlFlow implements Analyzer {
 
     /* Get earliest load instructions in basic blocks 
      */
-    private InstructionHandle[] getEarliestLoadInstructions(BasicBlock[] basicBlocks, SpawnableMethod spawnableMethod) {
+    private InstructionHandle[] getEarliestLoadInstructions(BasicBlock[] basicBlocks, SpawningMethod spawnableMethod) {
 	ArrayList<InstructionHandle> bestInstructionHandles = new ArrayList<InstructionHandle>();
 
 	d.log(0, "trying to get the earliest load instructions\n"); 
@@ -473,7 +473,7 @@ public class ControlFlow implements Analyzer {
      *	    block
      * Again remove duplicates
      */
-    private BasicBlock[] proposeBasicBlocks(SpawnableMethod spawnableMethod) 
+    private BasicBlock[] proposeBasicBlocks(SpawningMethod spawnableMethod) 
 	throws SyncInsertionProposalFailure {
 
 	ArrayList<SpawnableCall> spawnableCalls = 
@@ -510,7 +510,7 @@ public class ControlFlow implements Analyzer {
 
     /* handle immediate syncs for when the result of a spawnable call is not stored */
 
-    private InstructionHandle[] getImmediateSyncs(SpawnableMethod spawnableMethod) {
+    private InstructionHandle[] getImmediateSyncs(SpawningMethod spawnableMethod) {
 	ArrayList<SpawnableCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
 	InstructionHandle[] immediateSyncs = new InstructionHandle[spawnableCalls.size()];
 	for (int i = 0; i < immediateSyncs.length; i++) {
@@ -521,7 +521,7 @@ public class ControlFlow implements Analyzer {
     }
 
 
-    private boolean needsImmediateSyncInsertion(SpawnableMethod spawnableMethod) {
+    private boolean needsImmediateSyncInsertion(SpawningMethod spawnableMethod) {
 	ArrayList<SpawnableCall> spawnableCalls = spawnableMethod.getSpawnableCalls();
 	for (SpawnableCall spawnableCall : spawnableCalls) {
 	    if (!spawnableCall.resultIsStored()) {
