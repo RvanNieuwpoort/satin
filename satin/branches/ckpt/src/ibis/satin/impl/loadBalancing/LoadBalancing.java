@@ -126,6 +126,10 @@ public final class LoadBalancing implements Config {
                 }
                 return;
             }
+            
+            if (stolenJob != null) {
+                ftLogger.warn("EEK: setting stolenJob when it is non-null!");
+            }
 
             gotStealReply = true;
             stolenJob = ir;
