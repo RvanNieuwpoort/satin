@@ -943,6 +943,10 @@ public final class Satinc extends IbiscComponent {
         InstructionHandle storeStart = i;
 
         do {
+            if (i == null) {
+                // Could not find store sequence.
+                return null;
+            }
             int inc = i.getInstruction().produceStack(cpg)
                 - i.getInstruction().consumeStack(cpg);
             netto_stack_inc += inc;
@@ -1029,6 +1033,16 @@ public final class Satinc extends IbiscComponent {
                 System.exit(1);
             }
             storeIns = getAndRemoveStoreIns(il, i.getNext());
+            
+            if (storeIns == null) {
+                LineNumberTable t = m.getLineNumberTable(cpg);
+                int l = t.getSourceLine(i.getNext().getPosition());
+
+                System.err.println("Error: \"not storing the result of a <spawnable method>\" is not "
+                    + "allowed, class " + m.getClassName()
+                    + ", line " + l);
+                System.exit(1);
+            }
         }
 
         int storeId = allocateId(storeIns, target, cl);
