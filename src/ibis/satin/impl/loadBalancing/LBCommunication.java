@@ -328,7 +328,7 @@ final class LBCommunication implements Config, Protocol {
             } catch (Exception e) {
                 stealLogger.error("SATIN '" + s.ident
                     + "': Got Exception while reading steal " + "reply from "
-                    + ident + ", opcode:" + +opcode + ", exception: " + e, e);
+                    + ident + ", opcode:" + opcode + ", exception: " + e, e);
             } finally {
                 s.stats.invocationRecordReadTimer.stop();
             }
