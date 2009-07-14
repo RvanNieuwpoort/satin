@@ -46,6 +46,9 @@ public final class ClusterAwareRandomWorkStealing extends
         // in a job.
         InvocationRecord job = checkForAsyncReply();
         if (job != null) {
+            if (stealLogger.isInfoEnabled()) {
+                stealLogger.info("Executing intercluster job " + job.getStamp());
+            }
             return job;
         }
 
@@ -159,6 +162,9 @@ public final class ClusterAwareRandomWorkStealing extends
         case ASYNC_STEAL_REPLY_FAILED:
         case ASYNC_STEAL_REPLY_SUCCESS_TABLE:
         case ASYNC_STEAL_REPLY_FAILED_TABLE:
+            if (stealLogger.isInfoEnabled() && ir != null) {
+                stealLogger.info("Stole intercluster job " + ir.getStamp());
+            }
             synchronized (satin) {
                 if (sender.equals(asyncCurrentVictim)) {
                     gotAsyncStealReply = true;
