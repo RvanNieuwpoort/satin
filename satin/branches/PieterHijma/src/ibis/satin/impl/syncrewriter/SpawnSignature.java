@@ -36,6 +36,6 @@ class SpawnSignature {
 
 
     public String toString() {
-	return "spawnSignature: method: " + method.getName() + ", class: " + className;
+	return "spawn signature: method: " + method.getName() + ", class: " + className;
     }
 }
