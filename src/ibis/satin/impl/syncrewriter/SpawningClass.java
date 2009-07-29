@@ -34,7 +34,6 @@ import org.apache.bcel.generic.ALOAD;
 class SpawningClass extends ClassGen {
 
 
-    //private int indexSync;
     private SpawnSignature[] spawnSignatures;
     private Debug d;
 
@@ -45,12 +44,9 @@ class SpawningClass extends ClassGen {
     SpawningClass (JavaClass javaClass, SpawnSignature[] allSpawnSignatures, Debug d) throws NoSpawningClassException {
 	super(javaClass);
 
-	//System.out.println(getClassName());
 	if (!javaClass.isClass()) throw new NoSpawningClassException();
 
 	this.d = d;
-	//this.indexSync = getConstantPool().addMethodref(javaClass.getClassName(), 
-	//	"sync", "()V");
 	this.spawnSignatures = getSpawnSignatures(allSpawnSignatures);
 
 	if (this.spawnSignatures.length == 0) throw new NoSpawningClassException();
@@ -60,27 +56,6 @@ class SpawningClass extends ClassGen {
     SpawnSignature[] getSpawnSignatures() {
 	return spawnSignatures;
     }
-
-
-    /*
-    void rewrite(Analyzer analyzer) throws ClassRewriteFailure {
-	boolean throwRewriteFailure = false;
-
-	for (SpawningMethod spawningMethod : spawningMethods) {
-	    try {
-		spawningMethod.rewrite(analyzer);
-		removeMethod(method);
-		addMethod(spawningMethod.getMethod());
-	    }
-	    catch (MethodRewriteFailure e) {
-		d.error("Failed to rewrite %s for spawn signature: %s\n",
-			method.getName(), spawnSignature.getName());
-		throwRewriteFailure = true;
-	    }
-	}
-	if (throwRewriteFailure) throw new ClassRewriteFailure();
-    }
-    */
 
 
     void rewrite(Analyzer analyzer) throws ClassRewriteFailure {
@@ -146,43 +121,6 @@ class SpawningClass extends ClassGen {
 	if (throwRewriteFailure) throw new MethodRewriteFailure();
 	d.log(0, "rewritten for %s\n", spawnSignature);
     }
-
-
-    /*
-    private Method[] getSpawnSignatures(JavaClass spawnableClass) {
-	Method[] spawningMethods = null;
-
-	JavaClass[] interfaces = spawnableClass.getInterfaces();
-	for (JavaClass javaInterface : interfaces) {
-	    if (isSpawnable(javaInterface)) {
-		spawningMethods = javaInterface.getMethods();
-	    }
-	}
-
-	if (spawningMethods == null) {
-	    throw new Error("no methods specified in " +
-		    spawnableClass.getClassName());
-	}
-
-	return spawningMethods;
-    }
-    */
-
-
-    /*
-    private boolean isSpawnable(JavaClass javaClass) {
-	JavaClass[] interfaces = javaClass.getAllInterfaces();
-
-	for (JavaClass javaInterface : interfaces) {
-	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
-		return true;
-	    }
-	}
-
-	return false;
-    }
-    */
-
 
 
     /* it is true that creating a spawning method happens twice, once to find

@@ -42,7 +42,7 @@ import org.apache.bcel.generic.ALOAD;
 
 /** This class represents a spawnable method. 
  *
- * A spawnable method contains spawnable calls.
+ * A spawning method contains spawnable calls.
  */
 public class SpawningMethod extends MethodGen {
 
@@ -79,7 +79,6 @@ public class SpawningMethod extends MethodGen {
 
 	super(method, className, constantPoolGen);
 
-	//System.out.printf("De spawnSignatureGen wordt gemaakt van className: %s\n", spawnSignature.getClassName());
 	MethodGen spawnSignatureGen = new MethodGen(spawnSignature.getMethod(), spawnSignature.getClassName(), constantPoolGen);
 
 	ArrayList<SpawnableCall> spawnableCalls = getSpawnableCalls(constantPoolGen, spawnSignatureGen);
@@ -231,7 +230,6 @@ public class SpawningMethod extends MethodGen {
 	}
 	try {
 	    Integer[] indices = new Integer[1];
-	    //System.err.printf("the stackConsumer is: %s\n", stackConsumers[0]);
 	    indices[0] = getIndexStore(stackConsumers[0]);
 	    return indices;
 	}
@@ -243,7 +241,6 @@ public class SpawningMethod extends MethodGen {
 
     private SpawnableCall getSpawnableCallReturningValue(InstructionHandle invokeInstruction) {
 	try {
-	    //System.out.println("ik ben hier toch?");
 	    return new SpawnableCall(invokeInstruction, 
 		    getObjectReferenceLoadInstruction(invokeInstruction), 
 		    findIndexStore(invokeInstruction));
@@ -263,11 +260,8 @@ public class SpawningMethod extends MethodGen {
 		new ArrayList<SpawnableCall>();
 
 	    InstructionList il = getInstructionList(); 
-	    //System.out.printf("De spawnSignature: %s\n", spawnSignatureGen);
-	    //System.out.println(constantPoolGen);
 	    int indexSpawnableCall = 
 		constantPoolGen.lookupMethodref(spawnSignatureGen);
-	    //System.out.printf("De index is: %d\n\n", indexSpawnableCall);
 	    if (indexSpawnableCall < 0) return spawnableCalls;
 
 	    INVOKEVIRTUAL spawnableInvoke = 

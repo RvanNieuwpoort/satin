@@ -248,20 +248,9 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      */
     public InstructionHandle getObjectReferenceLoadInstruction(InstructionHandle ih) {
 	ArrayList<InstructionHandle> objectLoadInstructions = getAllObjectLoadInstructions(getInstructionList());
-	/*
-	System.out.println("getObjectReferenceLoadInstruction()");
-	System.out.println("the instructionHandle:");
-	System.out.println(ih);
-	System.out.println("all objectLoadInstructions:");
-	System.out.println(objectLoadInstructions);
-	*/
 
 	for (InstructionHandle objectLoadInstruction : objectLoadInstructions) {
 	    if (consumesExtensively(ih, objectLoadInstruction)) {
-		/*
-		System.out.println("this is the objectLoadInstruction:");
-		System.out.println(objectLoadInstruction);
-		*/
 		return objectLoadInstruction;
 	    }
 	}
@@ -443,10 +432,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      */
     private boolean consumesIncludingDUP(InstructionHandle consumer, InstructionHandle consumee, 
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
-	//System.err.printf("consumes(), consumer: %s, consumee: %s\n", consumer, consumee);
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
 	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
-	//System.err.printf("  the consumers are: %s\n", consumers);
 
 	return containsDUP(consumers) && consumes(consumer, getDUP(consumers));
     }
@@ -461,10 +448,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      */
     private boolean consumesIncludingArrayLoad(InstructionHandle consumer, InstructionHandle consumee, 
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
-	//System.err.printf("consumes(), consumer: %s, consumee: %s\n", consumer, consumee);
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
 	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
-	//System.err.printf("  the consumers are: %s\n", consumers);
 
 	return containsArrayLoad(consumers) && consumes(consumer, getArrayLoad(consumers));
     }
