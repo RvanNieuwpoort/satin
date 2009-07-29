@@ -92,7 +92,7 @@ class SyncRewriter {
 	SpawningClass spawnableClass = 
 	    new SpawningClass(javaClass, spawnSignatures, new Debug(d.turnedOn(), 2));
 	d.log(0, "%s is a spawning class\n", className);
-	d.log(1, "it contains calls with spawnsignatures:\n");
+	d.log(1, "it contains calls with spawn signatures:\n");
 	print(spawnableClass.getSpawnSignatures(), 2);
 	d.log(1, "backing up spawning class %s\n", className);
 	backup(javaClass);

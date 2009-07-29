@@ -9,6 +9,7 @@ import org.apache.bcel.verifier.structurals.InstructionContext;
 
 import org.apache.bcel.generic.ArrayInstruction;
 import org.apache.bcel.generic.AALOAD;
+import org.apache.bcel.generic.GETSTATIC;
 import org.apache.bcel.generic.CodeExceptionGen;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.InstructionHandle;
@@ -337,7 +338,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	InstructionHandle current = il.getStart();
 	while(current != null) {
 	    Instruction instruction = current.getInstruction();
-	    if (instruction instanceof ALOAD) {
+	    if (instruction instanceof ALOAD || instruction instanceof GETSTATIC) {
 		objectLoadInstructions.add(current);
 	    }
 	    current = current.getNext();

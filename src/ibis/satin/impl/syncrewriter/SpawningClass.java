@@ -108,7 +108,7 @@ class SpawningClass extends ClassGen {
 	throws MethodRewriteFailure {
 	boolean throwRewriteFailure = false;
 
-	d.log(0, "rewriting for spawn signature: %s\n", spawnSignature);
+	d.log(0, "rewriting for %s\n", spawnSignature);
 
 	int indexSync = getConstantPool().addMethodref(spawnSignature.getClassName(), 
 		"sync", "()V");
@@ -144,7 +144,7 @@ class SpawningClass extends ClassGen {
 	}
 
 	if (throwRewriteFailure) throw new MethodRewriteFailure();
-	d.log(0, "rewritten for spawn signature: %s\n", spawnSignature);
+	d.log(0, "rewritten for %s\n", spawnSignature);
     }
 
 
