@@ -103,17 +103,6 @@ class SyncRewriter {
     }
 
 
-    /*
-    void addAll(Method[] methods, ArrayList<Method> methodList) {
-	if (methods == null) return;
-
-	for (Method method : methods) {
-	    if (!methodList.contains(method)) methodList.add(method);
-	}
-    }
-    */
-
-
     void print(SpawnSignature[] spawnSignatures, int level) {
 	for (SpawnSignature spawnSignature : spawnSignatures) {
 	    d.log(level, "%s\n", spawnSignature);
