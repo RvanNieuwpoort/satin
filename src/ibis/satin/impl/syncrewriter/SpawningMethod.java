@@ -1,6 +1,7 @@
 package ibis.satin.impl.syncrewriter;
 
 import ibis.satin.impl.syncrewriter.bcel.MethodGen;
+import ibis.satin.impl.syncrewriter.bcel.Util;
 import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.io.PrintStream;
@@ -156,7 +157,12 @@ public class SpawningMethod extends MethodGen {
 
 	for (CodeExceptionGen codeException : codeExceptions) {
 	    // codeException.containsTarget has a BUG????
+	    /*
 	    if (codeException.containsTarget(ih) && hasRightType(codeException, spawnSignature)) {
+		result.add(codeException);
+	    }
+	    */
+	    if (Util.containsTarget(codeException, ih) && hasRightType(codeException, spawnSignature)) {
 		result.add(codeException);
 	    }
 	}
@@ -202,6 +208,7 @@ public class SpawningMethod extends MethodGen {
 
     private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, MethodGen spawnSignatureGen) {
 	ArrayList<CodeExceptionGen> exceptionHandlers = getExceptionHandlers(invokeInstruction, spawnSignatureGen);
+
 
 	if (exceptionHandlers.size() == 0) {
 	    return new SpawnableCall(invokeInstruction, getObjectReferenceLoadInstruction(invokeInstruction), 
