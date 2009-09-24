@@ -25,6 +25,8 @@ import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
 import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
 import java.util.Map;
 
 final class FTCommunication implements Config, ReceivePortConnectUpcall,
@@ -460,14 +462,21 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             m.writeByte(Protocol.RESULT_PUSH);
             m.writeObject(toPush);
             long numBytes = victim.finish(m);
-            grtLogger.debug("SATIN '" + s.ident + "': " + numBytes
-                    + " bytes pushed");
+            if (grtLogger.isDebugEnabled()) {
+                grtLogger.debug("SATIN '" + s.ident + "': " + numBytes
+                        + " bytes pushed");
+            }
         } catch (IOException e) {
             if (m != null) {
                 m.finish(e);
             }
-            grtLogger.info("SATIN '" + s.ident + "': error pushing results "
-                    + e);
+            if (e instanceof NotSerializableException || e instanceof InvalidClassException) {
+                grtLogger.warn("SATIN '" + s.ident
+                        + "': error pushing results ", e);
+            } else if (grtLogger.isInfoEnabled()) {
+                grtLogger.info("SATIN '" + s.ident + "': error pushing results "
+                        + e);
+            }
         }
     }
 

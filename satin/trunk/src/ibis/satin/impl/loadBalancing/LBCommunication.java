@@ -18,6 +18,8 @@ import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
 import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
 import java.util.Map;
 
 final class LBCommunication implements Config, Protocol {
@@ -214,9 +216,12 @@ final class LBCommunication implements Config, Protocol {
             if (writeMessage != null) {
                 writeMessage.finish(e);
             }
-            if (ftLogger.isInfoEnabled()) {
+            if (e instanceof NotSerializableException || e instanceof InvalidClassException) {
+                ftLogger.warn("SATIN '" + s.ident
+                        + "': Got exception while sending result of stolen job", e);
+            } else if (ftLogger.isInfoEnabled()) {
                 ftLogger.info("SATIN '" + s.ident
-                    + "': Got Exception while sending result of stolen job", e);
+                    + "': Got exception while sending result of stolen job", e);
             }
         } finally {
             s.stats.returnRecordWriteTimer.stop();

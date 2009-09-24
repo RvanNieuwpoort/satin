@@ -14,6 +14,8 @@ import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
 import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.NotSerializableException;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
@@ -157,25 +159,26 @@ final class GlobalResultTable implements Config, Protocol {
                 try {
                     m.writeByte(GRT_UPDATE);
                     m.writeObject(toSend);
+                    long msgSize = v.finish(m);
+
+                    if (grtLogger.isDebugEnabled()) {
+                        grtLogger.debug("SATIN '" + s.ident + "': " + msgSize
+                                + " sent in "
+                                + s.stats.tableSerializationTimer.lastTimeVal() + " to "
+                                + v);
+                    }
                 } catch (IOException e) {
-                    grtLogger.info("Got exception in writeObject()", e);
+                    m.finish(e);
+                    if (e instanceof NotSerializableException || e instanceof InvalidClassException) {
+                        grtLogger.warn("SATIN '" + s.ident
+                                + "': Got exception in writeObject()", e);
+                    } else if (grtLogger.isInfoEnabled()) {
+                        grtLogger.info("Got exception in writeObject()", e);
+                    }
                     //always happens after a crash
                 } finally {
                     tableSerializationTimer.stop();
                     s.stats.tableSerializationTimer.add(tableSerializationTimer);
-                }
-
-                try {
-                    long msgSize = v.finish(m);
-
-                    grtLogger.debug("SATIN '" + s.ident + "': " + msgSize
-                        + " sent in "
-                        + s.stats.tableSerializationTimer.lastTimeVal() + " to "
-                        + v);
-                } catch (IOException e) {
-                    m.finish(e);
-                    grtLogger.info("SATIN '" + s.ident + "': Got exception in finish()");
-                    //always happens after a crash
                 }
             }
 
