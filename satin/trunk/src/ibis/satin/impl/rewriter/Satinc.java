@@ -953,6 +953,22 @@ public final class Satinc extends IbiscComponent {
             i = i.getNext();
         } while (netto_stack_inc >= 0);
 
+        if (i == null) {
+            // may happen if the result is used like, for instance:
+            // return f().clone();
+            // No store sequence, so this is wrong as well.
+            return null;
+        }
+        
+        Instruction store = i.getPrev().getInstruction();
+        
+        if (store instanceof ReturnInstruction) {
+            return null;
+        }
+        if (store instanceof POP || store instanceof POP2) {
+            return null;
+        }
+        
         InstructionList result = new InstructionList();
         InstructionHandle ip = storeStart;
 
