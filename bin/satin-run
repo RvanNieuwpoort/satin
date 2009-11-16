@@ -9,21 +9,9 @@ if [ -z "$SATIN_HOME" ];  then
     exit 1
 fi
 
-# Jar-files from library.
-LIBCLASSPATH=""
-add_to_libclasspath () {
-    JARFILES=`cd "$1" && ls *.jar 2>/dev/null`
-    for i in ${JARFILES} ; do
-	if [ -z "$LIBCLASSPATH" ] ; then
-	    LIBCLASSPATH="$1/$i"
-	else
-	    LIBCLASSPATH="$LIBCLASSPATH:$1/$i"
-	fi
-    done
-}
-
-# Add the jar files in the Ibis lib dir to the classpath.
-add_to_libclasspath "${SATIN_HOME}"/lib
-
-# And finally, run ...
-java -classpath "$CLASSPATH:$LIBCLASSPATH" -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties "$@"
+# Run..
+# Note: this requires Java 6.
+java \
+    -classpath "$CLASSPATH:$SATIN_HOME/lib/"'*' \
+    -Dlog4j.configuration=file:$SATIN_HOME/log4j.properties \
+    "$@"

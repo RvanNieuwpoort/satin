@@ -6,9 +6,6 @@ rem %~dp0 is expanded pathname of the current script under NT
 
 if "%SATIN_HOME%X"=="X" set SATIN_HOME=%~dp0..
 
-set JAVACLASSPATH=%CLASSPATH%;
-for %%i in ("%SATIN_HOME%\lib\*.jar") do call "%SATIN_HOME%\bin\AddToSatinClassPath.bat" %%i
-
 set SERVER_ARGS=
 
 :setupArgs
@@ -25,6 +22,6 @@ rem and for NT handling to skip to.
 
 :doneArgs
 
-java -classpath "%JAVACLASSPATH%" -Dlog4j.configuration=file:"%SATIN_HOME%"\log4j.properties ibis.server.Server %SERVER_ARGS%
+java -classpath "%CLASSPATH%;%SATIN_HOME%\lib\*" -Dlog4j.configuration=file:"%SATIN_HOME%"\log4j.properties ibis.ipl.server.Server %SERVER_ARGS%
 
 if "%OS%"=="Windows_NT" @endlocal
