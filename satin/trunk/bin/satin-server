@@ -9,4 +9,4 @@ if [ -z "$SATIN_HOME" ];  then
     exit 1
 fi
 
-exec "$SATIN_HOME"/bin/satin-run -Xmx256M ibis.server.Server "$@"
+exec "$SATIN_HOME"/bin/satin-run -Xmx256M ibis.ipl.server.Server "$@"
