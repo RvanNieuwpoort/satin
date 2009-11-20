@@ -103,7 +103,7 @@ public final class ClusterAwareRandomWorkStealing extends
         return null;
     }
 
-    public InvocationRecord checkForAsyncReply() {
+    private InvocationRecord checkForAsyncReply() {
         if (!asyncStealInProgress) {
             return null;
         }
@@ -187,7 +187,7 @@ public final class ClusterAwareRandomWorkStealing extends
             stealLogger.info("waiting for a pending async steal reply from "
                     + asyncCurrentVictim);
             synchronized (satin) {
-                while (!gotAsyncStealReply) {
+                while (asyncStealInProgress && !gotAsyncStealReply) {
                     try {
                         satin.handleDelayedMessages(); //TODO move outside lock --Rob
                         satin.wait(250);
