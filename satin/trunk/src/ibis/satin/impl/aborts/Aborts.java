@@ -184,12 +184,12 @@ public final class Aborts implements Config {
         // that the PARENT does not have a try catch block around the spawn.
         // there is thus no inlet to call in the parent.
 
-        if (r.eek == null) {
+        if (r.eek == null || r.aborted) {
             return;
         }
         if (r.getParent() == null) {
             // Throw the exception, otherwise it will just disappear ...
-            throw new Error("Spawned job threw exception: ", r.eek);
+            throw new Error("Spawned job threw exception. Invocation record = " + r, r.eek);
         }
         if (ASSERTS && r.getParentLocals() != null) {
             s.assertFailed("parenlocals is not null in empty inlet", new Exception());
