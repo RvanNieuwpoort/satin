@@ -502,8 +502,10 @@ final class LBCommunication implements Config, Protocol {
         /* If we don't use fault tolerance with the global result table, 
          * we can set the object parameters to null,
          * so the GC can clean them up --Rob */
-        if (FT_NAIVE) {
-            result.clearParams();
-        }
+        // No, this cannot be right: it must be possible to put the job back
+        // onto the work queue, so the parameters cannot be cleared. --Ceriel
+        // if (FT_NAIVE) {
+        //    result.clearParams();
+        // }
     }
 }

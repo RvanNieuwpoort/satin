@@ -151,6 +151,8 @@ public final class FaultTolerance implements Config {
                         // abort all jobs stolen from id or descendants of jobs
                         // stolen from id
                         killAndStoreSubtreeOf(id);
+                    } else {
+                        killSubtreeOf(id);
                     }
 
                     s.outstandingJobs.redoStolenBy(id);
@@ -239,6 +241,13 @@ public final class FaultTolerance implements Config {
         s.q.killSubtreeOf(targetOwner);
         s.outstandingJobs.killAndStoreSubtreeOf(targetOwner);
     }
+    
+    public void killSubtreeOf(IbisIdentifier targetOwner) {
+        s.onStack.killSubtreesOf(targetOwner);
+        s.q.killSubtreeOf(targetOwner);
+        s.outstandingJobs.killSubtreeOf(targetOwner);
+    }
+
 
     public void addToAbortAndStoreList(Stamp stamp) {
         Satin.assertLocked(s);
@@ -334,10 +343,16 @@ public final class FaultTolerance implements Config {
         if (FT_NAIVE) return false;
 
         if (parent != null && parent.isReDone() || parent == null && restarted) {
+            if (ftLogger.isDebugEnabled()) {
+                ftLogger.debug("Parent is redone, setting redone of job " + r.getStamp());
+            }
             r.setReDone(true);
         }
 
         if (r.isReDone()) {
+            if (ftLogger.isDebugEnabled()) {
+                 ftLogger.debug("Looking for job result of " + r.getStamp());
+            }
             if (ftComm.askForJobResult(r)) {
                 return true;
             }
@@ -393,6 +408,11 @@ public final class FaultTolerance implements Config {
     public void sendAbortAndStoreMessage(InvocationRecord r) {
         ftComm.sendAbortAndStoreMessage(r);
     }
+    
+    public void sendAbortMessage(InvocationRecord r) {
+        ftComm.sendAbortMessage(r);
+    }
+
     
     public void handleGRTUpdate(ReadMessage m) {
         globalResultTable.handleGRTUpdate(m);
