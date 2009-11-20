@@ -10,6 +10,7 @@ import ibis.satin.impl.Satin;
 import ibis.satin.impl.communication.Protocol;
 import ibis.satin.impl.loadBalancing.Victim;
 import ibis.satin.impl.spawnSync.InvocationRecord;
+import ibis.satin.impl.spawnSync.ReturnRecord;
 import ibis.satin.impl.spawnSync.Stamp;
 import ibis.util.Timer;
 
@@ -32,7 +33,7 @@ final class GlobalResultTable implements Config, Protocol {
     private Map<Stamp, GlobalResultTableValue> toSend;
 
     private GlobalResultTableValue pointerValue = new GlobalResultTableValue(
-        GlobalResultTableValue.TYPE_POINTER, null);
+        GlobalResultTableValue.TYPE_POINTER);
 
     protected GlobalResultTable(Satin s) {
         this.s = s;
@@ -52,8 +53,10 @@ final class GlobalResultTable implements Config, Protocol {
             GlobalResultTableValue value = entries.get(key);
 
             if (value != null) {
-                grtLogger
+                if (grtLogger.isDebugEnabled()) {
+                    grtLogger
                     .debug("SATIN '" + s.ident + "': lookup successful " + key);
+                }
                 if (value.type == GlobalResultTableValue.TYPE_POINTER) {
                     if (!s.deadIbises.contains(value.owner)) {
                         s.stats.tableSuccessfulLookups++;
@@ -62,25 +65,26 @@ final class GlobalResultTable implements Config, Protocol {
                 } else {
                     s.stats.tableSuccessfulLookups++;
                 }
+            } else {
+                if (grtLogger.isDebugEnabled()) {
+                    grtLogger
+                    .debug("SATIN '" + s.ident + "': lookup failed " + key);
+                }
             }
-            s.stats.tableRemoteLookups++;
+
             return value;
         } finally {
+            s.stats.tableLookups++;
             s.stats.lookupTimer.stop();
         }
     }
 
-    protected void storeResult(InvocationRecord r) {
+    private void update(Stamp key, GlobalResultTableValue value) {
         Satin.assertLocked(s);
 
         s.stats.updateTimer.start();
 
         try {
-
-            GlobalResultTableValue value = new GlobalResultTableValue(
-                GlobalResultTableValue.TYPE_RESULT, r);
-
-            Stamp key = r.getStamp();
             Object oldValue = entries.get(key);
             entries.put(key, value);
             s.stats.tableResultUpdates++;
@@ -101,6 +105,17 @@ final class GlobalResultTable implements Config, Protocol {
         }
     }
 
+    public void storeResult(InvocationRecord r) {
+        update(r.getStamp(), new GlobalResultTableValue(
+                GlobalResultTableValue.TYPE_RESULT, r));
+    }
+
+    public void storeResult(ReturnRecord r) {
+        update(r.getStamp(), new GlobalResultTableValue(
+                GlobalResultTableValue.TYPE_RESULT, r));
+    }
+
+
     protected void updateAll(Map<Stamp, GlobalResultTableValue> updates) {
         Satin.assertLocked(s);
         s.stats.updateTimer.start();
@@ -111,13 +126,19 @@ final class GlobalResultTable implements Config, Protocol {
             if (entries.size() > s.stats.tableMaxEntries) {
                 s.stats.tableMaxEntries = entries.size();
             }
+            if (grtLogger.isDebugEnabled()) {
+                for (Stamp key : updates.keySet()) {
+                    grtLogger.debug("SATIN '" + s.ident + "': update: " + key
+                            + "," + updates.get(key));
+                }
+            }
         } finally {
             s.stats.updateTimer.stop();
         }
         s.ft.updatesToSend = true;
     }
 
-    protected void sendUpdates() {
+    public void sendUpdates() {
         Timer updateTimer = null;
         Timer tableSerializationTimer = null;
         int size = 0;
@@ -156,19 +177,12 @@ final class GlobalResultTable implements Config, Protocol {
 
                 tableSerializationTimer = Timer.createTimer();
                 tableSerializationTimer.start();
+                IOException ex = null;
                 try {
                     m.writeByte(GRT_UPDATE);
                     m.writeObject(toSend);
-                    long msgSize = v.finish(m);
-
-                    if (grtLogger.isDebugEnabled()) {
-                        grtLogger.debug("SATIN '" + s.ident + "': " + msgSize
-                                + " sent in "
-                                + s.stats.tableSerializationTimer.lastTimeVal() + " to "
-                                + v);
-                    }
                 } catch (IOException e) {
-                    m.finish(e);
+                    ex = e;
                     if (e instanceof NotSerializableException || e instanceof InvalidClassException) {
                         grtLogger.warn("SATIN '" + s.ident
                                 + "': Got exception in writeObject()", e);
@@ -179,6 +193,23 @@ final class GlobalResultTable implements Config, Protocol {
                 } finally {
                     tableSerializationTimer.stop();
                     s.stats.tableSerializationTimer.add(tableSerializationTimer);
+                }
+                
+                try {
+                    if (ex != null) {
+                        v.finish(m, ex);
+                        return;
+                    }
+                    long msgSize = v.finish(m);
+
+                    grtLogger.debug("SATIN '" + s.ident + "': " + msgSize
+                            + " sent in "
+                            + s.stats.tableSerializationTimer.lastTimeVal() + " to "
+                            + v);
+                } catch (IOException e) {
+                    m.finish(e);
+                    grtLogger.info("SATIN '" + s.ident + "': Got exception in finish()");
+                    //always happens after a crash
                 }
             }
 
@@ -258,4 +289,9 @@ final class GlobalResultTable implements Config, Protocol {
             out.println("=end of GRT " + s.ident + "=");            
         }
     }
+    
+    public int size() {
+        return entries.size();
+    }
+
 }

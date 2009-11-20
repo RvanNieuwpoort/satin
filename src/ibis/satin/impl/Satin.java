@@ -247,9 +247,12 @@ public final class Satin implements Config {
 
         // Maybe this job is already in the global result table.
         // If so, we don't have to do it again.
+        // Ouch, this cannot be the right place: there is no stamp allocated
+        // yet for the job! --Ceriel
+        // Fixed by first calling r.spawn.
+        r.spawn(ident, parent);
         if (ft.checkForDuplicateWork(parent, r)) return;
 
-        r.spawn(ident, parent);
         q.addToHead(r);
         algorithm.jobAdded();
     }
@@ -485,6 +488,12 @@ public final class Satin implements Config {
             return;
         }
 
+        if (ftLogger.isDebugEnabled()) {
+            if (r.isReDone()) {
+                ftLogger.debug("Redoing job " + r.getStamp());
+            }
+        }
+    
         InvocationRecord oldParent = parent;
         onStack.push(r);
         parent = r;

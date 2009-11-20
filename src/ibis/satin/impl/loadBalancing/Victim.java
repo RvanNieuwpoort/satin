@@ -138,13 +138,27 @@ public final class Victim implements Config {
                 Satin.addIntraClusterStats(cnt);
             }
             return cnt;
+        } catch(IOException e) {
+            finish(m, e);
+            throw e;
+        } catch(Throwable e) {
+            commLogger.error("Got exception in finish", e);
+            IOException ex = new IOException();
+            ex.initCause(e);
+             throw ex;
         }  finally {
-            synchronized (sendPort) {
+            synchronized(sendPort) {
                 referenceCount--;
                 optionallyDropConnection();
             }
         }
     }
+    
+         
+    public void finish(WriteMessage m, IOException e) {
+        m.finish(e);
+    }
+
 
     private void optionallyDropConnection() throws IOException {
         if (CLOSE_CONNECTIONS) {
@@ -174,7 +188,7 @@ public final class Victim implements Config {
             } catch (Exception e) {
                 // ignore
                 Config.commLogger.warn("SATIN '" + sendPort.identifier().ibisIdentifier()
-                    + "': port.close() throws exception (ignored)", e);
+                    + "': port.close() throws exception (ignored), dest = " + ident, e);
             }
         }
     }
