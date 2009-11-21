@@ -114,6 +114,23 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public int numCrashesHandled;
 
+    //[KRIS]
+    public double requestCheckpointTime;
+    
+    public double makeCheckpointTime;
+    
+    public double receiveCheckpointTime;
+    
+    public double writeCheckpointTime;
+    
+    public double useCheckpointTime;
+    
+    public double totalCheckpointTime;
+    
+    public double createCoordinatorTime;
+    
+    public int numCheckpointsTaken;
+
     //shared objects
     public long soInvocations;
 
@@ -192,6 +209,20 @@ public final class Statistics implements java.io.Serializable, Config {
     public Timer crashTimer = Timer.createTimer();
 
     public Timer redoTimer = Timer.createTimer();
+
+    //[KRIS]
+    public Timer requestCheckpointTimer = Timer.createTimer();
+    
+    public Timer makeCheckpointTimer = Timer.createTimer();
+    
+    public Timer receiveCheckpointTimer = Timer.createTimer();
+    
+    public Timer writeCheckpointTimer = Timer.createTimer();
+    
+    public Timer useCheckpointTimer = Timer.createTimer();
+    
+    public Timer createCoordinatorTimer = Timer.createTimer();
+    // end KRIS
 
     public Timer handleSOInvocationsTimer = Timer.createTimer();
 
@@ -276,6 +307,16 @@ public final class Statistics implements java.io.Serializable, Config {
         crashHandlingTime += s.crashHandlingTime;
         numCrashesHandled += s.numCrashesHandled;
 
+        //[KRIS]
+        requestCheckpointTime += s.requestCheckpointTime;
+        makeCheckpointTime += s.makeCheckpointTime;
+        receiveCheckpointTime += s.receiveCheckpointTime;
+        writeCheckpointTime += s.writeCheckpointTime;
+        useCheckpointTime += s.useCheckpointTime;
+        createCoordinatorTime += s.createCoordinatorTime;
+        totalCheckpointTime += (s.requestCheckpointTime + s.makeCheckpointTime + s.writeCheckpointTime + s.useCheckpointTime + s.receiveCheckpointTime + s.createCoordinatorTime);
+        numCheckpointsTaken += s.numCheckpointsTaken;
+
         //shared objects
         soInvocations += s.soInvocations;
         soInvocationsBytes += s.soInvocationsBytes;
@@ -328,6 +369,18 @@ public final class Statistics implements java.io.Serializable, Config {
         tableDeserializationTime = tableDeserializationTimer.totalTimeVal();
         tableCheckTime = redoTimer.totalTimeVal();
         crashHandlingTime = crashTimer.totalTimeVal();
+
+        //[KRIS]
+        if (CHECKPOINTING){
+            requestCheckpointTime = requestCheckpointTimer.totalTimeVal();
+            makeCheckpointTime = makeCheckpointTimer.totalTimeVal();
+            receiveCheckpointTime = receiveCheckpointTimer.totalTimeVal();
+            writeCheckpointTime = writeCheckpointTimer.totalTimeVal();
+            useCheckpointTime = useCheckpointTimer.totalTimeVal();
+            createCoordinatorTime = createCoordinatorTimer.totalTimeVal();
+            numCheckpointsTaken = makeCheckpointTimer.nrTimes();
+        }
+
 
         handleSOInvocations = handleSOInvocationsTimer.nrTimes();
 
@@ -500,6 +553,39 @@ public final class Statistics implements java.io.Serializable, Config {
                 + Timer.format(crashHandlingTime));
         }
 
+        //[KRIS]
+        if (CHECKPOINTING) {
+            out.println("SATIN: REQUEST_CHECKPOINT_TIME:    total "
+                    + Timer.format(requestCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(requestCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: MAKE_CHECKPOINT_TIME:       total "
+                    + Timer.format(makeCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(makeCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    total "
+                    + Timer.format(receiveCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(receiveCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: WRITE_CHECKPOINT_TIME:      total "
+                    + Timer.format(writeCheckpointTime)
+                    + " time/checkpoint "
+                    + Timer.format(perStats(writeCheckpointTime,
+                            numCheckpointsTaken)));
+            out.println("SATIN: USE_CHECKPOINT_TIME:        total "
+                        + Timer.format(useCheckpointTime));
+            out.println("SATIN: CREATE_COORDINATOR_TIME:    total "
+                        + Timer.format(createCoordinatorTime));
+            out.println("SATIN: TOTAL_CHECKPOINT_TIME:      total "
+                        + Timer.format(totalCheckpointTime));
+            out.println("SATIN: NUM_CHECKPOINTS_TAKEN:    "
+                        + nf.format(numCheckpointsTaken));
+        }
+
+
         if (haveSO) {
             out.println("SATIN: BROADCAST_SO_INVOCATIONS:   total "
                 + Timer.format(broadcastSOInvocationsTime)
@@ -586,6 +672,23 @@ public final class Statistics implements java.io.Serializable, Config {
             / totalTime * 100;
         double crashHandlingTimeAvg = crashHandlingTime / size;
         double crashHandlingPerc = crashHandlingTimeAvg / totalTime * 100.0;
+        
+        //[KRIS]
+        double requestCheckpointTimeAvg = requestCheckpointTime / size;
+        double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime * 100.0;
+        double makeCheckpointTimeAvg = makeCheckpointTime / size;
+        double makeCheckpointPerc = makeCheckpointTimeAvg / totalTime * 100.0;
+        double receiveCheckpointTimeAvg = receiveCheckpointTime / size;
+        double receiveCheckpointPerc = receiveCheckpointTimeAvg / totalTime * 100.0;
+        double writeCheckpointTimeAvg = writeCheckpointTime / size;
+        double writeCheckpointPerc = writeCheckpointTimeAvg / totalTime * 100.0;
+        double useCheckpointTimeAvg = useCheckpointTime / size;
+        double useCheckpointPerc = useCheckpointTimeAvg / totalTime * 100.0;
+        double createCoordinatorTimeAvg = createCoordinatorTime /size;
+        double createCoordinatorPerc = createCoordinatorTimeAvg / totalTime * 100.0;
+        double totalCheckpointTimeAvg = totalCheckpointTime / size;
+        double totalCheckpointPerc = totalCheckpointTimeAvg / totalTime * 100.0;
+
         double broadcastSOInvocationsTimeAvg = broadcastSOInvocationsTime
             / size;
         double broadcastSOInvocationsPerc = broadcastSOInvocationsTimeAvg
@@ -670,6 +773,30 @@ public final class Statistics implements java.io.Serializable, Config {
                 + Timer.format(crashHandlingTimeAvg) + " ("
                 + pf.format(crashHandlingPerc) + " %)");
         }
+
+        if (CHECKPOINTING) {
+            out.println("SATIN: REQUEST_CHECKPOINT_TIME:    avg. per machine "
+                    + Timer.format(requestCheckpointTimeAvg) + " ("
+                    + pf.format(requestCheckpointPerc) + " %)");            
+            out.println("SATIN: MAKE_CHECKPOINT_TIME:       avg. per machine "
+                    + Timer.format(makeCheckpointTimeAvg) + " ("
+                    + pf.format(makeCheckpointPerc) + " %)");
+            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    avg. per machine "
+                    + Timer.format(receiveCheckpointTimeAvg) + " ("
+                    + pf.format(receiveCheckpointPerc) + " %)");
+            out.println("SATIN: WRITE_CHECKPOINT_TIME:      avg. per machine "
+                    + Timer.format(writeCheckpointTimeAvg) + " ("
+                    + pf.format(writeCheckpointPerc) + " %)");
+            out.println("SATIN: USE_CHECKPOINT_TIME:        avg. per machine "
+                    + Timer.format(useCheckpointTimeAvg) + " ("
+                    + pf.format(useCheckpointPerc) + " %)");
+            out.println("SATIN: CREATE_COORDINATOR_TIME:    avg. per machine "
+                    + Timer.format(createCoordinatorTimeAvg) + " ("
+                    + pf.format(createCoordinatorPerc) + " %)");
+            out.println("SATIN: TOTAL_CHECKPOINT_TIME:      avg. per machine "
+                    + Timer.format(totalCheckpointTimeAvg) + " ("
+                    + pf.format(totalCheckpointPerc) + " %)");
+        }   
 
         if (haveSO) {
             out.println("SATIN: BROADCAST_SO_INVOCATIONS:   agv. per machine "

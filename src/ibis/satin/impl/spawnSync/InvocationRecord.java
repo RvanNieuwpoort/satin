@@ -89,6 +89,9 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
     // Used by my subclasses
     protected transient boolean inletExecuted;
 
+    //[KRIS]
+    public transient boolean checkpointed = false;
+
     /**
      * List of finished children; used for fault tolerance.
      */
