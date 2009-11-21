@@ -21,8 +21,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
-final class GlobalResultTable implements Config, Protocol {
-    private Satin s;
+public final class GlobalResultTable implements Config, Protocol {
+    public Satin s;
 
     /** The entries in the global result table. Entries are of type
      * GlobalResultTableValue. */

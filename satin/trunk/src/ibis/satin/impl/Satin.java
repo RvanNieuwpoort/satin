@@ -207,6 +207,8 @@ public final class Satin implements Config {
 
         comm.end();
 
+        ft.end();
+
         if (commLogger.isDebugEnabled()) {
             commLogger.debug("SATIN '" + ident + "': exited");
         }

@@ -140,6 +140,30 @@ public final class IRStack implements Config {
         return toPush;
     }
 
+    //[KRIS]
+    public ArrayList<ReturnRecord> peekFinishedJobs(){
+        
+        ArrayList<ReturnRecord> result = new ArrayList<ReturnRecord>();
+        InvocationRecord curr, child;
+
+        for (int i = 0; i < count; i++){
+            curr = l[i];
+            child = curr.getFinishedChild();
+            while (child != null){
+                if (!child.checkpointed){
+                    ReturnRecord r = child.getReturnRecord();
+                    if (r != null) {
+                        result.add(r);
+                        child.checkpointed = true;
+                    }
+                }
+                child = child.getFinishedSibling();
+            }
+        }
+        return result;
+    }
+
+
     public void print(java.io.PrintStream out) {
         out.println("=IRStack " + s.ident + ":=============");
         for (int i = 0; i < count; i++) {
