@@ -125,7 +125,7 @@ public final class FaultTolerance implements Config {
             // a cluster coordinator, otherwise everything gets terribly slow.
             // Don't hold the lock while doing this.
             for (int i = 0; i < crashesToHandle.size(); i++) {
-                IbisIdentifier id = crashesToHandle.get(0);
+                IbisIdentifier id = crashesToHandle.get(i);
                 if (id.equals(s.getMasterIdent()) || id.equals(clusterCoordinatorIdent)) {
                     try {
                         s.comm.ibis.registry().maybeDead(id);
@@ -175,7 +175,7 @@ public final class FaultTolerance implements Config {
         // master has crashed, let's elect a new one
         IbisIdentifier newMaster = null;
         try {
-            newMaster = s.comm.ibis.registry().elect("satin master");
+            newMaster = s.comm.ibis.registry().elect("satin.master");
         } catch (Exception e) {
             ftLogger.error("SATIN '" + s.ident
                 + "' :exception while electing a new master " + e, e);
