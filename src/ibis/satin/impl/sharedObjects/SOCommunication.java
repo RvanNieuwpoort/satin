@@ -1,5 +1,3 @@
-// @@@ msg combining AND lrmc at the same time is not supported
-
 /*
  * Created on Apr 26, 2006 by rob
  */
