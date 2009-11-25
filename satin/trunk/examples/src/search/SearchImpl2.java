@@ -23,7 +23,7 @@ class SearchImpl2 extends SatinObject implements Searcher {
     }
 
     public static void main(String[] args) {
-        SearchImpl1 s = new SearchImpl1();
+        SearchImpl2 s = new SearchImpl2();
         int a[] = new int[2000000];
 
         // Fill the array with random values between 0 and 1000000.
