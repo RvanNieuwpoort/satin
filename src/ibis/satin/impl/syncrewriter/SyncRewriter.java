@@ -1,9 +1,12 @@
 package ibis.satin.impl.syncrewriter;
 
 
+import ibis.compile.IbiscComponent;
 import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.StringTokenizer;
 
 import org.apache.bcel.Repository;
 import org.apache.bcel.classfile.JavaClass;
@@ -11,7 +14,7 @@ import org.apache.bcel.classfile.Method;
 
 
 
-class SyncRewriter {
+class SyncRewriter extends IbiscComponent {
 
 
     static final String[] ANALYZER_NAMES = {"Naive", "EarliestLoad", 
@@ -22,7 +25,8 @@ class SyncRewriter {
 
     protected Debug d;
     protected Analyzer analyzer;
-
+    
+    protected ArrayList<String> classNames = new ArrayList<String>();
 
     SyncRewriter() {
 	d = new Debug();
@@ -80,6 +84,21 @@ class SyncRewriter {
 	dump(spawnableClass.getJavaClass());
     }
     
+    void rewrite(JavaClass javaClass, SpawnSignature[] spawnSignatures)
+            throws NoSpawningClassException, ClassRewriteFailure {
+        String className = javaClass.getClassName();
+        SpawningClass spawnableClass = 
+            new SpawningClass(javaClass, spawnSignatures, new Debug(d.turnedOn(), 2));
+        d.log(0, "%s is a spawning class\n", className);
+        d.log(1, "it contains calls with spawn signatures:\n");
+        print(spawnableClass.getSpawnSignatures(), 2);
+        d.log(1, "rewriting %s\n", className);
+        spawnableClass.rewrite(analyzer);
+        Repository.removeClass(javaClass);
+        javaClass = spawnableClass.getJavaClass();
+        Repository.addClass(javaClass);
+        setModified(wrapper.getInfo(javaClass));
+    }
 
     void print(SpawnSignature[] spawnSignatures, int level) {
 	for (SpawnSignature spawnSignature : spawnSignatures) {
@@ -204,8 +223,7 @@ class SyncRewriter {
     }
 
 
-    ArrayList<String> processArguments(String[] argv) {
-	ArrayList<String> classNames = new ArrayList<String>();
+    void processArguments(String[] argv) {
 
 	for (int i = 0; i < argv.length; i++) {
 	    String arg = argv[i];
@@ -242,21 +260,19 @@ class SyncRewriter {
 	    printUsage();
 	    System.exit(1);
 	}
-
-	return classNames;
     }
 
 
     void start(String[] argv) {
 	int returnCode = 0;
-	ArrayList<String> classFileNames = processArguments(argv);
+	processArguments(argv);
 	if (analyzer == null) setAnalyzer("ControlFlow");
 
 	d.log(0, "rewriting for following spawnsignatures:\n");
-	SpawnSignature[] spawnSignatures = getSpawnSignatures(classFileNames);
+	SpawnSignature[] spawnSignatures = getSpawnSignatures(classNames);
 	print(spawnSignatures, 1);
 
-	for (String classFileName : classFileNames) {
+	for (String classFileName : classNames) {
 	    String className = getClassName(classFileName);
 	    try {
 		rewrite(className, spawnSignatures);
@@ -272,8 +288,84 @@ class SyncRewriter {
 	System.exit(returnCode);
     }
 
+    public String getUsageString() {
+        return "[-syncrewriter <classlist>]";
+    }
+
+
+    @Override
+    public void process(Iterator<?> classes) {
+        if (classNames.size() == 0) {
+            return;
+        }
+        
+        d.log(0, "rewriting for following spawnsignatures:\n");
+        SpawnSignature[] spawnSignatures = getSpawnSignatures(classNames);
+        print(spawnSignatures, 1);
+        
+        while (classes.hasNext()) {
+            JavaClass clazz = (JavaClass) classes.next();
+            if (classNames.contains(clazz.getClassName())) {
+                try {
+                    rewrite(clazz, spawnSignatures);
+                }
+                catch (NoSpawningClassException e) {
+                    d.log(0, "%s is not a spawning class\n", clazz.getClassName());
+                }
+                catch (ClassRewriteFailure e) {
+                    System.err.println("Syncrewriter failed to rewrite " + clazz.getClassName());
+                    System.exit(1);
+                }
+            }
+        }
+        
+    }
+    
+    void addToClassList(String list) {
+        StringTokenizer st = new StringTokenizer(list, ", ");
+        while (st.hasMoreTokens()) {
+            classNames.add(st.nextToken());
+        }
+    }
+
+
+    public boolean processArgs(ArrayList<String> args) {
+
+        boolean retval = false;
+        for (int i = 0; i < args.size(); i++) {
+            String arg = args.get(i);
+            if (false) {
+                // nothing
+            } else if (arg.equals("-syncrewriter-debug")) {
+                d.turnOn();
+                args.remove(i--);
+            } else if (arg.equals("-syncrewriter-analyzer")) {
+                args.remove(i);
+                if (i >= args.size()) {
+                    throw new IllegalArgumentException("-syncrewriter-analyzer needs analyzer");
+                }
+                setAnalyzer(args.get(i));
+                args.remove(i--);
+            } else if (arg.equals("-syncrewriter")) {
+                args.remove(i);
+                retval = true;
+                if (i >= args.size()) {
+                    throw new IllegalArgumentException("-syncrewriter needs classlist");
+                }
+                addToClassList(args.get(i));
+                args.remove(i--);
+            }
+        }
+        return retval;
+    }
+
+
+    public String rewriterImpl() {
+        return "BCEL";
+    }
+    
 
     public static void main(String[] argv) {
-	new SyncRewriter().start(argv);
+        new SyncRewriter().start(argv);
     }
 }
