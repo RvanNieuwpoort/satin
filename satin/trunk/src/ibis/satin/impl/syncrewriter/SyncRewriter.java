@@ -30,7 +30,7 @@ class SyncRewriter extends IbiscComponent {
 
     SyncRewriter() {
 	d = new Debug();
-	d.turnOn();
+	// d.turnOn();
 	analyzer = null;
     }
 
