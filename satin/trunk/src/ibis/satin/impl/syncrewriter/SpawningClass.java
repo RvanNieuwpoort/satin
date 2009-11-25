@@ -50,11 +50,45 @@ class SpawningClass extends ClassGen {
 	}
 	if (throwRewriteFailure) throw new ClassRewriteFailure();
     }
-
-
+    
+    
+    void advise(Analyzer analyzer) {
+        for (SpawnSignature spawnSignature : spawnSignatures) {
+            adviseForSpawnSignature(spawnSignature, analyzer);
+        }
+    }
 
 
     /* private methods */
+    
+    private void adviseForSpawnSignature(SpawnSignature spawnSignature,
+            Analyzer analyzer) {
+        d.log(0, "advising for signature %s\n", spawnSignature);
+        
+        Method[] methods = getMethods();
+
+        for (Method method : methods) {
+            try {
+                SpawningMethod spawningMethod = new 
+                    SpawningMethod(method, getClassName(), getConstantPool(),
+                            spawnSignature, 0, 
+                            new Debug(d.turnedOn(), d.getStartLevel()+2));
+                d.log(1, "%s calls %s\n", method.getName(), spawnSignature);
+                spawningMethod.adviseSync(analyzer);
+            } catch (NoSpawningMethodException e) {
+                    d.log(1, "%s doesn't call %s\n", method.getName(), spawnSignature);
+                    // spawnSignature is not called
+            } catch (MethodRewriteFailure e) {
+                d.error("Failed to rewrite %s for spawn signature: %s\n",
+                        method.getName(), spawnSignature);
+            } catch (AssumptionFailure e) {
+                d.error("Failed to rewrite %s for spawn signature: %s\n",
+                        method.getName(), spawnSignature);
+                d.error(e.getMessage());
+            }
+        }
+                
+    }
 
     /* Rewrite for a specific spawn signature.
     */

@@ -6,6 +6,7 @@ import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.util.ArrayList;
 
+import org.apache.bcel.classfile.LineNumberTable;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.CodeExceptionGen;
 import org.apache.bcel.generic.ConstantPoolGen;
@@ -79,7 +80,21 @@ public class SpawningMethod extends MethodGen {
 	insertSync(analyzer);
 	d.log(0, "rewrote %s\n", getName());
     }
+    
+    void adviseSync(Analyzer analyzer) throws SyncInsertionProposalFailure {
+        d.log(0, "adviseSync %s\n", getName());
+        d.log(1, "trying to find sync statement location(s)\n");
+        InstructionHandle[] ihs = 
+            analyzer.proposeSyncInsertion(this, new Debug(d.turnedOn(), d.getStartLevel() + 2));
 
+        LineNumberTable t = getLineNumberTable(getConstantPool());
+        
+        for (InstructionHandle ih : ihs) {
+            int l = t.getSourceLine(ih.getPosition());
+            System.out.println("Add a sync() in method "
+                    + getName() + " at line "+ l + " in class " + getClassName());
+        }
+    }
 
 
     /* private methods */
