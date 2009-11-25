@@ -20,8 +20,8 @@ class SyncRewriter {
     static final boolean BACKUP_ORIGINAL_CLASSFILES = true;
 
 
-    private Debug d;
-    private Analyzer analyzer;
+    protected Debug d;
+    protected Analyzer analyzer;
 
 
     SyncRewriter() {
@@ -79,7 +79,7 @@ class SyncRewriter {
 	d.log(1, "dumping %s\n", className);
 	dump(spawnableClass.getJavaClass());
     }
-
+    
 
     void print(SpawnSignature[] spawnSignatures, int level) {
 	for (SpawnSignature spawnSignature : spawnSignatures) {
