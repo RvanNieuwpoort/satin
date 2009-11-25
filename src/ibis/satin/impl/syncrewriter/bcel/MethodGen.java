@@ -250,7 +250,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 		return objectLoadInstruction;
 	    }
 	}
-	throw new Error("Can't find the object reference load instruction");
+	throw new Error("Can't find the object reference load instruction for " + ih.getInstruction());
     }
 
 
@@ -285,7 +285,9 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
 	    return objectLoadInstruction.getIndex();
 	}
-
+	@SuppressWarnings("unused")
+	PUTFIELD p = (PUTFIELD) instructionHandle.getInstruction();
+	// Will generate a ClassCast exception when not a PUTFIELD.
 	InstructionHandle ih  = getObjectReferenceLoadInstruction
 	    (instructionHandle);
 	ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
