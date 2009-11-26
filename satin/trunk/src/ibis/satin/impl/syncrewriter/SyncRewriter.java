@@ -28,7 +28,7 @@ public class SyncRewriter extends IbiscComponent {
     
     protected ArrayList<String> classNames = new ArrayList<String>();
 
-    SyncRewriter() {
+    public SyncRewriter() {
 	d = new Debug();
 	// d.turnOn();
 	analyzer = null;
@@ -293,7 +293,6 @@ public class SyncRewriter extends IbiscComponent {
     }
 
 
-    @Override
     public void process(Iterator<?> classes) {
         if (classNames.size() == 0) {
             return;
