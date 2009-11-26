@@ -54,9 +54,9 @@ its subdirectories are processed.  The command sequence
 $ cd $SATIN_HOME/examples
 $ mkdir tmp
 $ javac -d tmp -g \
-     -classpath ../lib/satin-2.1.jar \
+     -classpath ../lib/satin-2.2.jar \
      src/fib/*.java
-$ ../bin/satinc -cp tmp -satin "fib.Fib" tmp
+$ CLASSPATH=tmp ../bin/satinc -satin "fib.Fib" tmp
 $ mkdir lib
 $ ( cd tmp ; jar c . ) > lib/satin-examples.jar
 $ rm -rf tmp
@@ -74,6 +74,24 @@ and all classes that invoke spawns or syncs.
 When using the \texttt{satinc} script, these classes must be provided as
 a comma-separated list, with the \texttt{-satin} option. In
 \texttt{build.xml} they are provided as the \texttt{satin-classes} property.
+
+The satinc script can also be used to give advice on locations of sync method
+invocations. The examples include a special version of Fib to demonstrate this
+feature. For instance after calling javac, as above, you can call
+
+\begin{verbatim}
+$ CLASSPATH=tmp ../bin/satinc -syncadvise "fib.FibWithoutSync" tmp
+\end{verbatim}
+
+which will print suggested locations for sync method invocations on standard
+output. Note that the program ignores sync invocations that are already present,
+and also that it is not fullproof. If you are satisfied that it gives proper
+locations, you can have them inserted in the bytecode automatically, by replacing
+the satin bytecode rewriter line with:
+
+\begin{verbatim}
+$ CLASSPATH=tmp ../bin/satinc -syncrewriter "fib.FibWithoutSync" -satin "fib.FibWithoutSync" tmp
+\end{verbatim}
 
 \section{A Satin run}
 
@@ -153,7 +171,7 @@ with the \texttt{ibis.properties.file} system property.
 \subsubsection{Add jar files to the classpath}
 
 The Satin implementation is provided in a single jar file: satin.jar,
-appended with the version of Satin, for instance \texttt{satin-2.1.jar}.
+appended with the version of Satin, for instance \texttt{satin-2.2.jar}.
 Satin interfaces to Ibis using the Ibis Portability Layer, or
 \emph{IPL}. Both Satin and the IPL depend on various other libraries.
 All jar files in \$SATIN\_HOME/lib need to be on the classpath.

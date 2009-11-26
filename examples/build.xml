@@ -8,7 +8,7 @@
     </description>
 
     <!-- satin classes, must be passed on to Satin rewriter. -->
-    <property name="satin-classes" value="search.SearchImpl1,search.SearchImpl2,search.SearchImpl3,fib.Fib"/>
+    <property name="satin-classes" value="search.SearchImpl1,search.SearchImpl2,search.SearchImpl3,fib.Fib,fib.FibWithoutSync"/>
 
     <property environment="env"/>
     <property name="satin"       location=".."/>
@@ -46,6 +46,7 @@ target="1.5">
 		failonerror="true"
 		maxmemory="512M"
 		fork="true">
+		<arg line="-syncrewriter &quot;fib.FibWithoutSync&quot;"/>
 		<arg line="-satin &quot;${satin-classes}&quot; ."/>
 		<classpath refid="default.classpath"/>
 	</java>
