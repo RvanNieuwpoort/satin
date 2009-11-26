@@ -299,6 +299,10 @@ class SyncRewriter extends IbiscComponent {
             return;
         }
         
+        if (analyzer == null) {
+            setAnalyzer("ControlFlow");
+        }
+        
         d.log(0, "rewriting for following spawnsignatures:\n");
         SpawnSignature[] spawnSignatures = getSpawnSignatures(classNames);
         print(spawnSignatures, 1);

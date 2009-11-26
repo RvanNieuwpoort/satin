@@ -73,7 +73,11 @@ public class SyncAdviser extends SyncRewriter {
 
     public void process(Iterator<?> classes) {
         if (classNames.size() == 0) {
-            return;
+            System.exit(0);
+        }
+        
+        if (analyzer == null) {
+            setAnalyzer("ControlFlow");
         }
         
         d.log(0, "advising for following spawnsignatures:\n");
@@ -91,11 +95,10 @@ public class SyncAdviser extends SyncRewriter {
                 }
             }
         }
-        
+        System.exit(0);
     }
 
     public boolean processArgs(ArrayList<String> args) {
-
         boolean retval = false;
         for (int i = 0; i < args.size(); i++) {
             String arg = args.get(i);
