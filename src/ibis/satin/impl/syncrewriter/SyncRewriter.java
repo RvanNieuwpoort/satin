@@ -14,7 +14,7 @@ import org.apache.bcel.classfile.Method;
 
 
 
-class SyncRewriter extends IbiscComponent {
+public class SyncRewriter extends IbiscComponent {
 
 
     static final String[] ANALYZER_NAMES = {"Naive", "EarliestLoad", 
