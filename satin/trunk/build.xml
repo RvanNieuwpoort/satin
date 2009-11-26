@@ -97,7 +97,7 @@
             <fileset dir="." includes="LICENSE.txt" />
 	    <manifest>
                 <attribute name="Ibisc-Component"
-                    value="ibis.satin.impl.rewriter.Satinc" />
+                    value="ibis.satin.impl.rewriter.Satinc,ibis.satin.impl.syncrewriter.SyncAdviser,ibis.satin.impl.syncrewriter.SyncRewriter" />
             </manifest>
         </jar>
         <delete dir="${tmp}" />
