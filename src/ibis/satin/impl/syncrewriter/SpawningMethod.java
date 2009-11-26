@@ -91,7 +91,7 @@ public class SpawningMethod extends MethodGen {
         
         for (InstructionHandle ih : ihs) {
             int l = t.getSourceLine(ih.getPosition());
-            System.out.println("Add a sync() in method "
+            System.out.println("Insert a sync() in method "
                     + getName() + " at line "+ l + " in class " + getClassName());
         }
     }
