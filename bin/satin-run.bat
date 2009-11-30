@@ -16,6 +16,6 @@ goto setupArgs
 
 :doneStart
 
-java -classpath "%CLASSPATH%;%SATIN_HOME%\lib\*" -Dlog4j.configuration=file:"%SATIN_HOME%"\log4j.properties %SATIN_APP_ARGS%
+java -classpath "%CLASSPATH%;%SATIN_HOME%\lib\*" -Dlog4j.configuration=file:"%SATIN_HOME%"\log4j.properties -Dgat.adaptor.path="%SATIN_HOME%"\lib\adaptors %SATIN_APP_ARGS%
 
 if "%OS%"=="Windows_NT" @endlocal

@@ -7,39 +7,29 @@
 
     <property name="dist-name" value="${ant.project.name}${version}" />
 
-    <target name="build"
-            description="Build with included IPL"
-            depends="clean,copy-included-ipl,compile,javadoc" />
+    <property name="external" location="external" />
+    <property name="javagat" value="${external}/javagat"/>
+    <property name="ipl" value="${external}/ipl"/>
 
-    <target name="build-external-ipl"
-            description="Build with external IPL"
-            depends="clean,copy-external-ipl,compile,javadoc" />
+    <target name="build"
+            description="Build Satin"
+            depends="clean,copy-external,compile,javadoc" />
 
     <property name="src" location="src" />
     <property name="tmp" location="tmp" />
     <property name="lib" location="lib" />
-    <property name="external" location="external" />
     <property name="javadoc" location="javadoc" />
     <property name="sources" location="sources" />
 
     <!-- copy external dependancies to lib, including provided IPL -->
-    <target name="copy-included-ipl">
+    <target name="copy-external">
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
-            <fileset dir="${external}/ipl" />
+            <fileset dir="${ipl}" />
         </copy>
-    </target>
-
-    <!-- copy external dependancies to lib, includig IPL 
-         specified by $IPL_HOME -->
-    <target name="copy-external-ipl">
-	<!-- Import environment properties -->
-	<property environment="env" />
-	<property name="ipl" location="${env.IPL_HOME}" />
-        <mkdir dir="${lib}" />
         <copy todir="${lib}">
-            <fileset dir="${ipl}/lib" />
-        </copy>
+            <fileset dir="${javagat}" />
+	</copy>
     </target>
 
     <!-- Compile -->
