@@ -1,6 +1,6 @@
 <project name="satin" default="build" basedir=".">
     <description>
-	Build file for Satin
+        Build file for Satin
     </description>
 
     <property name="version" value="-2.2" />
@@ -21,7 +21,7 @@
     <property name="javadoc" location="javadoc" />
     <property name="sources" location="sources" />
 
-    <!-- copy external dependancies to lib, including provided IPL -->
+    <!-- Copy external dependancies to lib -->
     <target name="copy-external">
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
@@ -29,7 +29,7 @@
         </copy>
         <copy todir="${lib}">
             <fileset dir="${javagat}" />
-	</copy>
+        </copy>
     </target>
 
     <!-- Compile -->
@@ -43,7 +43,7 @@
             <fileset dir="${external}" includes="*.jar" />
         </copy>
 
-	<!-- classpath -->
+        <!-- classpath -->
         <path id="default.classpath">
             <fileset dir="${lib}">
                 <include name="*.jar" />
@@ -58,8 +58,8 @@
                source="1.5"
                target="1.5"
                classpathref="default.classpath">
-	    <compilerarg value="-Xlint:unchecked" />
-	</javac>
+            <compilerarg value="-Xlint:unchecked" />
+        </javac>
 
         <!-- Run Ibisc -->
         <java classname="ibis.compile.Ibisc"
@@ -72,20 +72,20 @@
             <classpath refid="default.classpath" />
         </java>
 
-	<!-- Extract ibis.io.Serializable, so that applications don't
-	     need ibis-io-2.2.jar to compile.
+        <!-- Extract ibis.io.Serializable, so that applications don't
+             need ibis-io-2.2.jar to compile.
         -->
-	<unjar src="external/ipl/ibis-io-2.2.jar" dest="${tmp}">
-	    <patternset>
-		<include name="**/Serializable.class"/>
-	    </patternset>
-	</unjar>
+        <unjar src="external/ipl/ibis-io-2.2.jar" dest="${tmp}">
+            <patternset>
+                <include name="**/Serializable.class"/>
+            </patternset>
+        </unjar>
 
         <!-- Create jar file -->
         <jar destfile="lib/${dist-name}.jar">
             <fileset dir="${tmp}" includes="**/*.class" />
             <fileset dir="." includes="LICENSE.txt" />
-	    <manifest>
+            <manifest>
                 <attribute name="Ibisc-Component"
                     value="ibis.satin.impl.rewriter.Satinc,ibis.satin.impl.syncrewriter.SyncAdviser,ibis.satin.impl.syncrewriter.SyncRewriter" />
             </manifest>
@@ -108,7 +108,7 @@
     </target>
 
     <target name="docs" description="Create manuals">
-	<ant dir="docs" inheritAll="false" />
+        <ant dir="docs" inheritAll="false" />
     </target>
 
     <!-- Clean up everything -->
@@ -117,12 +117,12 @@
         <delete dir="${lib}" />
         <delete dir="${javadoc}" />
         <delete dir="${sources}" />
-	<ant dir="examples" inheritAll="false" target="clean" />
-	<ant dir="docs" inheritAll="false" target="clean" />
+        <ant dir="examples" inheritAll="false" target="clean" />
+        <ant dir="docs" inheritAll="false" target="clean" />
     </target>
 
     <target name="dist" depends="build,docs">
-	<ant dir="examples" inheritAll="false" />
+        <ant dir="examples" inheritAll="false" />
         <delete file="${dist-name}.zip" />
         <delete dir="${sources}" />
 
