@@ -385,7 +385,6 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                 s.notifyAll();
             }
             
-            //[KRIS]
             // this part will only be executed for nodes which join later on
             // nodes which are available from the beginning need to be informed
             // seperately

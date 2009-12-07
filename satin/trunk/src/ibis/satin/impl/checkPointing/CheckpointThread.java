@@ -1,4 +1,3 @@
-//[KRIS]
 package ibis.satin.impl.checkPointing;
 
 import ibis.satin.impl.Satin;
