@@ -81,7 +81,6 @@ public interface Config {
 
     static final String s_kill_time = PROPERTY_PREFIX + "killTime";
 
-    //[KRIS]
     static final String s_cpt = PROPERTY_PREFIX + "cpt";
     
     static final String s_cpt_push = PROPERTY_PREFIX + "cpt.push";
@@ -161,7 +160,6 @@ public interface Config {
     public static final boolean CHECKPOINT_PUSH = properties.getBooleanProperty(
             s_cpt_push, true);
 
-    //[KRIS]
     public static final int CHECKPOINT_INTERVAL
             = properties.getIntProperty(s_cpt_interval, 5000);
     

@@ -140,7 +140,6 @@ public final class IRStack implements Config {
         return toPush;
     }
 
-    //[KRIS]
     public ArrayList<ReturnRecord> peekFinishedJobs(){
         
         ArrayList<ReturnRecord> result = new ArrayList<ReturnRecord>();

@@ -114,7 +114,7 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public int numCrashesHandled;
 
-    //[KRIS]
+    // Checkpointing.
     public double requestCheckpointTime;
     
     public double makeCheckpointTime;
@@ -210,7 +210,7 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public Timer redoTimer = Timer.createTimer();
 
-    //[KRIS]
+    // Checkpointing.
     public Timer requestCheckpointTimer = Timer.createTimer();
     
     public Timer makeCheckpointTimer = Timer.createTimer();
@@ -222,7 +222,7 @@ public final class Statistics implements java.io.Serializable, Config {
     public Timer useCheckpointTimer = Timer.createTimer();
     
     public Timer createCoordinatorTimer = Timer.createTimer();
-    // end KRIS
+    // end Checkpointing.
 
     public Timer handleSOInvocationsTimer = Timer.createTimer();
 
@@ -307,7 +307,7 @@ public final class Statistics implements java.io.Serializable, Config {
         crashHandlingTime += s.crashHandlingTime;
         numCrashesHandled += s.numCrashesHandled;
 
-        //[KRIS]
+        // Checkpointing.
         requestCheckpointTime += s.requestCheckpointTime;
         makeCheckpointTime += s.makeCheckpointTime;
         receiveCheckpointTime += s.receiveCheckpointTime;
@@ -370,7 +370,7 @@ public final class Statistics implements java.io.Serializable, Config {
         tableCheckTime = redoTimer.totalTimeVal();
         crashHandlingTime = crashTimer.totalTimeVal();
 
-        //[KRIS]
+        // Checkpointing.
         if (CHECKPOINTING){
             requestCheckpointTime = requestCheckpointTimer.totalTimeVal();
             makeCheckpointTime = makeCheckpointTimer.totalTimeVal();
@@ -553,7 +553,7 @@ public final class Statistics implements java.io.Serializable, Config {
                 + Timer.format(crashHandlingTime));
         }
 
-        //[KRIS]
+        // Checkpointing.
         if (CHECKPOINTING) {
             out.println("SATIN: REQUEST_CHECKPOINT_TIME:    total "
                     + Timer.format(requestCheckpointTime)
@@ -673,7 +673,7 @@ public final class Statistics implements java.io.Serializable, Config {
         double crashHandlingTimeAvg = crashHandlingTime / size;
         double crashHandlingPerc = crashHandlingTimeAvg / totalTime * 100.0;
         
-        //[KRIS]
+        // Checkpointing.
         double requestCheckpointTimeAvg = requestCheckpointTime / size;
         double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime * 100.0;
         double makeCheckpointTimeAvg = makeCheckpointTime / size;

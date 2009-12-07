@@ -149,7 +149,6 @@ public final class FaultTolerance implements Config {
             (new DeleteClusterThread(DELETE_CLUSTER_TIME)).start();
         }       
 
-        //[KRIS]
         if (CHECKPOINTING){
             // in case of a CHECKPOINT_PUSH, every node has to decide when
             // to send the checkpoint itself. That's what the CheckpointThread
@@ -224,7 +223,7 @@ public final class FaultTolerance implements Config {
             // Don't hold the lock while doing this.
             for (int i = 0; i < crashesToHandle.size(); i++) {
                 IbisIdentifier id = crashesToHandle.get(i);
-                //[KRIS]
+
                 if (CHECKPOINTING || checkpointAndQuitTime > 0) {
                     if (id.equals(coordinatorIdent)){
                         coordinatorIdent = null;
@@ -275,7 +274,7 @@ public final class FaultTolerance implements Config {
         } finally {
             s.stats.crashTimer.stop();
         }
-        //[KRIS]
+        
         if (CHECKPOINTING && coordinator){
             synchronized(s) {
                 s.stats.useCheckpointTimer.start();
@@ -554,7 +553,6 @@ public final class FaultTolerance implements Config {
     }
             
 
-    //[KRIS]
     /**
      * Request checkpoints of all the nodes, and takes it's own checkpoint
      **/

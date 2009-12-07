@@ -69,7 +69,7 @@ public interface Protocol {
 
     static final byte RESUME = 35;
     
-    //[KRIS]
+    // Checkpointing.
     static final byte CHECKPOINT_REQUEST = 36;
     
     static final byte CHECKPOINT = 37;
