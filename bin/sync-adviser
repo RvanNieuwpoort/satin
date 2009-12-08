@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# This script is a convenience script to start the Satin registry server from the
-# Satin installation, specified in the $SATIN_HOME environment variable.
+# Utility script to run the Satin sync adviser on the specified arguments.
 
 # Check SATIN_HOME.
 if [ -z "$SATIN_HOME" ];  then
