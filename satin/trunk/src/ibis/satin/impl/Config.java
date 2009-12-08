@@ -154,24 +154,34 @@ public interface Config {
     static final boolean FT_NAIVE = properties.getBooleanProperty(s_ft_naive,
             false);
 
+    /** When set, checkpointing code is enabled. */
     public static final boolean CHECKPOINTING = properties.getBooleanProperty(
             s_cpt, false);
     
+    /**
+     * When set, every node decides for itself when checkpoints are sent to
+     * the coordinator.
+     */
     public static final boolean CHECKPOINT_PUSH = properties.getBooleanProperty(
             s_cpt_push, true);
 
+    /** Checkpointing interval, in milliseconds. */
     public static final int CHECKPOINT_INTERVAL
-            = properties.getIntProperty(s_cpt_interval, 5000);
+            = properties.getIntProperty(s_cpt_interval, 60000);
     
+    /** Time to wait before first checkpoint, in milliseconds. */
     public static final int CHECKPOINT_FIRST
             = properties.getIntProperty(s_cpt_first, CHECKPOINT_INTERVAL);
     
+    /** URI of the checkpoint file. */
     public static final String CHECKPOINT_FILE
             = properties.getProperty(s_cpt_file, "checkpoints.txt");
     
+    /** When set, this node is a candidate to become coordinator. */
     public static final boolean CHECKPOINT_CLUSTER
             = properties.getBooleanProperty(s_cpt_cluster, true);
     
+    /** If the checkpoint file becomes larger than this, compress (unless 0). */
     public static final int CHECKPOINT_MAXFILESIZE
             = properties.getIntProperty(s_cpt_maxFileSize, 0);
     
