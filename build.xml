@@ -7,13 +7,15 @@
 
     <property name="dist-name" value="${ant.project.name}${version}" />
 
+    <property name="sources-filename" value="${ant.project.name}${version}-sources" />
+
     <property name="external" location="external" />
     <property name="javagat" value="${external}/javagat"/>
     <property name="ipl" value="${external}/ipl"/>
 
     <target name="build"
             description="Build Satin"
-            depends="clean,copy-external,compile,javadoc" />
+            depends="clean,copy,compile,javadoc" />
 
     <property name="src" location="src" />
     <property name="tmp" location="tmp" />
@@ -21,8 +23,8 @@
     <property name="javadoc" location="javadoc" />
     <property name="sources" location="sources" />
 
-    <!-- Copy external dependancies to lib -->
-    <target name="copy-external">
+    <!-- Copy dependancies to lib -->
+    <target name="copy">
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
             <fileset dir="${ipl}" />
@@ -128,10 +130,10 @@
 
         <mkdir dir="${sources}" />
 
-        <zip destfile="${sources}/${dist-name}-src.zip">
+	<zip destfile="${sources}/${sources-filename}.zip">
             <zipfileset dir="src"
                         includes="**/*.java"
-                        prefix="${dist-name}" />
+                        prefix="${sources-filename}" />
 
             <zipfileset dir="."
                         includes="LICENSE.txt"
