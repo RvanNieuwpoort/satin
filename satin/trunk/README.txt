@@ -37,11 +37,10 @@ The javadoc of Satin is available in "javadoc/index.html".
 Ibis has its own web-site: http://www.cs.vu.nl/ibis/.  There, you can
 find more Ibis documentation, papers, application sources.
 
-The latest Satin source repository tree is accessible through SVN at
-"https://gforge.cs.vu.nl/svn/ibis/satin/trunk".  You need an account on
-https://gforge.cs.vu.nl/ to access the repositories there. You can
-create an account by clicking the 'New Account' button on the
-https://gforge.cs.vu.nl/ page.
+The current Satin source repository tree is accessible through SVN at
+"https://gforge.cs.vu.nl/svn/ibis/satin/trunk".  You can check it
+out anonymously using the command
+"svn checkout https://gforge.cs.vu.nl/svn/ibis/satin/trunk satin".
 
 The file BUGS.txt contains information for filing bug reports.
 
@@ -63,6 +62,9 @@ license lives in "notices/LICENSE.apache-2.0.txt".
 
 This product includes the trilead SSH-2 library. Its license
 lives in "notices/LICENSE.trilead.txt".
+
+This product includes some of the JavaGAT libraries. Its license
+lives in "notices/LICENSE.javagat.txt".
 
 This product includes software developed by TouchGraph LLC
 (http://www.touchgraph.com/). Its license lives in
