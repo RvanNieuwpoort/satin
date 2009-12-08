@@ -46,9 +46,9 @@ for parts of your application, it is also possible to first compile
 your application to class files or jar files, and then process those
 using the \emph{satinc} script. This script can be found in the Satin
 bin directory. It takes either directories, class files, or jar files
-as parameter, and processes those, possibly rewriting them. In case
-of a directory, all class files and jar files in that directory or
-its subdirectories are processed.  The command sequence
+as parameter, and processes those, possibly rewriting them for Ibis.
+In case of a directory, all class files and jar files in that directory or
+its subdirectories are processed. The command sequence
 
 \begin{verbatim}
 $ cd $SATIN_HOME/examples
@@ -68,7 +68,7 @@ The \texttt{SATIN\_HOME} environment variable must be set to the location of
 the Satin installation.
 
 Note that the Satin bytecode rewriter \texttt{satinc} needs to know the
-classes in your application that must be rewritten.
+classes in your application that must be rewritten for Satin.
 Those classes are: the main class, any class that implements a shared object,
 and all classes that invoke spawns or syncs.
 When using the \texttt{satinc} script, these classes must be provided as
@@ -85,7 +85,9 @@ $ CLASSPATH=tmp ../bin/satinc -syncadvise "fib.FibWithoutSync" tmp
 
 which will print suggested locations for sync method invocations on standard
 output. Note that the program ignores sync invocations that are already present,
-and also that it is not fullproof. If you are satisfied that it gives proper
+and also that it is not fullproof: in obscure cases it is too conservative,
+which means that your application will behave like a sequential program.
+If you are satisfied that it gives proper
 locations, you can have them inserted in the bytecode automatically, by replacing
 the satin bytecode rewriter line with:
 
@@ -230,7 +232,8 @@ as discussed above:
 \begin{description}
 \item{\texttt{satin.closed}}
 Only use the initial set of hosts for the computation; do not allow
-further hosts to join the computation later on.
+further hosts to join the computation later on. This requires the
+\texttt{ibis.pool.size} property as well, as discussed above.
 \item{\texttt{satin.stats}}
 Display some statistics at the end of the Satin run. This is the default.
 \item{\texttt{satin.stats=false}}
