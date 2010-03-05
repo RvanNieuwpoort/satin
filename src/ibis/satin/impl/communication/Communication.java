@@ -26,6 +26,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 public final class Communication implements Config, Protocol {
+
+    private static final long EXIT_TIMEOUT = 60000;
+
     private Satin s;
 
     public PortType portType;
@@ -70,7 +73,7 @@ public final class Communication implements Config, Protocol {
             MessageHandler messageHandler = new MessageHandler(s);
 
             receivePort = ibis.createReceivePort(portType, "satin port",
-                messageHandler, s.ft.getReceivePortConnectHandler(), null);
+                    messageHandler, s.ft.getReceivePortConnectHandler(), null);
         } catch (Exception e) {
             s.assertFailed("Could not start ibis: ", e);
         }
@@ -170,7 +173,7 @@ public final class Communication implements Config, Protocol {
         } else if (UNRELIABLE) {
             // NOTE: using this breaks both lrmc and the master election.
             return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
-                    IbisCapabilities.ELECTIONS_UNRELIABLE);
+                    IbisCapabilities.ELECTIONS_UNRELIABLE, IbisCapabilities.SIGNALS);
         } else {
             return new IbisCapabilities(
                     IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
@@ -191,15 +194,18 @@ public final class Communication implements Config, Protocol {
             victims = s.victims.victims();
         }
 
+
         for (int i = 0; i < victims.length; i++) {
             WriteMessage writeMessage = null;
             Victim v = victims[i];
             commLogger.debug("SATIN '" + s.ident + "': sending "
                     + opcodeToString(opcode) + " message to " + v.getIdent());
+
             try {
                 writeMessage = v.newMessage();
                 writeMessage.writeByte(opcode);
                 v.finish(writeMessage);
+
             } catch (IOException e) {
                 if (writeMessage != null) {
                     writeMessage.finish(e);
@@ -217,6 +223,20 @@ public final class Communication implements Config, Protocol {
                 }
             }
         }
+
+	if (UNRELIABLE && opcode == EXIT) {
+	    IbisIdentifier[] ibises;
+	  
+	   synchronized(s) { 
+	    ibises = s.victims.getIbises();
+	   }
+	   try {
+	    ibis.registry().signal("EXIT", ibises);
+	     } catch (IOException e) {
+		 System.err.println("error while signalling" + e);
+	     }
+	}
+
     }
 
     public static void disconnect(SendPort s, ReceivePortIdentifier ident) {
@@ -311,7 +331,7 @@ public final class Communication implements Config, Protocol {
                     }
                     if (v == null) {
                         s.assertFailed("a machine crashed with closed world",
-                            new Exception());
+                                new Exception());
                     }
 
                     try {
@@ -334,7 +354,7 @@ public final class Communication implements Config, Protocol {
 
                 if (v == null) {
                     s.assertFailed("could not get master victim.",
-                        new Exception());
+                            new Exception());
                 }
 
                 WriteMessage writeMessage = null;
@@ -366,6 +386,12 @@ public final class Communication implements Config, Protocol {
     }
 
     public void waitForExitReplies() {
+        long deadline = Long.MAX_VALUE;
+
+        if (UNRELIABLE) {
+            deadline = System.currentTimeMillis() + EXIT_TIMEOUT;
+        }
+
         int size;
         synchronized (s) {
             size = s.victims.size();
@@ -373,7 +399,7 @@ public final class Communication implements Config, Protocol {
 
         // wait until everybody has send an ACK
         synchronized (s) {
-            while (exitReplies != size) {
+            while (exitReplies != size && System.currentTimeMillis() < deadline) {
                 try {
                     s.handleDelayedMessages();
                     s.wait(250);
@@ -412,8 +438,8 @@ public final class Communication implements Config, Protocol {
                 writeMessage.finish(e);
             }
             ftLogger.info(
-                "SATIN '" + s.ident + "': could not send exit message to "
-                        + s.getMasterIdent(), e);
+                    "SATIN '" + s.ident + "': could not send exit message to "
+                            + s.getMasterIdent(), e);
             try {
                 ibis.registry().maybeDead(s.getMasterIdent());
             } catch (IOException e2) {
@@ -424,8 +450,14 @@ public final class Communication implements Config, Protocol {
     }
 
     public void waitForExitStageTwo() {
+        long deadline = Long.MAX_VALUE;
+
+        if (UNRELIABLE) {
+            deadline = System.currentTimeMillis() + EXIT_TIMEOUT;
+        }
+
         synchronized (s) {
-            while (!exitStageTwo) {
+            while (!exitStageTwo && System.currentTimeMillis() < deadline) {
                 try {
                     s.handleDelayedMessages();
                     s.wait(250);
@@ -466,7 +498,7 @@ public final class Communication implements Config, Protocol {
 
     public void closeReceivePort() {
         try {
-            receivePort.close();
+            receivePort.close(10000);
         } catch (Throwable e) {
             commLogger.warn("SATIN '" + s.ident
                     + "': port.close() throws exception", e);

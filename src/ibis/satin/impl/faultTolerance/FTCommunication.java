@@ -336,7 +336,12 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
     public void gotSignal(String signal, IbisIdentifier sender) {
         if (signal != null && signal.equals("delete")) {
             s.ft.gotDelete = true;
-        }
+        } else if (signal != null && signal.equals("EXIT")) {
+	    //drastic measures!
+	    System.err.println("Got EXIT signal");
+	    s.comm.handleExitStageTwoMessage(sender);
+	    s.comm.handleExitMessage(sender);
+	}
     }
 
 
