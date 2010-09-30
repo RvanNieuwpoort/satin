@@ -50,6 +50,9 @@ public final class SharedObjects implements Config {
 
     /** Add an object to the object table */
     public void addObject(SharedObject object) {
+        if (! SO_ENABLED) {
+            throw new Error("Shared objects not enabled! Did you set satin.so to false?");
+        }
         SharedObjectInfo i = new SharedObjectInfo();
         i.sharedObject = object;
         synchronized (s) {
