@@ -28,8 +28,6 @@ import java.util.HashMap;
 
 final class SOCommunication implements Config, Protocol {
     private static final boolean ASYNC_SO_BCAST = false;
-
-    public static final boolean DISABLE_SO_BCAST = false;
     
     private Satin s;
 
@@ -65,7 +63,7 @@ final class SOCommunication implements Config, Protocol {
     }
 
     protected void init() {
-        if(DISABLE_SO_BCAST) return;
+        if(! SO_ENABLED) return;
     
         if (LABEL_ROUTING_MCAST) {
             try {
@@ -135,7 +133,7 @@ final class SOCommunication implements Config, Protocol {
      * them available as soon as possible.
      */
     protected void handleJoins(IbisIdentifier[] joiners) {
-        if(DISABLE_SO_BCAST) return;
+        if(! SO_ENABLED) return;
     
         // lrmc uses its own ports
         if (LABEL_ROUTING_MCAST) {
@@ -190,7 +188,7 @@ final class SOCommunication implements Config, Protocol {
     }
 
     protected void broadcastSOInvocation(SOInvocationRecord r) {
-        if(DISABLE_SO_BCAST) return;
+        if(! SO_ENABLED) return;
     
         if (LABEL_ROUTING_MCAST) {
             doBroadcastSOInvocationLRMC(r);
@@ -340,7 +338,7 @@ final class SOCommunication implements Config, Protocol {
      * as the SO invocation messages. This is only called by exportObject. 
      */
     protected void broadcastSharedObject(SharedObject object) {
-        if(DISABLE_SO_BCAST) return;
+        if (! SO_ENABLED) return;
         
         if (LABEL_ROUTING_MCAST) {
             doBroadcastSharedObjectLRMC(object);

@@ -55,6 +55,8 @@ public interface Config {
     static final String s_dump = PROPERTY_PREFIX + "dump";
 
     static final String s_in_latency = PROPERTY_PREFIX + "messagesInLatency";
+    
+    static final String s_so = PROPERTY_PREFIX + "so";
 
     static final String s_so_delay = PROPERTY_PREFIX + "so.delay";
 
@@ -100,7 +102,7 @@ public interface Config {
     static final String[] sysprops = { s_stats, s_queue_steals,
             s_detailed_stats, s_client, s_closed, s_unreliable, s_asserts,
             s_ft_naive, s_ft_connectTimeout, s_masterhost, s_in_latency,
-            s_delete_time, s_delete_cluster_time, s_kill_time, s_dump,
+            s_delete_time, s_delete_cluster_time, s_kill_time, s_dump, s_so,
             s_so_delay, s_so_size, s_alg, s_so_lrmc, s_close_connections,
             s_max_connections, s_so_wait_time, s_steal_wait_timeout,
             s_connections_on_demand, s_keep_intra_connections,
@@ -209,6 +211,9 @@ public interface Config {
     public static final long STEAL_WAIT_TIMEOUT = properties.getLongProperty(
             s_steal_wait_timeout, (CONNECT_TIMEOUT / 1000L) * 2 + 1) * 1000L;
 
+    /** Enable/disable shared objects. */
+    static final boolean SO_ENABLED = properties.getBooleanProperty(s_so, true);
+    
     /**
      * Maximum time that messages may be buffered for message combining. If > 0,
      * it is used for combining shared objects invocations. setting this to 0
