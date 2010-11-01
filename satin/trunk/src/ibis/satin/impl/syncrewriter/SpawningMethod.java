@@ -231,6 +231,13 @@ public class SpawningMethod extends MethodGen {
 	try {
 	    Integer[] indices = new Integer[1];
 	    indices[0] = getIndexStore(stackConsumers[0]);
+	    // TODO here: if the store is an array store or object field store,
+	    // we need to make sure that it is not aliased. --Ceriel
+	    // Fairly cheap check could be: the object is local, allocated in the
+	    // spawning method, and no alias is done. This may, however, be a bit
+	    // too restrictive. On the other hand, allowing for more makes the check
+	    // much more difficult. --Ceriel
+	    
 	    return indices;
 	}
 	catch (ClassCastException e) {

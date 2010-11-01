@@ -283,6 +283,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    InstructionHandle ih  = getObjectReferenceLoadInstruction
 		(instructionHandle);
 	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
+	    // If not an ALOAD, we don't handle this, so this will default into a
+	    // sync right after the spawn. --Ceriel
 	    return objectLoadInstruction.getIndex();
 	}
 	@SuppressWarnings("unused")
@@ -291,6 +293,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	InstructionHandle ih  = getObjectReferenceLoadInstruction
 	    (instructionHandle);
 	ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
+	// If not an ALOAD, we don't handle this, so this will default into a
+	// sync right after the spawn. --Ceriel
 	return objectLoadInstruction.getIndex();
     }
 
