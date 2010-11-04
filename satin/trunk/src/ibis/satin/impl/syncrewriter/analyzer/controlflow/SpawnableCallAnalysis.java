@@ -1,11 +1,14 @@
 package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 import ibis.satin.impl.syncrewriter.SpawnableCall;
+import ibis.satin.impl.syncrewriter.bcel.MethodGen;
+import ibis.satin.impl.syncrewriter.controlflow.BasicBlock;
 import ibis.satin.impl.syncrewriter.controlflow.BasicBlockGraph;
 import ibis.satin.impl.syncrewriter.controlflow.Path;
 import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import org.apache.bcel.generic.InstructionHandle;
 
@@ -21,6 +24,7 @@ public class SpawnableCallAnalysis {
     private ArrayList<StoreLoadPath> storeLoadPaths;
     private Path latestCommonSubPath;
 
+    private boolean resultAnalysisFailed = false;    
 
     /* public methods */
 
@@ -35,7 +39,59 @@ public class SpawnableCallAnalysis {
 	this.d = d;
 
 	int idBasicBlock = basicBlockGraph.getIdBasicBlock(spawnableCall.getInvokeInstruction());
+	BasicBlock callerBlock = basicBlockGraph.getBasicBlock(idBasicBlock);
+	
 	this.d.log(1, "analyzing spawnable call: %s at basic block %d\n", spawnableCall, idBasicBlock);
+	
+        MethodGen mg = callerBlock.getMethodGen();
+        InstructionHandle[] stackConsumers = mg.findInstructionConsumers(spawnableCall.getInvokeInstruction());
+        
+        // TODO here: if the store is an array store or object field store,
+        // we need to make sure that it is not aliased. --Ceriel
+        // Fairly cheap check could be: the object is local, allocated in the
+        // spawning method, and no alias is done. This may, however, be a bit
+        // too restrictive. On the other hand, allowing for more makes the check
+        // much more difficult. --Ceriel
+        if (mg.isUsedForArrayStore(stackConsumers[0]) || mg.isUsedForPutField(stackConsumers[0])) {
+            // So, here we have a spawn that stores into an object field or an
+            // array element.
+            Integer[] localVariableIndices = spawnableCall.getIndicesStores();
+            for (Integer i : localVariableIndices) {
+                if (mg.isParameter(localVariableIndices[i])) {
+                    // The object is indicated by a parameter. We give up.
+                    d.warning("Warning: the result of a spawn is stored in an object given as parameter to");
+                    d.warning ("the spawning method. This case is not handled by the sync inserter/adviser.");
+                    d.warning("The result is likely not optimal (to put it lightly).");
+                    resultAnalysisFailed = true;
+                }
+            }
+            // Here, the object is indicated by a local variable. This is OK if
+            // 1. There is no load of this local variable present in front of the spawn.
+            // 2. The object is allocated in the spawning method, and the result of the allocation
+            //    is stored in this local variable.
+            // First check 1.
+            Set<BasicBlock> predecessors = callerBlock.getAllPredecessors();
+            for (BasicBlock b : predecessors) {
+                LoadAwareBasicBlock lb = new LoadAwareBasicBlock(b);
+                for (Integer i : localVariableIndices) {
+                    if (lb.containsLoadWithIndex(i)) {
+                        d.warning("Warning: the result of a spawn is stored in an object that has aliases.");
+                        d.warning("The result is likely not optimal (to put it lightly).");
+                        resultAnalysisFailed = true;
+                    }
+                }
+            }
+            for (Integer i : localVariableIndices) {
+                if (new LoadAwareBasicBlock(callerBlock).containsLoadWithIndexBefore(
+                        spawnableCall.getInvokeInstruction(), i)) {
+                    d.warning("Warning: the result of a spawn is stored in an object that may have aliases.");
+                    d.warning("The result is likely not optimal (to put it lightly).");
+                    resultAnalysisFailed = true;
+                }
+            }
+            // Now check 2.
+        }
+
 
 	endingPaths = basicBlockGraph.getEndingPathsFrom(idBasicBlock);
 	this.d.log(2, "ending paths from %d:\n", idBasicBlock);

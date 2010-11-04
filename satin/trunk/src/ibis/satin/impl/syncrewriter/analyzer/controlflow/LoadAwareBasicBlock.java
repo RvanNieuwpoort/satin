@@ -37,6 +37,20 @@ class LoadAwareBasicBlock extends BasicBlock {
     }
 
 
+    boolean containsLoadWithIndexBefore(InstructionHandle ih, 
+            int localVarIndex) {
+        for (InstructionContext ic : instructions) {
+            InstructionHandle current = ic.getInstruction();
+            if (current.equals(ih)) {
+                break;
+            }
+            if (methodGen.instructionLoadsTo(current, localVarIndex)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /* private methods */
 
     private boolean containsLoadWithIndexAfter(InstructionHandle ih, 
@@ -52,4 +66,6 @@ class LoadAwareBasicBlock extends BasicBlock {
 	}
 	return false;
     }
+    
+    
 }

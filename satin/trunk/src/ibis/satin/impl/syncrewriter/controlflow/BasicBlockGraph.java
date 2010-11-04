@@ -26,7 +26,6 @@ public class BasicBlockGraph {
 
 
     private Path basicBlocks;
-
     
 
     /* public methods */
