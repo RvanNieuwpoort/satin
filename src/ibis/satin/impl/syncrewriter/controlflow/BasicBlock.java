@@ -3,6 +3,8 @@ package ibis.satin.impl.syncrewriter.controlflow;
 import ibis.satin.impl.syncrewriter.bcel.MethodGen;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.verifier.structurals.InstructionContext;
@@ -27,6 +29,7 @@ public class BasicBlock {
 
     private int id;
     private BasicBlock[] targets;
+    private HashSet<BasicBlock> predecessors = new HashSet<BasicBlock>();
     private int level;
 
 
@@ -66,6 +69,10 @@ public class BasicBlock {
 	sb.append(String.format("END BASIC BLOCK: %d\n", id));
 
 	return sb.toString();
+    }
+    
+    public MethodGen getMethodGen() {
+        return methodGen;
     }
 
 
@@ -116,6 +123,7 @@ public class BasicBlock {
 	this.id = basicBlock.id;
 	this.targets = basicBlock.targets;
 	this.level = basicBlock.level;
+	this.predecessors = basicBlock.predecessors;
     }
 
 
@@ -152,8 +160,21 @@ public class BasicBlock {
 
     void setTarget(int id, BasicBlock target) {
 	targets[id] = target;
+	target.predecessors.add(this);
     }
 
+    public Set<BasicBlock> getAllPredecessors() {
+        HashSet<BasicBlock> result = new HashSet<BasicBlock>(predecessors);
+        int size = 0;
+        do {
+            size = result.size();
+            BasicBlock[] blocks = result.toArray(new BasicBlock[result.size()]);
+            for (BasicBlock b : blocks) {
+                result.addAll(b.predecessors);
+            }
+        } while (size < result.size());
+        return result;
+    }
 
     BasicBlock getTarget(int id) {
 	return targets[id];
@@ -199,12 +220,25 @@ public class BasicBlock {
     int getNrOfTargets() {
 	return targets.length;
     }
+    
+    
+    int getNrOfPredecessors() {
+        return predecessors.size();
+    }
 
 
+    boolean isStarting() {
+        return predecessors.size() == 0;
+    }
+    
+    
     boolean isEnding() {
 	return targets.length == 0;
     }
 
+    boolean isPredecessorOf(BasicBlock basicBlock) {
+        return predecessors.contains(basicBlock);
+    }
 
     boolean targets(BasicBlock basicBlock) {
 	for (BasicBlock target : targets) {

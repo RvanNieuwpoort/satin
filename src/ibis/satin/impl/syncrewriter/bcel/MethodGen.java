@@ -31,6 +31,7 @@ import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.SALOAD;
 import org.apache.bcel.generic.SASTORE;
 import org.apache.bcel.generic.StoreInstruction;
+import org.apache.bcel.generic.Type;
 import org.apache.bcel.verifier.structurals.ControlFlowGraph;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 
@@ -44,7 +45,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     private static final long serialVersionUID = 1L;
     
     private static boolean EXACT = true;
-
+    
+    protected int parameterPos;
 
     /** Instantiate from an existing method.
      *
@@ -54,6 +56,25 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      */
     public MethodGen(Method method, String className, ConstantPoolGen constantPoolGen) {
 	super(method, className, constantPoolGen);
+	       
+        // Analyze how many stack positions are for parameters.
+        // We won't touch those.
+        parameterPos = isStatic() ? 0 : 1;
+
+        Type[] parameters = getArgumentTypes();
+
+        parameterPos += parameters.length;
+        for (int i = 0; i < parameters.length; i++) {
+            if (parameters[i].equals(Type.LONG)
+                || parameters[i].equals(Type.DOUBLE)) {
+                parameterPos++;
+            }
+        }
+    }
+    
+    
+    public boolean isParameter(int pos) {
+        return pos < parameterPos;
     }
 
 
