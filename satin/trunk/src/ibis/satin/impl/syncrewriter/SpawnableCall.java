@@ -82,7 +82,9 @@ public class SpawnableCall {
     /** Returns a string representation.
      */
     public String toString() {
-	StringBuilder sb = new StringBuilder(String.format("%s, resultIndices: ", invokeInstruction));
+	StringBuilder sb = new StringBuilder();
+	sb.append(invokeInstruction.toString());
+	sb.append(", resultIndices: ");
 	if (indicesStores == null) {
 	    sb.append("(none), exceptions are not handled");
 	}
