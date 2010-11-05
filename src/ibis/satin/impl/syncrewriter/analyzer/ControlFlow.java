@@ -1,5 +1,6 @@
 package ibis.satin.impl.syncrewriter.analyzer;
 
+import ibis.satin.impl.syncrewriter.AliasingException;
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableCall;
 import ibis.satin.impl.syncrewriter.SpawningMethod;
@@ -84,8 +85,14 @@ public class ControlFlow implements Analyzer {
 	}
 
 	d.log(0, "proposing basic blocks\n"); 
-	BasicBlock[] proposedBasicBlocks
-	    = proposeBasicBlocks(spawningMethod); 
+	
+	BasicBlock[] proposedBasicBlocks;
+    try {
+        proposedBasicBlocks = proposeBasicBlocks(spawningMethod);
+    } catch (AliasingException e) {
+        d.log(0, "aliasing exception; returning immediate syncs");
+        return getImmediateSyncs(spawningMethod);
+    } 
 	d.log(0, "proposed basic blocks:\n"); d.log(1, "%s\n", toString(proposedBasicBlocks));
 
 	return getEarliestLoadInstructions(proposedBasicBlocks,
@@ -479,7 +486,7 @@ public class ControlFlow implements Analyzer {
      * Again remove duplicates
      */
     private BasicBlock[] proposeBasicBlocks(SpawningMethod spawningMethod) 
-	throws SyncInsertionProposalFailure {
+	throws SyncInsertionProposalFailure, AliasingException {
 
 	ArrayList<SpawnableCall> spawnableCalls = 
 	    spawningMethod.getSpawnableCalls();
@@ -488,6 +495,12 @@ public class ControlFlow implements Analyzer {
 	d.log(1, "analyzing spawnable calls\n");
 	SpawnableCallAnalysis[] spawnableCallAnalyses = getSpawnableCallAnalyses(spawnableCalls, basicBlockGraph);
 	d.log(1, "analyzed spawnable calls\n");
+	
+	for (SpawnableCallAnalysis s : spawnableCallAnalyses) {
+	    if (s.mayHaveAliases()) {
+	        throw new AliasingException();
+	    }
+	}
 
 	d.log(1, "all store load paths:\n");
 	ArrayList<Path> allStoreLoadPaths = getStoreLoadPaths(spawnableCallAnalyses);

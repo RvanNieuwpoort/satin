@@ -47,6 +47,7 @@ public class SyncAdviser extends SyncRewriter {
                 advise(className, spawnSignatures);
             }
             catch (NoSpawningClassException e) {
+                e.printStackTrace();
                 d.log(0, "%s is not a spawning class\n", className);
             }
         }

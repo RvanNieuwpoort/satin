@@ -1,6 +1,7 @@
 package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 
+import ibis.satin.impl.syncrewriter.controlflow.BasicBlock;
 import ibis.satin.impl.syncrewriter.controlflow.Path;
 
 import org.apache.bcel.generic.InstructionHandle;
@@ -16,10 +17,19 @@ public class StoreLoadPath extends Path {
     
     private InstructionHandle storeInstruction;
     private Integer[] localVariableIndices;
+    private boolean aliasProblem = false;
 
 
 
     /* package methods */
+    
+    StoreLoadPath(InstructionHandle storeInstruction, BasicBlock block, Integer[] localVariableIndices) {
+        super(new Path());
+        add(block);
+        this.storeInstruction = storeInstruction;
+        this.localVariableIndices = localVariableIndices;
+        aliasProblem = true;
+    }
 
     StoreLoadPath(InstructionHandle storeInstruction, Path path, Integer[] localVariableIndices)
 	throws NeverReadException {

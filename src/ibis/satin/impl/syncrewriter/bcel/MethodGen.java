@@ -205,6 +205,15 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    return false;
 	}
     }
+    
+    public boolean instructionStoresTo(InstructionHandle ih, int localVarIndex) {
+        try {
+            StoreInstruction storeInstruction = (StoreInstruction) (ih.getInstruction());
+            return storeInstruction.getIndex() == localVarIndex;
+        } catch(ClassCastException e) {
+            return false;
+        }
+    }
 
 
     /** Tests whether an instruction consumes what another instruction puts
@@ -394,7 +403,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     }
 
 
-    private boolean isArrayStore(Instruction instruction) {
+    public boolean isArrayStore(Instruction instruction) {
 	return instruction instanceof AASTORE || instruction instanceof BASTORE || 
 	    instruction instanceof CASTORE || instruction instanceof DASTORE ||
 	    instruction instanceof FASTORE || instruction instanceof IASTORE ||

@@ -116,15 +116,14 @@ public class SyncRewriter extends IbiscComponent {
 
 
     private boolean isSpawnable(JavaClass javaClass) {
-	JavaClass[] interfaces = javaClass.getAllInterfaces();
+        JavaClass[] interfaces = javaClass.getAllInterfaces();
 
-	for (JavaClass javaInterface : interfaces) {
-	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
-		return true;
-	    }
-	}
-
-	return false;
+        for (JavaClass javaInterface : interfaces) {
+            if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
