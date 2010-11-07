@@ -10,6 +10,7 @@ import ibis.satin.impl.syncrewriter.util.Debug;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.apache.bcel.classfile.LineNumberTable;
 import org.apache.bcel.generic.ALOAD;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.PUTFIELD;
@@ -45,8 +46,16 @@ public class SpawnableCallAnalysis {
 	
 	this.d.log(1, "analyzing spawnable call: %s at basic block %d\n", spawnableCall, idBasicBlock);
 	
+	    InstructionHandle invoker = spawnableCall.getInvokeInstruction();
+	
         MethodGen mg = callerBlock.getMethodGen();
-        InstructionHandle[] stackConsumers = mg.findInstructionConsumers(spawnableCall.getInvokeInstruction());
+        InstructionHandle[] stackConsumers = mg.findInstructionConsumers(invoker);
+        
+        LineNumberTable t = mg.getLineNumberTable(mg.getConstantPool());
+        
+        int spawnLineno = t.getSourceLine(invoker.getPosition());
+        
+        String className = mg.getClassName();
         
         for (InstructionHandle consumer : stackConsumers) {
             int indexToCheck = indexToCheckForAlias(consumer, mg);
@@ -62,38 +71,42 @@ public class SpawnableCallAnalysis {
                 d.log(0, "spawn stores in array element or object field, index " + indexToCheck);
                 if (mg.isParameter(indexToCheck)) {
                     // The object is indicated by a parameter. We give up.
-                    d.warning("The result of a spawn is stored in an object given as parameter to");
-                    d.warning ("the spawning method. This case is not handled by the sync inserter/adviser.");
-                    d.warning("The resulting sync placement is likely not optimal (to put it lightly).");
+                    d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
+                            + " is stored in an object given as parameter to "
+                            + "the spawning method. This case is not handled by the sync inserter/adviser. "
+                            + "The resulting sync placement is likely not optimal (to put it lightly).");
                     resultMayHaveAliases = true;
                     break;
                 }
-            }
-            // Here, the object is indicated by a local variable. This is OK if
-            // 1. There is no load of this local variable present in front of the spawn.
-            // 2. The object is allocated in the spawning method, and the result of the allocation
-            //    is stored in this local variable.
-            Set<BasicBlock> predecessors = callerBlock.getAllPredecessors();
-            for (BasicBlock b : predecessors) {
-                LoadAwareBasicBlock lb = new LoadAwareBasicBlock(b);
-                if (lb.containsLoadWithIndex(indexToCheck) || ! lb.noAliasesStoreWithIndex(indexToCheck)) {
-                    d.warning("The result of a spawn is stored in an object that may have aliases.");
-                    d.warning("The resulting sync placement is likely not optimal (to put it lightly).");
+            
+                // Here, the object is indicated by a local variable. This is OK if
+                // 1. There is no load of this local variable present in front of the spawn.
+                // 2. The object is allocated in the spawning method, and the result of the allocation
+                //    is stored in this local variable.
+                Set<BasicBlock> predecessors = callerBlock.getAllPredecessors();
+                for (BasicBlock b : predecessors) {
+                    LoadAwareBasicBlock lb = new LoadAwareBasicBlock(b);
+                    if (lb.containsLoadWithIndex(indexToCheck) || ! lb.noAliasesStoreWithIndex(indexToCheck)) {
+                        d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
+                                + " is stored in an object that may have aliases. "
+                                + "The resulting sync placement is likely not optimal (to put it lightly).");
+                        resultMayHaveAliases = true;
+                        break;
+                    }
+                }
+                LoadAwareBasicBlock lb = new LoadAwareBasicBlock(callerBlock);
+                if (lb.containsLoadWithIndexBefore(invoker, indexToCheck) || ! lb.noAliasesStoreWithIndexBefore(invoker, indexToCheck)) {
+                    d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
+                            + " is stored in an object that may have aliases. "
+                            + "The resulting sync placement is likely not optimal (to put it lightly).");
                     resultMayHaveAliases = true;
                     break;
                 }
-            }
-            LoadAwareBasicBlock lb = new LoadAwareBasicBlock(callerBlock);
-            InstructionHandle invoker = spawnableCall.getInvokeInstruction();
-            if (lb.containsLoadWithIndexBefore(invoker, indexToCheck) || ! lb.noAliasesStoreWithIndexBefore(invoker, indexToCheck)) {
-                d.warning("The result of a spawn is stored in an object that may have aliases.");
-                d.warning("The resulting sync placement is likely not optimal (to put it lightly).");
-                resultMayHaveAliases = true;
-                break;
             }
         }
 
         if (resultMayHaveAliases) {
+            spawnableCall.setResultMayHaveAliases(true);
             endingPaths = null;
             storeLoadPaths = new ArrayList<StoreLoadPath>();
             storeLoadPaths.add(new StoreLoadPath(spawnableCall.getInvokeInstruction(), callerBlock, spawnableCall.getIndicesStores()));

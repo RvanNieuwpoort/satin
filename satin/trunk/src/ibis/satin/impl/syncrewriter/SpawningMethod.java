@@ -85,7 +85,11 @@ public class SpawningMethod extends MethodGen {
         LineNumberTable t = getLineNumberTable(getConstantPool());
         
         for (InstructionHandle ih : ihs) {
-            int l = t.getSourceLine(ih.getPosition());
+            InstructionHandle h = ih.getNext();
+            if (h == null) {
+                h = ih;
+            }
+            int l = t.getSourceLine(h.getPosition());
             System.out.println("Insert a sync() in method "
                     + getName() + " at line "+ l + " in class " + getClassName());
         }
