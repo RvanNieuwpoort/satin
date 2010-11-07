@@ -17,9 +17,20 @@ public class SpawnableCall {
 
     private Integer[] indicesStores;
     private Type type;
-
+    
+    private boolean resultMayHaveAliases = false;
 
     /* public methods */
+
+    public boolean resultMayHaveAliases() {
+        return resultMayHaveAliases;
+    }
+
+
+    public void setResultMayHaveAliases(boolean resultMayHaveAliases) {
+        this.resultMayHaveAliases = resultMayHaveAliases;
+    }
+
 
     /** Tests whether exceptions are handled for this spawnable call.
      *

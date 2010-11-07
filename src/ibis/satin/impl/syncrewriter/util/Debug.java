@@ -15,7 +15,7 @@ public class Debug {
 
 
 
-    public static final int NR_CHARS_ON_LINE = 150;
+    public static final int NR_CHARS_ON_LINE = 80;
     public static final int INDENTATION_WIDTH = 2;
 
     private static final boolean IS_FIRST_LINE = true;

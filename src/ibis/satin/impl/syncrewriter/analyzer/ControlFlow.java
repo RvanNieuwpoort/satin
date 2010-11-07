@@ -1,6 +1,5 @@
 package ibis.satin.impl.syncrewriter.analyzer;
 
-import ibis.satin.impl.syncrewriter.AliasingException;
 import ibis.satin.impl.syncrewriter.Analyzer;
 import ibis.satin.impl.syncrewriter.SpawnableCall;
 import ibis.satin.impl.syncrewriter.SpawningMethod;
@@ -87,12 +86,8 @@ public class ControlFlow implements Analyzer {
 	d.log(0, "proposing basic blocks\n"); 
 	
 	BasicBlock[] proposedBasicBlocks;
-    try {
-        proposedBasicBlocks = proposeBasicBlocks(spawningMethod);
-    } catch (AliasingException e) {
-        d.log(0, "aliasing exception; returning immediate syncs");
-        return getImmediateSyncs(spawningMethod);
-    } 
+    proposedBasicBlocks = proposeBasicBlocks(spawningMethod);
+ 
 	d.log(0, "proposed basic blocks:\n"); d.log(1, "%s\n", toString(proposedBasicBlocks));
 
 	return getEarliestLoadInstructions(proposedBasicBlocks,
@@ -202,7 +197,18 @@ public class ControlFlow implements Analyzer {
 	ConstantPoolGen cp = spawningMethod.getConstantPool();
 	ArrayList<InstructionContext> instructions = basicBlock.getInstructions();
 	int indexAfterSpawnableCall = getIndexAfterSpawnableCall(instructions, spawnableCall);
-
+    if (spawnableCall.resultMayHaveAliases()) {
+        InstructionHandle[] consumers = spawningMethod.findInstructionConsumers(spawnableCall.getInvokeInstruction());
+        for (InstructionHandle h : consumers) {
+            for (InstructionContext c : instructions) {
+                if (c.getInstruction() == h) {
+                    return h;
+                }
+            }
+        }
+        return null;
+    }
+	
 	for (int i = indexAfterSpawnableCall; i < instructions.size(); i++) {
 	    InstructionHandle ih = instructions.get(i).getInstruction();
 	    try {
@@ -486,7 +492,7 @@ public class ControlFlow implements Analyzer {
      * Again remove duplicates
      */
     private BasicBlock[] proposeBasicBlocks(SpawningMethod spawningMethod) 
-	throws SyncInsertionProposalFailure, AliasingException {
+	throws SyncInsertionProposalFailure {
 
 	ArrayList<SpawnableCall> spawnableCalls = 
 	    spawningMethod.getSpawnableCalls();
@@ -494,13 +500,6 @@ public class ControlFlow implements Analyzer {
 
 	d.log(1, "analyzing spawnable calls\n");
 	SpawnableCallAnalysis[] spawnableCallAnalyses = getSpawnableCallAnalyses(spawnableCalls, basicBlockGraph);
-	d.log(1, "analyzed spawnable calls\n");
-	
-	for (SpawnableCallAnalysis s : spawnableCallAnalyses) {
-	    if (s.mayHaveAliases()) {
-	        throw new AliasingException();
-	    }
-	}
 
 	d.log(1, "all store load paths:\n");
 	ArrayList<Path> allStoreLoadPaths = getStoreLoadPaths(spawnableCallAnalyses);
