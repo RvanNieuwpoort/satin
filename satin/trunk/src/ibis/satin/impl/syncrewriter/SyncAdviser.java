@@ -10,7 +10,7 @@ import org.apache.bcel.classfile.JavaClass;
 public class SyncAdviser extends SyncRewriter {
 
     void advise(JavaClass javaClass, SpawnSignature[] spawnSignatures)
-            throws NoSpawningClassException {
+            throws NoSpawningClassException, AssumptionFailure {
         String className = javaClass.getClassName();
         SpawningClass spawnableClass = 
             new SpawningClass(javaClass, spawnSignatures, new Debug(d.turnedOn(), 2));
@@ -21,7 +21,7 @@ public class SyncAdviser extends SyncRewriter {
     }
     
     void advise(String className, SpawnSignature[] spawnSignatures) 
-            throws NoSpawningClassException {
+            throws NoSpawningClassException, AssumptionFailure {
 
         JavaClass javaClass = getClassFromName(className);
         SpawningClass spawnableClass = 
@@ -47,8 +47,12 @@ public class SyncAdviser extends SyncRewriter {
                 advise(className, spawnSignatures);
             }
             catch (NoSpawningClassException e) {
-                e.printStackTrace();
-                d.log(0, "%s is not a spawning class\n", className);
+                d.warning("%s is not a spawning class", className);
+            }
+            catch (AssumptionFailure e) {
+                d.error("%s has spawns that don't return a value or throw an inlet."
+                        + " The syncadviser cannot handle this.", className);
+                System.exit(1);
             }
         }
     }
@@ -93,6 +97,11 @@ public class SyncAdviser extends SyncRewriter {
                 }
                 catch (NoSpawningClassException e) {
                     d.log(0, "%s is not a spawning class\n", clazz.getClassName());
+                }
+                catch (AssumptionFailure e) {
+                    d.error("%s has spawns that don't return a value or throw an inlet."
+                            + " The syncadviser cannot handle this.", clazz.getClassName());
+                    System.exit(1);
                 }
             }
         }

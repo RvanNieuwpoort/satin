@@ -270,21 +270,22 @@ public class SpawningMethod extends MethodGen {
 	    InstructionHandle ih = il.getStart();
 
 	    do {
-		Instruction instruction = ih.getInstruction();
-		if (instruction.equals(spawnableInvoke) && (instruction.produceStack(constantPoolGen) > 0)) {
-		    spawnableCalls.add(getSpawnableCallReturningValue(ih));
-		}
-		else if (instruction.equals(spawnableInvoke) && 
-			(instruction.produceStack(constantPoolGen) == 0) &&
-			spawnSignatureGen.getExceptions().length > 0) {
-		    spawnableCalls.add(getSpawnableCallWithException(ih, spawnSignatureGen));
-			}
-		else if (instruction.equals(spawnableInvoke) && (instruction.produceStack(constantPoolGen) == 0)) {
-		    throw new AssumptionFailure("Not satisfying assumption that spawnable method returns something or throws something");
-		}
-		else {
-		    // ok
-		}
+	        Instruction instruction = ih.getInstruction();
+    		if (instruction.equals(spawnableInvoke)) {
+    		    if (instruction.produceStack(constantPoolGen) > 0) {
+    		        spawnableCalls.add(getSpawnableCallReturningValue(ih));
+    		    } else if (instruction.produceStack(constantPoolGen) == 0) {
+    		        if (spawnSignatureGen.getExceptions().length > 0) {
+    		            spawnableCalls.add(getSpawnableCallWithException(ih, spawnSignatureGen));
+    		        } else {
+    		            throw new AssumptionFailure("Not satisfying assumption that spawnable method returns something or throws something");
+    		        }
+    		    } else {
+    		        throw new AssumptionFailure("Not satisfying assumption that spawnable method returns something or throws something");
+    		    }
+    		} else {
+    		    // OK
+    		}
 	    } while((ih = ih.getNext()) != null);
 
 	    return spawnableCalls;

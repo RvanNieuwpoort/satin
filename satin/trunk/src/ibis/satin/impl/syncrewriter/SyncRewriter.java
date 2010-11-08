@@ -68,7 +68,7 @@ public class SyncRewriter extends IbiscComponent {
 
 
     void rewrite(String className, SpawnSignature[] spawnSignatures) throws NoSpawningClassException, 
-	 ClassRewriteFailure {
+	 ClassRewriteFailure, AssumptionFailure {
 
 	JavaClass javaClass = getClassFromName(className);
 	SpawningClass spawnableClass = 
@@ -85,7 +85,7 @@ public class SyncRewriter extends IbiscComponent {
     }
     
     void rewrite(JavaClass javaClass, SpawnSignature[] spawnSignatures)
-            throws NoSpawningClassException, ClassRewriteFailure {
+            throws NoSpawningClassException, ClassRewriteFailure, AssumptionFailure {
         String className = javaClass.getClassName();
         SpawningClass spawnableClass = 
             new SpawningClass(javaClass, spawnSignatures, new Debug(d.turnedOn(), 2));
@@ -282,6 +282,11 @@ public class SyncRewriter extends IbiscComponent {
 		d.error("Failed to rewrite %s\n", className);
 		returnCode++;
 	    }
+	    catch (AssumptionFailure e) {
+	        d.error("%s has spawns that don't return a value or throw an inlet."
+	                + " The syncrewriter cannot handle this.", className);
+	        System.exit(1);
+        }
 	}
 	System.exit(returnCode);
     }
@@ -300,7 +305,7 @@ public class SyncRewriter extends IbiscComponent {
             setAnalyzer("ControlFlow");
         }
         
-        d.log(0, "rewriting for following spawnsignatures:\n");
+        d.log(0, "rewriting for following spawnsignatures:");
         SpawnSignature[] spawnSignatures = getSpawnSignatures(classNames);
         print(spawnSignatures, 1);
         
@@ -311,10 +316,15 @@ public class SyncRewriter extends IbiscComponent {
                     rewrite(clazz, spawnSignatures);
                 }
                 catch (NoSpawningClassException e) {
-                    d.log(0, "%s is not a spawning class\n", clazz.getClassName());
+                    d.warning("%s is not a spawning class", clazz.getClassName());
                 }
                 catch (ClassRewriteFailure e) {
-                    System.err.println("Syncrewriter failed to rewrite " + clazz.getClassName());
+                    d.error("Syncrewriter failed to rewrite %s", clazz.getClassName());
+                    System.exit(1);
+                }
+                catch (AssumptionFailure e) {
+                    d.error("%s has spawns that don't return a value or throw an inlet."
+                            + " The syncRewriter cannot handle this.", clazz.getClassName());
                     System.exit(1);
                 }
             }
