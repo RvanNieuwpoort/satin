@@ -93,7 +93,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	ConstantPoolGen constantPoolGen = getConstantPool();
 	int wordsOnStack = ih.getInstruction().produceStack(constantPoolGen);
 	ControlFlowGraph controlFlowGraph = new ControlFlowGraph(this);
-	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, ih.getNext(), constantPoolGen, controlFlowGraph, EXACT);
+	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack,
+	        ih.getNext(), constantPoolGen, controlFlowGraph, EXACT);
 	InstructionHandle[] consumersArray = new InstructionHandle[consumers.size()];
 	return consumers.toArray(consumersArray);
     }
@@ -116,11 +117,11 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	ConstantPoolGen constantPoolGen = getConstantPool();
 	int wordsOnStack = ih.getInstruction().produceStack(constantPoolGen);
 	ControlFlowGraph controlFlowGraph = new ControlFlowGraph(this);
-	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, ih.getNext(), constantPoolGen, controlFlowGraph, !EXACT);
+	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack,
+	        ih.getNext(), constantPoolGen, controlFlowGraph, !EXACT);
 	InstructionHandle[] consumersArray = new InstructionHandle[consumers.size()];
 	return consumers.toArray(consumersArray);
     }
-
 
 
     /** Tests whether an object load instruction is used for puting something
@@ -300,11 +301,11 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      * instruction. 
      * @see #getObjectReferenceLoadInstruction(InstructionHandle)
      */
-    public int getIndexStore(InstructionHandle instructionHandle) throws ClassCastException {
+    public LocalVariableGen getIndexStore(InstructionHandle instructionHandle) throws ClassCastException {
 	try {
 	    StoreInstruction storeInstruction = (StoreInstruction) 
 		(instructionHandle.getInstruction());
-	    return storeInstruction.getIndex();
+	    return findLocalVar(instructionHandle, storeInstruction.getIndex());
 	}
 	catch (ClassCastException e) {
 	}
@@ -315,7 +316,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
 	    // If not an ALOAD, we don't handle this, so this will default into a
 	    // sync right after the spawn. --Ceriel
-	    return objectLoadInstruction.getIndex();
+	    return findLocalVar(ih, objectLoadInstruction.getIndex());
 	}
 	@SuppressWarnings("unused")
 	PUTFIELD p = (PUTFIELD) instructionHandle.getInstruction();
@@ -325,7 +326,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	ALOAD objectLoadInstruction = (ALOAD) ih.getInstruction();
 	// If not an ALOAD, we don't handle this, so this will default into a
 	// sync right after the spawn. --Ceriel
-	return objectLoadInstruction.getIndex();
+	return findLocalVar(ih, objectLoadInstruction.getIndex());
     }
 
 
@@ -396,7 +397,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	InstructionContext currentContext = controlFlowGraph.contextOf(current);
 	for (InstructionContext successorContext : currentContext.getSuccessors()) {
 	    InstructionHandle successor = successorContext.getInstruction();
-	    consumers.addAll(getInstructionsConsuming(wordsOnStack, successor, constantPoolGen, controlFlowGraph, exact));
+	    consumers.addAll(getInstructionsConsuming(wordsOnStack, successor,
+	            constantPoolGen, controlFlowGraph, exact));
 	}
 
 	return consumers;
@@ -464,7 +466,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     private boolean consumesIncludingDUP(InstructionHandle consumer, InstructionHandle consumee, 
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
-	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
+	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack,
+	        consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
 
 	return containsDUP(consumers) && consumes(consumer, getDUP(consumers));
     }
@@ -480,7 +483,8 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     private boolean consumesIncludingArrayLoad(InstructionHandle consumer, InstructionHandle consumee, 
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
-	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
+	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack,
+	        consumee.getNext(), constantPoolGen, controlFlowGraph, EXACT);
 
 	return containsArrayLoad(consumers) && consumes(consumer, getArrayLoad(consumers));
     }
@@ -497,8 +501,41 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     private boolean consumes(InstructionHandle consumer, InstructionHandle consumee, 
 	    ConstantPoolGen constantPoolGen, ControlFlowGraph controlFlowGraph) {
 	int wordsOnStack = consumee.getInstruction().produceStack(constantPoolGen);
-	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack, consumee.getNext(), constantPoolGen, controlFlowGraph, !EXACT);
+	ArrayList<InstructionHandle> consumers = getInstructionsConsuming(wordsOnStack,
+	        consumee.getNext(), constantPoolGen, controlFlowGraph, !EXACT);
 
 	return consumers.contains(consumer); 
+    }
+    
+    public LocalVariableGen findLocalVar(InstructionHandle ih, int index) {
+        LocalVariableGen[] lt = getLocalVariables();
+        for (LocalVariableGen l : lt) {
+            if (l.getIndex() == index) {
+                InstructionHandle start = l.getStart();
+                InstructionHandle prev = start.getPrev();
+                // The initial store is not included in the start/end range, so include the previous
+                // instruction if it exists.
+                InstructionHandle end = l.getEnd();
+                int startIndex = prev != null ? prev.getPosition() : start.getPosition();
+                int endIndex = end.getPosition();
+                if (ih.getPosition() >= startIndex && ih.getPosition() <= endIndex) {
+                    return l;
+                }
+            }
+        }
+        /*
+        System.err.println("Oops, could not find local " + index);
+        System.err.println("Instruction = " + ih.getInstruction());
+        System.err.println("Instruction index = " + ih.getPosition());
+        for (LocalVariableGen l : lt) {
+            if  (l.getIndex() == index) {
+                InstructionHandle start = l.getStart();
+                InstructionHandle end = l.getEnd();
+                System.err.println("" + l);
+                System.err.println("start " + start.getPosition() + ", end " + end.getPosition());
+            }
+        }
+        */       
+        throw new RuntimeException("Oops: could not find local variable");
     }
 }

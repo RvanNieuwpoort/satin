@@ -14,6 +14,7 @@ import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.ObjectType;
 
 
@@ -95,9 +96,8 @@ public class SpawningMethod extends MethodGen {
         }
     }
 
-
     /* private methods */
-
+    
     private void insertSync(Analyzer analyzer) throws MethodRewriteFailure {
 	d.log(1, "trying to insert sync statement(s)\n");
 	InstructionHandle[] ihs = 
@@ -164,14 +164,14 @@ public class SpawningMethod extends MethodGen {
 
 
     private void getIndicesStores(InstructionHandle start,
-	    InstructionHandle end, ArrayList<Integer> resultIndices) {
+	    InstructionHandle end, ArrayList<LocalVariableGen> resultIndices) {
 
 	for (InstructionHandle current = start.getNext() ;current != end.getNext(); current = current.getNext()) {
 	    try {
-		int indexStore = getIndexStore(current);
-		if (!resultIndices.contains(indexStore)) {
-		    resultIndices.add(indexStore);
-		}
+	        LocalVariableGen l = getIndexStore(current);
+		    if (! resultIndices.contains(l)) {
+		        resultIndices.add(l);
+		    }
 	    }
 	    catch (ClassCastException e) {
 		// no problem, just not a store 
@@ -183,14 +183,14 @@ public class SpawningMethod extends MethodGen {
     private SpawnableCall getSpawnableCallWithException(InstructionHandle invokeInstruction, 
 	    ArrayList<CodeExceptionGen> exceptionHandlers) {
 
-	ArrayList<Integer> resultIndices = new ArrayList<Integer>();
+	ArrayList<LocalVariableGen> resultIndices = new ArrayList<LocalVariableGen>();
 	for (CodeExceptionGen exceptionHandler : exceptionHandlers) {
 	    InstructionHandle start = exceptionHandler.getHandlerPC(); 
 	    InstructionHandle end = getEndExceptionHandler(exceptionHandler);
 	    getIndicesStores(start, end, resultIndices);
 	}
 
-	Integer[] dummy = new Integer[resultIndices.size()];
+	LocalVariableGen[] dummy = new LocalVariableGen[resultIndices.size()];
 
 	return new SpawnableCall(invokeInstruction,
 		getObjectReferenceLoadInstruction(invokeInstruction),
@@ -214,7 +214,7 @@ public class SpawningMethod extends MethodGen {
 
     /* Find the index of the variable in which a spawnable call stores.
      */
-    private Integer[] findIndexStore(InstructionHandle spawnableMethodInvoke) throws ResultNotStored {
+    private LocalVariableGen[] findIndexStore(InstructionHandle spawnableMethodInvoke) throws ResultNotStored {
 	InstructionHandle[] stackConsumers = findInstructionConsumers(spawnableMethodInvoke);
 	if (stackConsumers.length != 1) {
 	    /*
@@ -228,7 +228,7 @@ public class SpawningMethod extends MethodGen {
 	    // just mark it as a result that isn't stored.
 	}
 	try {
-	    Integer[] indices = new Integer[1];
+	    LocalVariableGen[] indices = new LocalVariableGen[1];
 	    indices[0] = getIndexStore(stackConsumers[0]);
 	    return indices;
 	}

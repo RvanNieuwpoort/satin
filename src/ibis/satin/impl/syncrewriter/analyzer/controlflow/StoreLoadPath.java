@@ -5,6 +5,7 @@ import ibis.satin.impl.syncrewriter.controlflow.BasicBlock;
 import ibis.satin.impl.syncrewriter.controlflow.Path;
 
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.LocalVariableGen;
 
 
 
@@ -16,14 +17,14 @@ public class StoreLoadPath extends Path {
     private static final long serialVersionUID = 1L;
     
     private InstructionHandle storeInstruction;
-    private Integer[] localVariableIndices;
+    private LocalVariableGen[] localVariableIndices;
     private boolean aliasProblem = false;
 
 
 
     /* package methods */
     
-    StoreLoadPath(InstructionHandle storeInstruction, BasicBlock block, Integer[] localVariableIndices) {
+    StoreLoadPath(InstructionHandle storeInstruction, BasicBlock block, LocalVariableGen[] localVariableIndices) {
         super(new Path());
         add(block);
         this.storeInstruction = storeInstruction;
@@ -31,7 +32,7 @@ public class StoreLoadPath extends Path {
         aliasProblem = true;
     }
 
-    StoreLoadPath(InstructionHandle storeInstruction, Path path, Integer[] localVariableIndices)
+    StoreLoadPath(InstructionHandle storeInstruction, Path path, LocalVariableGen[] localVariableIndices)
 	throws NeverReadException {
 	super(path);
 
@@ -101,8 +102,8 @@ public class StoreLoadPath extends Path {
     }
 
 
-    private boolean containsLoadWithIndex(LoadAwareBasicBlock basicBlock, Integer[] localVariableIndices) {
-	for (Integer localVariableIndex : localVariableIndices) {
+    private boolean containsLoadWithIndex(LoadAwareBasicBlock basicBlock, LocalVariableGen[] localVariableIndices) {
+	for (LocalVariableGen localVariableIndex : localVariableIndices) {
 	    if (basicBlock.containsLoadWithIndex(localVariableIndex)) {
 		return true;
 	    }
@@ -111,8 +112,8 @@ public class StoreLoadPath extends Path {
     }
 
 
-    private boolean containsLoadWithIndexAfter(LoadAwareBasicBlock basicBlock, Integer[] localVariableIndices, InstructionHandle instruction) {
-	for (Integer localVariableIndex : localVariableIndices) {
+    private boolean containsLoadWithIndexAfter(LoadAwareBasicBlock basicBlock, LocalVariableGen[] localVariableIndices, InstructionHandle instruction) {
+	for (LocalVariableGen localVariableIndex : localVariableIndices) {
 	    if (basicBlock.containsLoadWithIndexAfter(instruction, localVariableIndex)) {
 		return true;
 	    }
@@ -125,7 +126,7 @@ public class StoreLoadPath extends Path {
      * storeInstruction where one of the local variables with indices in
      * localVariableIndices is loaded. 
      */
-    private int getIndexEarliestBasicBlock(Integer[] localVariableIndices, InstructionHandle storeInstruction) throws NeverReadException {
+    private int getIndexEarliestBasicBlock(LocalVariableGen[] localVariableIndices, InstructionHandle storeInstruction) throws NeverReadException {
 	for (int i = 0; i < size(); i++) {
 	    LoadAwareBasicBlock basicBlock = new LoadAwareBasicBlock(get(i));
 	    if (i == 0) {
