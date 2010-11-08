@@ -20,7 +20,7 @@ class SpawningClass extends ClassGen {
     /* package methods */
 
 
-    SpawningClass (JavaClass javaClass, SpawnSignature[] allSpawnSignatures, Debug d) throws NoSpawningClassException {
+    SpawningClass (JavaClass javaClass, SpawnSignature[] allSpawnSignatures, Debug d) throws NoSpawningClassException, AssumptionFailure {
 	super(javaClass);
 
 	if (!javaClass.isClass()) throw new NoSpawningClassException();
@@ -158,7 +158,7 @@ class SpawningClass extends ClassGen {
      * Therefore, the easiest option is chosen: Just try to create a
      * SpawningMethod for some spawnSignature and record the spawnSignature.
      */
-    private void getSpawnSignatures(ArrayList<SpawnSignature> spawnSignatures, SpawnSignature spawnSignature) {
+    private void getSpawnSignatures(ArrayList<SpawnSignature> spawnSignatures, SpawnSignature spawnSignature) throws AssumptionFailure {
 	Method[] methods = getMethods();
 
 	for (Method method : methods) {
@@ -172,14 +172,11 @@ class SpawningClass extends ClassGen {
 	    catch (NoSpawningMethodException e) {
 		// spawnSignature is not called
 	    }
-	    catch (AssumptionFailure e) {
-		// ignore for now, will be caught the second time
-	    }
 	}
     }
 
 
-    private SpawnSignature[] getSpawnSignatures(SpawnSignature[] allSpawnSignatures) {
+    private SpawnSignature[] getSpawnSignatures(SpawnSignature[] allSpawnSignatures) throws AssumptionFailure {
 	ArrayList<SpawnSignature> spawnSignatures = new ArrayList<SpawnSignature>();
 
 	for (SpawnSignature spawnSignature : allSpawnSignatures) {
