@@ -131,10 +131,24 @@ public class Debug {
 	}
 	sb.append(((message.replace('\n', ' ')).replace('\t', ' ')).trim());
 	if (sb.length() > NR_CHARS_ON_LINE) {
-	    String firstLine = sb.substring(0, NR_CHARS_ON_LINE);
-	    String followingLines = sb.substring(NR_CHARS_ON_LINE, sb.length());
+	    String firstLine = null;
+	    String followingLines = null;
+	    for (int i = NR_CHARS_ON_LINE; i < sb.length(); i++) {
+	        if (sb.charAt(i) == ' ') {
+	            firstLine = sb.substring(0, i);
+	            if (i+1 < sb.length()) { 
+	                followingLines = sb.substring(i+1, sb.length());
+	            }
+	            break;
+	        }
+	    }
+	    if (firstLine == null) {
+	        firstLine = sb.toString();
+	    }
 	    out.println(firstLine);
-	    print(prefix, isFirstLine ? indentation + 2 : indentation , followingLines, !IS_FIRST_LINE);
+	    if (followingLines != null) {
+	        print(prefix, isFirstLine ? indentation + 2 : indentation , followingLines, !IS_FIRST_LINE);
+	    }
 	    // all following lines are indented two times more
 	}
 	else {
