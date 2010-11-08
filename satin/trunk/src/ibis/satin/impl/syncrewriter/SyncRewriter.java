@@ -228,29 +228,28 @@ public class SyncRewriter extends IbiscComponent {
 	    String arg = argv[i];
 
 	    if (!arg.startsWith("-")) {
-		classNames.add(arg);
-	    }
-	    else if (arg.equals("-help")) {
-		printUsage();
-		System.exit(0);
+	        addToClassList(arg);
+	    } else if (arg.equals("-help")) {
+	        printUsage();
+	        System.exit(0);
 	    }
 	    else if (arg.equals("-debug")) {
-		d.turnOn();
+	        d.turnOn();       
 	    }
 	    else if (arg.equals("-analyzer")) {
-		if (i + 1 < argv.length) {
-		    setAnalyzer(argv[i+1]);
-		    i++; // skip the following as argument
-		}
-		else {
-		    System.out.printf("No analyzers specified\n"); 
-		    printUsage();
-		    System.exit(1);
-		}
+	        if (i + 1 < argv.length) {
+	            setAnalyzer(argv[i+1]);
+	            i++; // skip the following as argument
+	        }
+	        else {
+	            System.out.printf("No analyzers specified\n"); 
+	            printUsage();
+	            System.exit(1);
+	        }
 	    }
 	    else if (arg.equals("-analyzerinfo")) {
-		printAnalyzerInfo();
-		System.exit(0);
+	        printAnalyzerInfo();
+	        System.exit(0);
 	    }
 	}
 

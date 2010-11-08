@@ -206,7 +206,7 @@ public class ControlFlow implements Analyzer {
                 }
             }
         }
-        return null;
+        return instructions.get(indexAfterSpawnableCall).getInstruction();
     }
 	
 	for (int i = indexAfterSpawnableCall; i < instructions.size(); i++) {
