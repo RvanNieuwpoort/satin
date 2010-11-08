@@ -69,7 +69,7 @@ public class EarliestLoad implements Analyzer {
 	    try {
 		LoadInstruction loadInstruction = 
 		    (LoadInstruction) (ih.getInstruction());
-		if (spawnableCall.storesIn(loadInstruction.getIndex())) {
+		if (spawnableCall.storesIn(loadInstruction.getIndex(), ih)) {
 		    return ih;
 			}
 	    }

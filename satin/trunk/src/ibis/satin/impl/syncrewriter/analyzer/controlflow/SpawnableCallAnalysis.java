@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.bcel.classfile.LineNumberTable;
 import org.apache.bcel.generic.ALOAD;
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.PUTFIELD;
 
 /** This class represents an analysis of a spawnable call.
@@ -51,6 +52,13 @@ public class SpawnableCallAnalysis {
         MethodGen mg = callerBlock.getMethodGen();
         InstructionHandle[] stackConsumers = mg.findInstructionConsumers(invoker);
         
+        LocalVariableGen[] lt = mg.getLocalVariables();
+
+        if (lt == null) {
+            d.warning("Could not get local variable table, did you "
+                    + "compile with the '-g' option?");
+        }
+        
         LineNumberTable t = mg.getLineNumberTable(mg.getConstantPool());
         
         int spawnLineno = t.getSourceLine(invoker.getPosition());
@@ -66,6 +74,7 @@ public class SpawnableCallAnalysis {
             // too restrictive. On the other hand, allowing for more makes the check
             // much more difficult. --Ceriel
             if (indexToCheck >= 0) {
+                LocalVariableGen lg = mg.findLocalVar(invoker, indexToCheck);
                 // So, here we have a spawn that stores into an object field or an
                 // array element.
                 d.log(0, "spawn stores in array element or object field, index " + indexToCheck);
@@ -74,11 +83,11 @@ public class SpawnableCallAnalysis {
                     d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
                             + " is stored in an object given as parameter to "
                             + "the spawning method. This case is not handled by the sync inserter/adviser. "
-                            + "The resulting sync placement is likely not optimal (to put it lightly).");
+                            + "The resulting sync placement is likely not optimal.");
                     resultMayHaveAliases = true;
                     break;
                 }
-            
+             
                 // Here, the object is indicated by a local variable. This is OK if
                 // 1. There is no load of this local variable present in front of the spawn.
                 // 2. The object is allocated in the spawning method, and the result of the allocation
@@ -86,7 +95,7 @@ public class SpawnableCallAnalysis {
                 Set<BasicBlock> predecessors = callerBlock.getAllPredecessors();
                 for (BasicBlock b : predecessors) {
                     LoadAwareBasicBlock lb = new LoadAwareBasicBlock(b);
-                    if (lb.containsLoadWithIndex(indexToCheck) || ! lb.noAliasesStoreWithIndex(indexToCheck)) {
+                    if (lb.containsLoadWithIndex(lg) || ! lb.noAliasesStoreWithIndex(lg)) {
                         d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
                                 + " is stored in an object that may have aliases. "
                                 + "The resulting sync placement is likely not optimal (to put it lightly).");
@@ -95,7 +104,7 @@ public class SpawnableCallAnalysis {
                     }
                 }
                 LoadAwareBasicBlock lb = new LoadAwareBasicBlock(callerBlock);
-                if (lb.containsLoadWithIndexBefore(invoker, indexToCheck) || ! lb.noAliasesStoreWithIndexBefore(invoker, indexToCheck)) {
+                if (lb.containsLoadWithIndexBefore(invoker, lg) || ! lb.noAliasesStoreWithIndexBefore(invoker, lg)) {
                     d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
                             + " is stored in an object that may have aliases. "
                             + "The resulting sync placement is likely not optimal (to put it lightly).");
@@ -189,7 +198,7 @@ public class SpawnableCallAnalysis {
     /* private methods */
 
     private void fillStoreLoadPaths(ArrayList<StoreLoadPath> storeLoadPaths, Path path, SpawnableCall spawnableCall) {
-	Integer[] indicesStores = spawnableCall.getIndicesStores();
+	LocalVariableGen[] indicesStores = spawnableCall.getIndicesStores();
 	InstructionHandle invokeInstruction = spawnableCall.getInvokeInstruction();
 
 	if (!spawnableCall.exceptionsHandled()) {

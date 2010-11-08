@@ -8,6 +8,7 @@ import org.apache.bcel.generic.ANEWARRAY;
 import org.apache.bcel.generic.ConstantPushInstruction;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.MULTIANEWARRAY;
 import org.apache.bcel.generic.NEW;
 import org.apache.bcel.generic.NEWARRAY;
@@ -29,28 +30,25 @@ class LoadAwareBasicBlock extends BasicBlock {
     }
 
 
-    boolean containsLoadWithIndex(int localVarIndex) {
-	return containsLoadWithIndexAfter(null, localVarIndex, 
-		!IGNORE_FIRST_INSTRUCTIONS);
+    boolean containsLoadWithIndex(LocalVariableGen lg) {
+	return containsLoadWithIndexAfter(null, !IGNORE_FIRST_INSTRUCTIONS, lg);
     }
 
 
     /* tests whether this basic block contains load with index localVarIndex
      * after instructionHandle ih */
-    boolean containsLoadWithIndexAfter(InstructionHandle ih, int localVarIndex) {
-	return containsLoadWithIndexAfter(ih, localVarIndex, 
-		IGNORE_FIRST_INSTRUCTIONS);
+    boolean containsLoadWithIndexAfter(InstructionHandle ih, LocalVariableGen lg) {
+	return containsLoadWithIndexAfter(ih, IGNORE_FIRST_INSTRUCTIONS, lg);
     }
 
 
-    boolean containsLoadWithIndexBefore(InstructionHandle ih, 
-            int localVarIndex) {
+    boolean containsLoadWithIndexBefore(InstructionHandle ih, LocalVariableGen lg) {
         for (InstructionContext ic : instructions) {
             InstructionHandle current = ic.getInstruction();
             if (current.equals(ih)) {
                 break;
             }
-            if (methodGen.instructionLoadsTo(current, localVarIndex)) {
+            if (lg.containsTarget(current) && methodGen.instructionLoadsTo(current, lg.getIndex())) {
                 return true;
             }
         }
@@ -64,15 +62,14 @@ class LoadAwareBasicBlock extends BasicBlock {
      * @param localVarIndex the local variable index
      * @return true if all stores are OK or there are no stores.
      */
-    boolean noAliasesStoreWithIndexBefore(InstructionHandle ih, 
-            int localVarIndex) {
+    boolean noAliasesStoreWithIndexBefore(InstructionHandle ih, LocalVariableGen lg) {
         InstructionHandle prev = null;
         for (InstructionContext ic : instructions) {
             InstructionHandle current = ic.getInstruction();
             if (current.equals(ih)) {
                 break;
             }
-            if (methodGen.instructionStoresTo(current, localVarIndex)) {
+            if (lg.containsTarget(current) && methodGen.instructionStoresTo(current, lg.getIndex())) {
                 if (prev != null) {
                     Instruction i = prev.getInstruction();
                     if (i instanceof NEW || i instanceof NEWARRAY
@@ -87,14 +84,14 @@ class LoadAwareBasicBlock extends BasicBlock {
             }
             prev = current;
         }
-        return false;
+        return true;
     }
     
-    boolean noAliasesStoreWithIndex(int localVarIndex) {
+    boolean noAliasesStoreWithIndex(LocalVariableGen lg) {
         InstructionHandle prev = null;
         for (InstructionContext ic : instructions) {
             InstructionHandle current = ic.getInstruction();
-            if (methodGen.instructionStoresTo(current, localVarIndex)) {
+            if (lg.containsTarget(current) && methodGen.instructionStoresTo(current, lg.getIndex())) {
                 if (prev != null) {
                     Instruction i = prev.getInstruction();
                     if (i instanceof NEW || i instanceof NEWARRAY
@@ -109,20 +106,19 @@ class LoadAwareBasicBlock extends BasicBlock {
             }
             prev = current;
         }
-        return false;
+        return true;
     }
 
     /* private methods */
 
-    private boolean containsLoadWithIndexAfter(InstructionHandle ih, 
-	    int localVarIndex, boolean ignoreInstructions) {
+    private boolean containsLoadWithIndexAfter(InstructionHandle ih, boolean ignoreInstructions, LocalVariableGen lg) {
 	for (InstructionContext ic : instructions) {
 	    InstructionHandle current = ic.getInstruction();
 	    if (ignoreInstructions) { 
-		ignoreInstructions = !current.equals(ih);
+	        ignoreInstructions = !current.equals(ih);
 	    }
-	    else if (methodGen.instructionLoadsTo(current, localVarIndex)) {
-		return true;
+	    else if (lg.containsTarget(current) && methodGen.instructionLoadsTo(current, lg.getIndex())) {
+	        return true;
 	    }
 	}
 	return false;

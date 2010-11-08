@@ -2,6 +2,7 @@ package ibis.satin.impl.syncrewriter;
 
 
 import org.apache.bcel.generic.InstructionHandle;
+import org.apache.bcel.generic.LocalVariableGen;
 
 
 /** This class represents a spawnable call.
@@ -15,7 +16,7 @@ public class SpawnableCall {
     private InstructionHandle invokeInstruction;
     private InstructionHandle objectReference;
 
-    private Integer[] indicesStores;
+    private LocalVariableGen[] indicesStores;
     private Type type;
     
     private boolean resultMayHaveAliases = false;
@@ -56,7 +57,7 @@ public class SpawnableCall {
      *
      * @return The indices in which the spawnable call stores.
      */
-    public Integer[] getIndicesStores() {
+    public LocalVariableGen[] getIndicesStores() {
 	return indicesStores;
     }
 
@@ -76,8 +77,13 @@ public class SpawnableCall {
      * @return true if the spawnable call stores in a variable with index
      * index; false otherwise.
      */
-    public boolean storesIn(int index) {
-	    return contains(indicesStores, index);
+    public boolean storesIn(int index, InstructionHandle ih) {
+        for (LocalVariableGen g : indicesStores) {
+            if (g.containsTarget(ih) && g.getIndex() == index) {
+                return true;
+            }
+        }
+	    return false;
     }
 
 
@@ -100,7 +106,7 @@ public class SpawnableCall {
 	    sb.append("(none), exceptions are not handled");
 	}
 	else {
-	    for (Integer i : indicesStores) {
+	    for (LocalVariableGen i : indicesStores) {
 		sb.append(i);
 		sb.append(", ");
 	    }
@@ -114,7 +120,7 @@ public class SpawnableCall {
     /* package methods */
 
     SpawnableCall(InstructionHandle invokeInstruction, 
-	    InstructionHandle objectReference, Integer[] indicesStores) {
+	    InstructionHandle objectReference, LocalVariableGen[] indicesStores) {
 	this.invokeInstruction = invokeInstruction;
 	this.objectReference = objectReference;
 	this.indicesStores = indicesStores;
