@@ -6,6 +6,7 @@ import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.AALOAD;
 import org.apache.bcel.generic.AASTORE;
 import org.apache.bcel.generic.ALOAD;
+import org.apache.bcel.generic.ARRAYLENGTH;
 import org.apache.bcel.generic.BALOAD;
 import org.apache.bcel.generic.BASTORE;
 import org.apache.bcel.generic.CALOAD;
@@ -175,6 +176,23 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    return false;
 	}
     }
+    
+    /** Tests whether an object load instruction is used for computing an array length.
+     *
+     * @param loadInstruction the load instruction that loads the object
+     * reference onto the stack. 
+     * @return true if the instruction is a load instruction of an object which
+     * is used for computing an array length. 
+     */
+    public boolean isUsedForArrayLength(InstructionHandle loadInstruction) {
+        if (loadInstruction.getInstruction() instanceof ALOAD) {
+            InstructionHandle next = loadInstruction.getNext();
+            if (next != null && (next.getInstruction() instanceof ARRAYLENGTH)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 
     /** Tests whether an instruction loads to a local variable with a certain
@@ -200,6 +218,7 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	try {
 	    LoadInstruction loadInstruction = (LoadInstruction) (ih.getInstruction());
 	    return loadInstruction.getIndex() == localVarIndex && 
+	        !isUsedForArrayLength(ih) &&
 		!isUsedForArrayStore(ih) && !isUsedForPutField(ih);
 	}
 	catch(ClassCastException e) {
