@@ -226,7 +226,8 @@ public class ControlFlow implements Analyzer {
 		LoadInstruction loadInstruction = 
 		    (LoadInstruction) (ih.getInstruction());
 		if (spawnableCall.storesIn(loadInstruction.getIndex(), ih) && 
-			!spawningMethod.isUsedForArrayStore(ih) &&
+		        !spawningMethod.isUsedForArrayLength(ih) &&
+		        !spawningMethod.isUsedForArrayStore(ih) &&
 			!spawningMethod.isUsedForPutField(ih)) {  
 		    return ih;
 			}
