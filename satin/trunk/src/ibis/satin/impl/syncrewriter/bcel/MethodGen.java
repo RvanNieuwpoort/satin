@@ -527,6 +527,10 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
     }
     
     public LocalVariableGen findLocalVar(InstructionHandle ih, int index) {
+        return findLocalVar(ih, index, true);
+    }
+    
+    public LocalVariableGen findLocalVar(InstructionHandle ih, int index, boolean fatal) {
         LocalVariableGen[] lt = getLocalVariables();
         for (LocalVariableGen l : lt) {
             if (l.getIndex() == index) {
@@ -542,19 +546,23 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
                 }
             }
         }
-        /*
-        System.err.println("Oops, could not find local " + index);
-        System.err.println("Instruction = " + ih.getInstruction());
-        System.err.println("Instruction index = " + ih.getPosition());
-        for (LocalVariableGen l : lt) {
-            if  (l.getIndex() == index) {
-                InstructionHandle start = l.getStart();
-                InstructionHandle end = l.getEnd();
-                System.err.println("" + l);
-                System.err.println("start " + start.getPosition() + ", end " + end.getPosition());
+
+        if (fatal) {
+            System.err.println("Oops, could not find local " + index);
+            System.err.println("Instruction = " + ih.getInstruction());
+            System.err.println("Instruction index = " + ih.getPosition());
+            for (LocalVariableGen l : lt) {
+                if  (l.getIndex() == index) {
+                    InstructionHandle start = l.getStart();
+                    InstructionHandle end = l.getEnd();
+                    System.err.println("" + l);
+                    System.err.println("start " + start.getPosition() + ", end " + end.getPosition());
+                }
             }
+
+            throw new RuntimeException("Oops: could not find local variable");
+        } else {
+            return null;
         }
-        */       
-        throw new RuntimeException("Oops: could not find local variable");
     }
 }
