@@ -78,12 +78,20 @@ public class SpawnableCall {
      * index; false otherwise.
      */
     public boolean storesIn(int index, InstructionHandle ih) {
+	int insNo = ih.getPosition();
         for (LocalVariableGen g : indicesStores) {
-            if (g.containsTarget(ih) && g.getIndex() == index) {
-                return true;
+            if (g.getIndex() == index) {
+        	InstructionHandle end = g.getEnd();
+        	InstructionHandle start = g.getStart();
+        	if (start.getPrev() != null) {
+        	    start = start.getPrev();
+        	}
+        	if (ih.getPosition() >= start.getPosition() && ih.getPosition() <= end.getPosition()) {
+        	    return true;
+        	}
             }
         }
-	    return false;
+	return false;
     }
 
 
