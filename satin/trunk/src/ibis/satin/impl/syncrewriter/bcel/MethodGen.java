@@ -152,7 +152,6 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	}
     }
 
-
     /** Tests whether an object load instruction is used for storing something
      * in an array. 
      *
@@ -162,13 +161,18 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
      * is used for storing something in an array. 
      */
     public boolean isUsedForArrayStore(InstructionHandle loadInstruction) {
-	if (loadInstruction.getInstruction() instanceof ALOAD) {
+	if (loadInstruction.getInstruction() instanceof ALOAD || loadInstruction.getInstruction() instanceof AALOAD) {
 	    InstructionHandle[] loadInstructionConsumers = findExactInstructionConsumers(loadInstruction);
 	    if (loadInstructionConsumers.length == 0) return false;
 	    boolean isUsedForArrayStore = true;
 	    for (InstructionHandle loadInstructionConsumer : loadInstructionConsumers) {
 		Instruction consumer = loadInstructionConsumer.getInstruction();
-		isUsedForArrayStore &= isArrayStore(consumer);
+		if (consumer instanceof AALOAD) {
+		    isUsedForArrayStore &= isUsedForArrayStore(loadInstructionConsumer);
+		    // Could still be a multi-dimensional array
+		} else {
+		    isUsedForArrayStore &= isArrayStore(consumer);
+		}
 	    }
 	    return isUsedForArrayStore;
 	}
