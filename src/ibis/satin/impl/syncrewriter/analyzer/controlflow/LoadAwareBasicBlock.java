@@ -7,6 +7,7 @@ import ibis.satin.impl.syncrewriter.controlflow.BasicBlock;
 import org.apache.bcel.Repository;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
+import org.apache.bcel.generic.ACONST_NULL;
 import org.apache.bcel.generic.ANEWARRAY;
 import org.apache.bcel.generic.ConstantPushInstruction;
 import org.apache.bcel.generic.DUP;
@@ -105,7 +106,7 @@ class LoadAwareBasicBlock extends BasicBlock {
                         }
                      } else if (i instanceof NEWARRAY
                             || i instanceof ANEWARRAY || i instanceof MULTIANEWARRAY
-                            || i instanceof ConstantPushInstruction) {
+                            || i instanceof ConstantPushInstruction || i instanceof ACONST_NULL) {
                          prev = current;
                          continue;
                     }
@@ -163,17 +164,14 @@ class LoadAwareBasicBlock extends BasicBlock {
         // The initial store is not included in the start/end range, so include the previous
         // instruction if it exists.
         InstructionHandle end = lg.getEnd();
-        int startIndex = prev != null ? prev.getPosition() : start.getPosition();
-        int endIndex = end.getPosition();
+        int startPosition = prev != null ? prev.getPosition() : start.getPosition();
+        int endPosition = end.getPosition();
 	for (InstructionContext ic : instructions) {
 	    InstructionHandle current = ic.getInstruction();
 	    if (ignoreInstructions) { 
 	        ignoreInstructions = !current.equals(ih);
-	    }
-	    if (current.getPosition() < startIndex || current.getPosition() > endIndex) {
-		continue;
-	    }
-	    if (! ignoreInstructions && methodGen.instructionLoadsTo(current, lg.getIndex())) {
+	    } else if (current.getPosition() >= startPosition && current.getPosition() <= endPosition
+		    && methodGen.instructionLoadsTo(current, lg.getIndex())) {
 	        return true;
 	    }
 	}
