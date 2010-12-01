@@ -158,12 +158,22 @@ class LoadAwareBasicBlock extends BasicBlock {
     /* private methods */
 
     private boolean containsLoadWithIndexAfter(InstructionHandle ih, boolean ignoreInstructions, LocalVariableGen lg) {
+        InstructionHandle start = lg.getStart();
+        InstructionHandle prev = start.getPrev();
+        // The initial store is not included in the start/end range, so include the previous
+        // instruction if it exists.
+        InstructionHandle end = lg.getEnd();
+        int startIndex = prev != null ? prev.getPosition() : start.getPosition();
+        int endIndex = end.getPosition();
 	for (InstructionContext ic : instructions) {
 	    InstructionHandle current = ic.getInstruction();
 	    if (ignoreInstructions) { 
 	        ignoreInstructions = !current.equals(ih);
 	    }
-	    else if (lg.containsTarget(current) && methodGen.instructionLoadsTo(current, lg.getIndex())) {
+	    if (current.getPosition() < startIndex || current.getPosition() > endIndex) {
+		continue;
+	    }
+	    if (! ignoreInstructions && methodGen.instructionLoadsTo(current, lg.getIndex())) {
 	        return true;
 	    }
 	}
