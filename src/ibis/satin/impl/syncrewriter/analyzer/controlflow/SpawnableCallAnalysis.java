@@ -92,11 +92,10 @@ public class SpawnableCallAnalysis {
                 // 1. There is no load of this local variable present in front of the spawn.
                 // 2. The object is allocated in the spawning method, and the result of the allocation
                 //    is stored in this local variable.
-                // TODO: if not array, check the constructor for escapes
                 Set<BasicBlock> predecessors = callerBlock.getAllPredecessors();
                 for (BasicBlock b : predecessors) {
                     LoadAwareBasicBlock lb = new LoadAwareBasicBlock(b);
-                    if (lb.containsLoadWithIndex(lg) || ! lb.noAliasesStoreWithIndex(lg)) {
+                    if (! lb.noAliasesLoadWithIndex(lg) || ! lb.noAliasesStoreWithIndex(lg)) {
                         d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
                                 + " is stored in an object that may have aliases. "
                                 + "The resulting sync placement is likely not optimal (to put it lightly).");
@@ -105,9 +104,9 @@ public class SpawnableCallAnalysis {
                     }
                 }
                 LoadAwareBasicBlock lb = new LoadAwareBasicBlock(callerBlock);
-                boolean containsLoad = lb.containsLoadWithIndexBefore(invoker, lg);
-                boolean noalias = !containsLoad ? lb.noAliasesStoreWithIndexBefore(invoker, lg) : false;
-                if (containsLoad || ! noalias) {
+                boolean noAliasLoad = lb.noAliasesLoadWithIndexBefore(invoker, lg);
+                boolean noaliasStore = noAliasLoad ? lb.noAliasesStoreWithIndexBefore(invoker, lg) : false;
+                if (! noAliasLoad || ! noaliasStore) {
                     d.warning("The result of the spawn at line " + spawnLineno + " of class " + className 
                             + " is stored in an object that may have aliases. "
                             + "The resulting sync placement is likely not optimal (to put it lightly).");

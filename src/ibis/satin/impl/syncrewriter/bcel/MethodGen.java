@@ -18,6 +18,7 @@ import org.apache.bcel.generic.DASTORE;
 import org.apache.bcel.generic.DUP;
 import org.apache.bcel.generic.FALOAD;
 import org.apache.bcel.generic.FASTORE;
+import org.apache.bcel.generic.GETFIELD;
 import org.apache.bcel.generic.GETSTATIC;
 import org.apache.bcel.generic.IALOAD;
 import org.apache.bcel.generic.IASTORE;
@@ -151,6 +152,33 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	    return false;
 	}
     }
+    
+    /** Tests whether an object load instruction is used for getting something
+     * from a field of an object. 
+     *
+     * @param loadInstruction the load instruction that loads the object
+     * reference onto the stack. 
+     *
+     * @return true if the instruction is a load instruction of an object which
+     * is used for getting a field. 
+     */
+    public boolean isUsedForGetField(InstructionHandle loadInstruction) {
+	if (loadInstruction.getInstruction() instanceof ALOAD) {
+	    InstructionHandle[] loadInstructionConsumers = findExactInstructionConsumers(loadInstruction);
+	    if (loadInstructionConsumers.length == 0) {
+		return false;
+	    }
+	    boolean isUsedForGetField = true;
+	    for (InstructionHandle loadInstructionConsumer : loadInstructionConsumers) {
+		Instruction consumer = loadInstructionConsumer.getInstruction();
+		isUsedForGetField &= consumer instanceof GETFIELD;
+	    }
+	    return isUsedForGetField;
+	}
+	else {
+	    return false;
+	}
+    }
 
     /** Tests whether an object load instruction is used for storing something
      * in an array. 
@@ -181,6 +209,29 @@ public class MethodGen extends org.apache.bcel.generic.MethodGen {
 	}
     }
     
+    /** Tests whether an object load instruction is used for loading something
+     * from an array. 
+     *
+     * @param loadInstruction the load instruction that loads the object
+     * reference onto the stack. 
+     * @return true if the instruction is a load instruction of an object which
+     * is used for loading something from an array. 
+     */
+    public boolean isUsedForArrayLoad(InstructionHandle loadInstruction) {
+	if (loadInstruction.getInstruction() instanceof ALOAD) {
+	    InstructionHandle[] loadInstructionConsumers = findExactInstructionConsumers(loadInstruction);
+	    if (loadInstructionConsumers.length == 0) return false;
+	    boolean isUsedForArrayLoad = true;
+	    for (InstructionHandle loadInstructionConsumer : loadInstructionConsumers) {
+		Instruction consumer = loadInstructionConsumer.getInstruction();
+                isUsedForArrayLoad &= isArrayLoad(consumer);
+	    }
+	    return isUsedForArrayLoad;
+	}
+	else {
+	    return false;
+	}
+    }
     /** Tests whether an object load instruction is used for computing an array length.
      *
      * @param loadInstruction the load instruction that loads the object
