@@ -197,17 +197,19 @@ public class ControlFlow implements Analyzer {
 	ConstantPoolGen cp = spawningMethod.getConstantPool();
 	ArrayList<InstructionContext> instructions = basicBlock.getInstructions();
 	int indexAfterSpawnableCall = getIndexAfterSpawnableCall(instructions, spawnableCall);
-    if (spawnableCall.resultMayHaveAliases()) {
-        InstructionHandle[] consumers = spawningMethod.findInstructionConsumers(spawnableCall.getInvokeInstruction());
-        for (InstructionHandle h : consumers) {
-            for (InstructionContext c : instructions) {
-                if (c.getInstruction() == h) {
-                    return h;
-                }
-            }
-        }
-        return instructions.get(indexAfterSpawnableCall).getInstruction();
-    }
+	if (spawnableCall.resultMayHaveAliases()) {
+	    InstructionHandle[] consumers = spawningMethod.findInstructionConsumers(spawnableCall.getInvokeInstruction());
+	    for (InstructionHandle h : consumers) {
+		for (InstructionContext c : instructions) {
+		    if (c.getInstruction() == h && h.getNext() != null) {
+			// Must insert sync AFTER the store.
+			return h.getNext();
+		    }
+		}
+	    }
+	    // Not sure about this ... do we get here if the result is not stored? --Ceriel
+	    return instructions.get(indexAfterSpawnableCall).getInstruction();
+	}
 	
 	for (int i = indexAfterSpawnableCall; i < instructions.size(); i++) {
 	    InstructionHandle ih = instructions.get(i).getInstruction();
