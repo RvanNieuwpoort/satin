@@ -2,21 +2,22 @@ package ibis.satin.impl.syncrewriter.analyzer.controlflow;
 
 
 
+import ibis.satin.impl.syncrewriter.bcel.MethodGen;
 import ibis.satin.impl.syncrewriter.controlflow.BasicBlock;
 
 import org.apache.bcel.Repository;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.ACONST_NULL;
+import org.apache.bcel.generic.ALOAD;
 import org.apache.bcel.generic.ANEWARRAY;
+import org.apache.bcel.generic.ClassGen;
 import org.apache.bcel.generic.ConstantPushInstruction;
-import org.apache.bcel.generic.DUP;
 import org.apache.bcel.generic.INVOKESPECIAL;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.MULTIANEWARRAY;
-import org.apache.bcel.generic.NEW;
 import org.apache.bcel.generic.NEWARRAY;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 
@@ -88,21 +89,8 @@ class LoadAwareBasicBlock extends BasicBlock {
                     if (i instanceof INVOKESPECIAL) {
                         INVOKESPECIAL invoker = (INVOKESPECIAL) i;
                         if (invoker.getMethodName(methodGen.getConstantPool()).equals("<init>")
-                            && isEmptyConstructor(invoker)) {
-                            InstructionHandle d = prev.getPrev();
-                            if (d != null) {
-                                i = d.getInstruction();
-                                if (i instanceof DUP) {
-                                    d = d.getPrev();
-                                    if (d != null) {
-                                        i = d.getInstruction();
-                                        if (i instanceof NEW) {
-                                            prev = current;
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
+                            && isNonEscapingConstructor(invoker)) {
+                            continue;
                         }
                      } else if (i instanceof NEWARRAY
                             || i instanceof ANEWARRAY || i instanceof MULTIANEWARRAY
@@ -119,34 +107,55 @@ class LoadAwareBasicBlock extends BasicBlock {
         return true;
     }
     
-    boolean isEmptyConstructor(INVOKESPECIAL invoker) {
+    boolean isNonEscapingConstructor(INVOKESPECIAL invoker) {
         String className = invoker.getClassName(methodGen.getConstantPool());
-        if (className.equals("java.lang.Object")) {
-            return true;
-        }
         JavaClass javaClass = Repository.lookupClass(className);
         if (javaClass == null) {
             return false;
         }
-        return emptyConstructor(javaClass);
+        return nonEscapingConstructor(javaClass, invoker.getSignature(methodGen.getConstantPool()));
     }
     
-    boolean emptyConstructor(JavaClass javaClass) {
+    boolean nonEscapingConstructor(JavaClass javaClass, String constructorSignature) {
         if (javaClass.getClassName().equals("java.lang.Object")) {
             return true;
         }
         Method[] methods = javaClass.getMethods();
         for (Method method : methods) {
-            if (method.getName().equals("<init>") && method.getSignature().equals("()V")) {
-                byte[] code = method.getCode().getCode();
-                // empty constructor only invokes super() and returns, which gives 5 bytes of code.
-                if (code.length > 5) {
-                    // non-empty constructor.
-                    // empty constructor only contains call to super:
-                    // ALOAD 0; INVOKESPECIAL <init>; RETURN
-                    return false;
-                }
-                return emptyConstructor(javaClass.getSuperClass());
+            if (method.getName().equals("<init>") && method.getSignature().equals(constructorSignature)) {
+        	if (nonEscapingConstructor(javaClass.getSuperClass(), "()V")) {
+        	    ClassGen cg = new ClassGen(javaClass);
+        	    MethodGen mg = new MethodGen(method, javaClass.getClassName(), cg.getConstantPool());
+        	    // Now check all ALOAD 0 instructions. They may only be used for
+        	    // PUTFIELD and for calling super().
+        	    InstructionHandle h = mg.getInstructionList().getStart();
+        	    while (h != null) {
+        		Instruction i = h.getInstruction();
+        		if (i instanceof ALOAD && ((ALOAD) i).getIndex() == 0) {
+        		    if (! mg.isUsedForPutField(h)) {
+        			// Find instructions that consume exactly this load (but not more,
+        			// otherwise it could be a parameter to another constructor).
+        			InstructionHandle[] users = mg.findExactInstructionConsumers(h);
+        			if (users.length != 1) {
+        			    return false;
+        			}
+        	                i = users[0].getInstruction();
+        	                if (i instanceof INVOKESPECIAL) {
+        	                    INVOKESPECIAL invoker = (INVOKESPECIAL) i;
+        	                    if (! invoker.getMethodName(mg.getConstantPool()).equals("<init>")
+        	                	    || ! nonEscapingConstructor(javaClass.getSuperClass(), invoker.getSignature(mg.getConstantPool()))) {
+        	                	return false;
+        	                    }
+        	                } else {
+        	                    return false;
+        	                }
+        		    }
+        		}
+        		h = h.getNext();
+        	    }
+
+        	    return true;
+        	}
             }
         }
         return false;
