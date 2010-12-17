@@ -168,10 +168,17 @@ public class SpawningMethod extends MethodGen {
 
 	for (InstructionHandle current = start.getNext() ;current != end.getNext(); current = current.getNext()) {
 	    try {
-	        LocalVariableGen l = getIndexStore(current);
-		    if (! resultIndices.contains(l)) {
-		        resultIndices.add(l);
-		    }
+		LocalVariableGen l = getIndexStore(current);
+		if (! resultIndices.contains(l)) {
+		    resultIndices.add(l);
+		}
+		for (LocalVariableGen ll : this.getLocalVariables()) {
+		    if (ll != l && l.getIndex() == ll.getIndex() && l.getName().equals(ll.getName())) {
+			if (! resultIndices.contains(ll)) {
+			    resultIndices.add(ll);
+			}
+		    }		    
+		}
 	    }
 	    catch (ClassCastException e) {
 		// no problem, just not a store 
@@ -228,9 +235,17 @@ public class SpawningMethod extends MethodGen {
 	    // just mark it as a result that isn't stored.
 	}
 	try {
-	    LocalVariableGen[] indices = new LocalVariableGen[1];
-	    indices[0] = getIndexStore(stackConsumers[0]);
-	    return indices;
+	    ArrayList<LocalVariableGen> resultIndices = new ArrayList<LocalVariableGen>();
+	    LocalVariableGen l = getIndexStore(stackConsumers[0]);
+	    resultIndices.add(l);
+	    for (LocalVariableGen ll : this.getLocalVariables()) {
+		if (ll != l && l.getIndex() == ll.getIndex() && l.getName().equals(ll.getName())) {
+		    if (! resultIndices.contains(ll)) {
+			resultIndices.add(ll);
+		    }
+		}		    
+	    }
+	    return resultIndices.toArray(new LocalVariableGen[resultIndices.size()]);
 	}
 	catch (ClassCastException e) {
 	    throw new ResultNotStored();

@@ -86,7 +86,7 @@ public class SpawnableCall {
         	if (start.getPrev() != null) {
         	    start = start.getPrev();
         	}
-        	if (ih.getPosition() >= start.getPosition() && ih.getPosition() <= end.getPosition()) {
+        	if (insNo >= start.getPosition() && insNo <= end.getPosition()) {
         	    return true;
         	}
             }
