@@ -134,7 +134,6 @@ public class SpawningMethod extends MethodGen {
 	    Instruction ins = handle.getInstruction();
 	    if (ins instanceof INVOKEVIRTUAL) {
 		INVOKEVIRTUAL inv = (INVOKEVIRTUAL) ins;
-		System.err.println("Invoke " + inv.getClassName(cpg) + "." + inv.getMethodName(cpg) + ": "+ inv.getSignature(cpg));
 		if (inv.getMethodName(cpg).equals("sync") &&
 			inv.getSignature(cpg).equals("()V")) {
 		    JavaClass cl = findMethodClass(inv, cpg);
