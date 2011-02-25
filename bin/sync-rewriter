@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Utility script to run the Satin sync adviser on the specified arguments.
+
+# Check SATIN_HOME.
+if [ -z "$SATIN_HOME" ];  then
+    echo "please set SATIN_HOME to the location of your Satin installation" 1>&2
+    exit 1
+fi
+
+exec "$SATIN_HOME"/bin/satin-run -Xmx256M ibis.satin.impl.syncrewriter.SyncRewriter "$@"
