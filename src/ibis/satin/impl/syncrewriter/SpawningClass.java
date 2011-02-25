@@ -75,6 +75,8 @@ class SpawningClass extends ClassGen {
                             new Debug(d.turnedOn(), d.getStartLevel()+2));
                 d.log(1, "%s calls %s\n", method.getName(), spawnSignature);
                 spawningMethod.adviseSync(analyzer);
+            } catch (MethodCallsSyncException e) {
+		d.log(1, "%s already calls sync\n", method.getName());
             } catch (NoSpawningMethodException e) {
                     d.log(1, "%s doesn't call %s\n", method.getName(), spawnSignature);
                     // spawnSignature is not called
@@ -113,6 +115,9 @@ class SpawningClass extends ClassGen {
 		spawningMethod.rewrite(analyzer);
 		removeMethod(method);
 		addMethod(spawningMethod.getMethod());
+	    }
+	    catch (MethodCallsSyncException e) {
+		d.log(1, "%s already calls sync\n", method.getName());
 	    }
 	    catch (NoSpawningMethodException e) {
 		d.log(1, "%s doesn't call %s\n", method.getName(), spawnSignature);

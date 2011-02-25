@@ -6,6 +6,8 @@ import ibis.satin.impl.syncrewriter.util.Debug;
 
 import java.util.ArrayList;
 
+import org.apache.bcel.Repository;
+import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.LineNumberTable;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.CodeExceptionGen;
@@ -14,6 +16,7 @@ import org.apache.bcel.generic.INVOKEVIRTUAL;
 import org.apache.bcel.generic.Instruction;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.InstructionList;
+import org.apache.bcel.generic.InvokeInstruction;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.ObjectType;
 
@@ -55,6 +58,10 @@ public class SpawningMethod extends MethodGen {
 	throws NoSpawningMethodException, AssumptionFailure {
 
 	super(method, className, constantPoolGen);
+	
+	if (callsSync()) {
+	    throw new MethodCallsSyncException();
+	}
 
 	MethodGen spawnSignatureGen = new MethodGen(spawnSignature.getMethod(), spawnSignature.getClassName(), constantPoolGen);
 
@@ -119,7 +126,61 @@ public class SpawningMethod extends MethodGen {
     }
 
 
+    private boolean callsSync() {
+	ConstantPoolGen cpg = getConstantPool();
+	InstructionList instructionList = getInstructionList();
+	InstructionHandle handle = instructionList.getStart();
+	while (handle != null) {
+	    Instruction ins = handle.getInstruction();
+	    if (ins instanceof INVOKEVIRTUAL) {
+		INVOKEVIRTUAL inv = (INVOKEVIRTUAL) ins;
+		System.err.println("Invoke " + inv.getClassName(cpg) + "." + inv.getMethodName(cpg) + ": "+ inv.getSignature(cpg));
+		if (inv.getMethodName(cpg).equals("sync") &&
+			inv.getSignature(cpg).equals("()V")) {
+		    JavaClass cl = findMethodClass(inv, cpg);
+		    if (cl != null && cl.getClassName().equals("ibis.satin.SatinObject")) {
+			System.out.println("Method "
+				+ getName() + " in class " + getClassName() + " already contains a sync call");
+			return true;
+		    }
+		}
+	    }
+	    handle = handle.getNext();
+	}
+	return false;
+    }
+    
+    private JavaClass findMethodClass(InvokeInstruction ins, ConstantPoolGen cpg) {
+        String name = ins.getMethodName(cpg);
+        String sig = ins.getSignature(cpg);
+        String cls = ins.getClassName(cpg);
 
+        if (cls.startsWith("[")) {
+            cls = "java.lang.Object";
+        }
+        JavaClass cl = Repository.lookupClass(cls);
+
+        if (cl == null) {
+            return null;
+        }
+
+        while (cl != null) {
+            Method[] methods = cl.getMethods();
+            for (int i = 0; i < methods.length; i++) {
+                    if (methods[i].getName().equals(name)
+                    && methods[i].getSignature().equals(sig)) {
+                    return cl;
+                }
+            }
+            cls = cl.getSuperclassName();
+            if (cls != null) {
+                cl = Repository.lookupClass(cls);
+            } else {
+                cl = null;
+            }
+        }
+        return null;
+    }
 
 
     /* determine the spawnable calls */
