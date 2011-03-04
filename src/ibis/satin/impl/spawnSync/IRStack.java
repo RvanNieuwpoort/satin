@@ -109,8 +109,16 @@ public final class IRStack implements Config {
         ArrayList<InvocationRecord> toStore = new ArrayList<InvocationRecord>();
         for (int i = 0; i < count; i++) {
             InvocationRecord curr = l[i];
+            if (ftLogger.isDebugEnabled()) {
+                ftLogger.debug("SATIN '" + s.ident + ": examining " + curr.getStamp() + ", owner = " + curr.getOwner());
+            }
 
-            if (curr.aborted) continue; // already handled
+            if (curr.aborted) {
+                if (ftLogger.isDebugEnabled()) {
+                    ftLogger.debug("SATIN '" + s.ident + ": " + curr.getStamp() + " already aborted");
+                }
+                continue; // already handled
+            }
 
             if ((curr.getParent() != null && curr.getParent().aborted)
                 || curr.isDescendentOf(targetOwner)
@@ -119,6 +127,13 @@ public final class IRStack implements Config {
                 curr.aborted = true;
                 s.stats.killedOrphans++;
                 toStore.add(curr);
+                if (ftLogger.isDebugEnabled()) {
+                    ftLogger.debug("SATIN '" + s.ident + ": " + curr.getStamp() + " to be stored");
+                }
+            } else {
+                if (ftLogger.isDebugEnabled()) {
+                    ftLogger.debug("SATIN '" + s.ident + ": " + curr.getStamp() + " not applicable");
+                }
             }
         }
         return toStore;

@@ -339,6 +339,9 @@ public final class FaultTolerance implements Config {
     }
 
     private void storeFinishedChildrenOf(InvocationRecord r) {
+        if (ftLogger.isDebugEnabled()) {
+            ftLogger.debug("SATIN '" + s.ident + ": storeFinishedChildrenOf " + r.getStamp());
+        }
         InvocationRecord child = r.getFinishedChild();
         while (child != null) {
             s.ft.storeResult(child);
@@ -347,6 +350,9 @@ public final class FaultTolerance implements Config {
     }
 
     public void killAndStoreSubtreeOf(IbisIdentifier targetOwner) {
+        if (ftLogger.isDebugEnabled()) {
+            ftLogger.debug("SATIN '" + s.ident + ": killAndStoreSubtreeOf " + targetOwner);
+        }
         ArrayList<InvocationRecord> toStore = s.onStack.killSubtreesOf(targetOwner);
 
         // update the global result table
