@@ -93,11 +93,12 @@ public class SyncRewriter extends IbiscComponent {
         d.log(1, "it contains calls with spawn signatures:\n");
         print(spawnableClass.getSpawnSignatures(), 2);
         d.log(1, "rewriting %s\n", className);
-        spawnableClass.rewrite(analyzer);
-        Repository.removeClass(javaClass);
-        javaClass = spawnableClass.getJavaClass();
-        Repository.addClass(javaClass);
-        setModified(wrapper.getInfo(javaClass));
+        if (spawnableClass.rewrite(analyzer)) {
+            Repository.removeClass(javaClass);
+            javaClass = spawnableClass.getJavaClass();
+            Repository.addClass(javaClass);
+            setModified(wrapper.getInfo(javaClass));
+        }
     }
 
     void print(SpawnSignature[] spawnSignatures, int level) {
