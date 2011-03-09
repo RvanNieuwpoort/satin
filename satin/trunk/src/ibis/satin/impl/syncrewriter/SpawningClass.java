@@ -15,12 +15,14 @@ class SpawningClass extends ClassGen {
     
     private SpawnSignature[] spawnSignatures;
     private Debug d;
+    private boolean hasMethodsThatCallSync = false;
 
 
     /* package methods */
 
 
-    SpawningClass (JavaClass javaClass, SpawnSignature[] allSpawnSignatures, Debug d) throws NoSpawningClassException, AssumptionFailure {
+    SpawningClass (JavaClass javaClass, SpawnSignature[] allSpawnSignatures, Debug d)
+    		throws NoSpawningClassException, AssumptionFailure {
 	super(javaClass);
 
 	if (!javaClass.isClass()) throw new NoSpawningClassException();
@@ -28,7 +30,9 @@ class SpawningClass extends ClassGen {
 	this.d = d;
 	this.spawnSignatures = getSpawnSignatures(allSpawnSignatures);
 
-	if (this.spawnSignatures.length == 0) throw new NoSpawningClassException();
+	if (this.spawnSignatures.length == 0 && ! hasMethodsThatCallSync) {
+	    throw new NoSpawningClassException();
+	}
     }
 
 
@@ -37,9 +41,12 @@ class SpawningClass extends ClassGen {
     }
 
 
-    void rewrite(Analyzer analyzer) throws ClassRewriteFailure {
+    boolean rewrite(Analyzer analyzer) throws ClassRewriteFailure {
 	boolean throwRewriteFailure = false;
 
+	if (spawnSignatures.length == 0) {
+	    return false;
+	}
 	for (SpawnSignature spawnSignature : spawnSignatures) {
 	    try {
 		rewriteForSpawnSignature(spawnSignature, analyzer);
@@ -49,6 +56,7 @@ class SpawningClass extends ClassGen {
 	    }
 	}
 	if (throwRewriteFailure) throw new ClassRewriteFailure();
+	return true;
     }
     
     
@@ -173,6 +181,9 @@ class SpawningClass extends ClassGen {
 	                spawnSignature, -1 /* doesn't matter for this time */, 
 	                new Debug());
 		if (!spawnSignatures.contains(spawnSignature)) spawnSignatures.add(spawnSignature);
+	    }
+	    catch (MethodCallsSyncException e) {
+		hasMethodsThatCallSync = true;
 	    }
 	    catch (NoSpawningMethodException e) {
 		// spawnSignature is not called
