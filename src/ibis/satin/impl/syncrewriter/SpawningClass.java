@@ -45,6 +45,9 @@ class SpawningClass extends ClassGen {
 	boolean throwRewriteFailure = false;
 
 	if (spawnSignatures.length == 0) {
+	    if (hasMethodsThatCallSync) {
+		System.out.println("All spawning methods of class " + getClassName() + " already sync.");
+	    }
 	    return false;
 	}
 	for (SpawnSignature spawnSignature : spawnSignatures) {
@@ -125,7 +128,8 @@ class SpawningClass extends ClassGen {
 		addMethod(spawningMethod.getMethod());
 	    }
 	    catch (MethodCallsSyncException e) {
-		d.log(1, "%s already calls sync\n", method.getName());
+		System.out.println("Method "
+			+ method.getName() + " in class " + getClassName() + " already contains a sync call");
 	    }
 	    catch (NoSpawningMethodException e) {
 		d.log(1, "%s doesn't call %s\n", method.getName(), spawnSignature);

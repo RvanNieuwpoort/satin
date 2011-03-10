@@ -138,8 +138,6 @@ public class SpawningMethod extends MethodGen {
 			inv.getSignature(cpg).equals("()V")) {
 		    JavaClass cl = findMethodClass(inv, cpg);
 		    if (cl != null && cl.getClassName().equals("ibis.satin.SatinObject")) {
-			System.out.println("Method "
-				+ getName() + " in class " + getClassName() + " already contains a sync call");
 			return true;
 		    }
 		}
