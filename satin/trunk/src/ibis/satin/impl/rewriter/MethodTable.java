@@ -379,7 +379,11 @@ final class MethodTable {
         this.self = self;
         this.c = c;
 
-        spawnableClass = Repository.lookupClass("ibis.satin.Spawnable");
+        try {
+            spawnableClass = Repository.lookupClass("ibis.satin.Spawnable");
+        } catch(ClassNotFoundException e) {
+            throw new Error("Could not find class ibis.satin.Spawnable", e);
+        }
 
         methodTable = new Vector<MethodTableEntry>();
 

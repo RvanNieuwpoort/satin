@@ -142,8 +142,10 @@ class LoadAwareBasicBlock extends BasicBlock {
     
     boolean isNonEscapingConstructor(INVOKESPECIAL invoker) {
         String className = invoker.getClassName(methodGen.getConstantPool());
-        JavaClass javaClass = Repository.lookupClass(className);
-        if (javaClass == null) {
+        JavaClass javaClass;
+        try {
+            javaClass = Repository.lookupClass(className);
+        } catch(ClassNotFoundException e) {
             return false;
         }
         return nonEscapingConstructor(javaClass, invoker.getSignature(methodGen.getConstantPool()));
@@ -153,10 +155,17 @@ class LoadAwareBasicBlock extends BasicBlock {
         if (javaClass.getClassName().equals("java.lang.Object")) {
             return true;
         }
+        JavaClass superClass;
+        try {
+            superClass = javaClass.getSuperClass();
+        } catch(ClassNotFoundException e) {
+            throw new Error("Superclass of " + javaClass.getClassName()
+                    + " not found");
+        }
         Method[] methods = javaClass.getMethods();
         for (Method method : methods) {
             if (method.getName().equals("<init>") && method.getSignature().equals(constructorSignature)) {
-        	if (nonEscapingConstructor(javaClass.getSuperClass(), "()V")) {
+        	if (nonEscapingConstructor(superClass, "()V")) {
         	    ClassGen cg = new ClassGen(javaClass);
         	    MethodGen mg = new MethodGen(method, javaClass.getClassName(), cg.getConstantPool());
         	    // Now check all ALOAD 0 instructions. They may only be used for
@@ -176,7 +185,7 @@ class LoadAwareBasicBlock extends BasicBlock {
         	                if (i instanceof INVOKESPECIAL) {
         	                    INVOKESPECIAL invoker = (INVOKESPECIAL) i;
         	                    if (! invoker.getMethodName(mg.getConstantPool()).equals("<init>")
-        	                	    || ! nonEscapingConstructor(javaClass.getSuperClass(), invoker.getSignature(mg.getConstantPool()))) {
+        	                	    || ! nonEscapingConstructor(superClass, invoker.getSignature(mg.getConstantPool()))) {
         	                	return false;
         	                    }
         	                } else {

@@ -23,14 +23,13 @@ class ClassViewer {
 
 
     JavaClass getClassFromName(String className) {
-	JavaClass javaClass = Repository.lookupClass(className);
-
-	if (javaClass == null) {
+        try {
+            return Repository.lookupClass(className);
+        } catch(ClassNotFoundException e) {
 	    System.out.println("class " + className + " not found");
 	    System.exit(1);
-	}
-
-	return javaClass;
+            return null;
+        }
     }
 
 
@@ -109,7 +108,13 @@ class ClassViewer {
 
 
     boolean isSpawnable(JavaClass javaClass) {
-	JavaClass[] interfaces = javaClass.getAllInterfaces();
+	JavaClass[] interfaces;
+        
+        try {
+            interfaces = javaClass.getAllInterfaces();
+        } catch(ClassNotFoundException e) {
+            throw new Error(e);
+        }
 
 	for (JavaClass javaInterface : interfaces) {
 	    if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
