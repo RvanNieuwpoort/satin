@@ -117,36 +117,43 @@ public class SyncRewriter extends IbiscComponent {
 
 
     private boolean isSpawnable(JavaClass javaClass) {
-        JavaClass[] interfaces = javaClass.getAllInterfaces();
+        try {
+            JavaClass[] interfaces = javaClass.getAllInterfaces();
 
-        for (JavaClass javaInterface : interfaces) {
-            if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
-                return true;
+            for (JavaClass javaInterface : interfaces) {
+                if (javaInterface.getClassName().equals("ibis.satin.Spawnable")) {
+                    return true;
+                }
             }
+            return false;
+        } catch(ClassNotFoundException e) {
+            throw new Error(e);
         }
-        return false;
     }
 
 
     void getSpawnSignatures(JavaClass javaClass, ArrayList<SpawnSignature> spawnSignatures) {
-	JavaClass[] interfaces = javaClass.getInterfaces();
-	for (JavaClass javaInterface : interfaces) {
-	    if (isSpawnable(javaInterface)) {
-		getSpawnSignatures(javaClass.getClassName(), javaInterface.getMethods(), spawnSignatures);
-	    }
-	}
+        try {
+            JavaClass[] interfaces = javaClass.getInterfaces();
+            for (JavaClass javaInterface : interfaces) {
+                if (isSpawnable(javaInterface)) {
+                    getSpawnSignatures(javaClass.getClassName(), javaInterface.getMethods(), spawnSignatures);
+                }
+            }
+        } catch(ClassNotFoundException e) {
+            throw new Error(e);
+        }
     }
 
 
     JavaClass getClassFromName(String className) {
-	JavaClass javaClass = Repository.lookupClass(className);
 
-	if (javaClass == null) {
-	    System.out.println("class " + className + " not found");
-	    System.exit(1);
+        try {
+            return  Repository.lookupClass(className);
+        } catch(ClassNotFoundException e) {
+	    System.err.println("class " + className + " not found");
+            throw new Error(e);
 	}
-
-	return javaClass;
     }
 
 

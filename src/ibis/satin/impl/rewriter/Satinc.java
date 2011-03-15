@@ -143,6 +143,23 @@ public final class Satinc extends IbiscComponent {
     // for ibisc
     private HashSet<String> satinSet = new HashSet<String>();
 
+    // Backwards BCEL compatibility ...
+    public static JavaClass lookupClass(String name) {
+        try {
+            return Repository.lookupClass(name);
+        } catch(ClassNotFoundException e) {
+            return null;
+        }
+    }
+
+    public static boolean implementationOf(String name1, String name2) {
+        try {
+            return Repository.implementationOf(name1, name2);
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     /**
      * Nested classes have '$'-signs in their bytecode names, but
      * these are not legal in java code, so we filter them out,
@@ -244,12 +261,12 @@ public final class Satinc extends IbiscComponent {
     }
 
     public Satinc() {
-        satinObjectClass = Repository.lookupClass("ibis.satin.SatinObject");
+        satinObjectClass = lookupClass("ibis.satin.SatinObject");
         spawnCounterType = new ObjectType(
                 "ibis.satin.impl.spawnSync.SpawnCounter");
         irType = new ObjectType("ibis.satin.impl.spawnSync.InvocationRecord");
         satinType = new ObjectType("ibis.satin.impl.Satin");
-        writeMethodsInterface = Repository.lookupClass(
+        writeMethodsInterface = lookupClass(
                 "ibis.satin.WriteMethodsInterface");
     }
 
@@ -283,7 +300,11 @@ public final class Satinc extends IbiscComponent {
     }
 
     boolean isSatin() {
-        return Repository.instanceOf(c, satinObjectClass);
+        try {
+            return Repository.instanceOf(c, satinObjectClass);
+        } catch(ClassNotFoundException e) {
+            throw new Error(e);
+        }
     }
 
     boolean isRewritten() {
@@ -1226,7 +1247,7 @@ public final class Satinc extends IbiscComponent {
             cls = "java.lang.Object";
         }
 
-        JavaClass cl = Repository.lookupClass(cls);
+        JavaClass cl = lookupClass(cls);
 
         if (cl == null) {
             System.out.println("findMethod: could not find class " + cls);
@@ -1243,7 +1264,7 @@ public final class Satinc extends IbiscComponent {
             }
             cls = cl.getSuperclassName();
             if (cls != null) {
-                cl = Repository.lookupClass(cls);
+                cl = lookupClass(cls);
             } else {
                 cl = null;
             }
@@ -1260,7 +1281,7 @@ public final class Satinc extends IbiscComponent {
         if (cls.startsWith("[")) {
             cls = "java.lang.Object";
         }
-        JavaClass cl = Repository.lookupClass(cls);
+        JavaClass cl = lookupClass(cls);
 
         if (cl == null) {
             System.out.println("findMethod: could not find class " + cls);
@@ -1277,7 +1298,7 @@ public final class Satinc extends IbiscComponent {
             }
             cls = cl.getSuperclassName();
             if (cls != null) {
-                cl = Repository.lookupClass(cls);
+                cl = lookupClass(cls);
             } else {
                 cl = null;
             }
@@ -1887,13 +1908,13 @@ public final class Satinc extends IbiscComponent {
             if (! fromIbisc) {
                 for (int i = 0; i < methods.length; i++) {
                     if (mtab.containsInlet(methods[i])) {
-                        Repository.lookupClass(localRecordName(methods[i]));
+                        lookupClass(localRecordName(methods[i]));
                     }
 
                     if (mtab.isSpawnable(methods[i], c)) {
-                        Repository.lookupClass(invocationRecordName(methods[i],
+                        lookupClass(invocationRecordName(methods[i],
                             classNameNoPackage, packageName));
-                        Repository.lookupClass(returnRecordName(methods[i],
+                        lookupClass(returnRecordName(methods[i],
                             classNameNoPackage, packageName));
                     }
                 }
@@ -1923,7 +1944,7 @@ public final class Satinc extends IbiscComponent {
                 String local_record_name = localRecordName(m);
 
                 Method clone = mtab.getExceptionHandlingClone(m);
-                JavaClass localRec = Repository.lookupClass(local_record_name);
+                JavaClass localRec = lookupClass(local_record_name);
 
                 ClassGen recgen = new ClassGen(localRec);
 
@@ -2153,9 +2174,13 @@ public final class Satinc extends IbiscComponent {
     private boolean isSharedObject(Type t) {
         if (t instanceof ObjectType) {
             ObjectType typ = (ObjectType) t;
-            if (Repository.instanceOf(typ.getClassName(),
-                "ibis.satin.SharedObject")) {
-                return true;
+            try {
+                if (Repository.instanceOf(typ.getClassName(),
+                    "ibis.satin.SharedObject")) {
+                    return true;
+                }
+            } catch(ClassNotFoundException e) {
+                throw new Error(e);
             }
         }
         return false;
@@ -2182,7 +2207,7 @@ public final class Satinc extends IbiscComponent {
             for (int i = 0; i < params.length; i++) {
                 if (params[i] instanceof ObjectType) {
                     String clnam = ((ObjectType) params[i]).getClassName();
-                    if (!Repository.implementationOf(clnam,
+                    if (!implementationOf(clnam,
                         "java.io.Serializable")) {
                         System.err.println(clname
                             + ": parameter of spawnable method " + m.getName()
@@ -2199,7 +2224,7 @@ public final class Satinc extends IbiscComponent {
             Type returnType = m.getReturnType();
             if (returnType instanceof ObjectType) {
                 String onam = ((ObjectType) returnType).getClassName();
-                if (!Repository.implementationOf(onam, "java.io.Serializable")) {
+                if (!implementationOf(onam, "java.io.Serializable")) {
                     System.err.println(clname + ": spawnable method "
                         + m.getName() + " has non-serializable return type: "
                         + onam + ".");
@@ -2727,7 +2752,7 @@ public final class Satinc extends IbiscComponent {
         for (i = 0; i < params.length; i++) {
             if (params[i] instanceof ObjectType) {
                 String clnam = ((ObjectType) params[i]).getClassName();
-                if (!Repository.implementationOf(clnam, "java.io.Serializable")) {
+                if (!implementationOf(clnam, "java.io.Serializable")) {
                     System.err.println(clname + ": write method"
                         + " with non-serializable parameter type " + clnam);
                     System.err.println(clname
@@ -2986,7 +3011,7 @@ public final class Satinc extends IbiscComponent {
                 for (int j = 0; j < methods.length; j++) {
                     Method method = methods[j];
                     if (a.isSpecial(method)) {
-                        Repository.lookupClass(SOInvocationRecordName(method,
+                        lookupClass(SOInvocationRecordName(method,
                             classNameNoPackage, packageName));
                     }
                 }
@@ -2997,7 +3022,7 @@ public final class Satinc extends IbiscComponent {
     /* End of SO rewriter. */
 
     private static JavaClass lookup(String className) {
-        JavaClass c = Repository.lookupClass(className);
+        JavaClass c = lookupClass(className);
 
         if (c == null) {
             System.out.println("class " + className + " not found");
@@ -3045,21 +3070,24 @@ public final class Satinc extends IbiscComponent {
             return;
         }
 
-        if (Repository.instanceOf(c, "ibis.satin.SharedObject")) {
-
-            if (gen_c.containsField("$SOrewritten$") != null) {
-                if (verbose) {
-                    System.out.println(className + " is already rewritten");
+        try {
+            if (Repository.instanceOf(c, "ibis.satin.SharedObject")) {
+                if (gen_c.containsField("$SOrewritten$") != null) {
+                    if (verbose) {
+                        System.out.println(className + " is already rewritten");
+                    }
+                } else {
+                    try {
+                        doSORewrite();
+                    } catch (IOException e) {
+                        System.out.println("IO error: " + e);
+                        System.exit(1);
+                    }
                 }
-            } else {
-                try {
-                    doSORewrite();
-                } catch (IOException e) {
-                    System.out.println("IO error: " + e);
-                    System.exit(1);
-                }
+                return;
             }
-            return;
+        } catch(ClassNotFoundException e) {
+            throw new Error(e);
         }
 
         // If we have the main method, rename it to origMain. 

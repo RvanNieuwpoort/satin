@@ -146,6 +146,15 @@ public class SpawningMethod extends MethodGen {
 	}
 	return false;
     }
+
+    // Mimic old behaviour of BCEL.
+    public static JavaClass lookupClass(String name) {
+        try {
+            return Repository.lookupClass(name);
+        } catch(ClassNotFoundException e) {
+            return null;
+        }
+    }
     
     private JavaClass findMethodClass(InvokeInstruction ins, ConstantPoolGen cpg) {
         String name = ins.getMethodName(cpg);
@@ -155,7 +164,7 @@ public class SpawningMethod extends MethodGen {
         if (cls.startsWith("[")) {
             cls = "java.lang.Object";
         }
-        JavaClass cl = Repository.lookupClass(cls);
+        JavaClass cl = lookupClass(cls);
 
         if (cl == null) {
             return null;
@@ -171,7 +180,7 @@ public class SpawningMethod extends MethodGen {
             }
             cls = cl.getSuperclassName();
             if (cls != null) {
-                cl = Repository.lookupClass(cls);
+                cl = lookupClass(cls);
             } else {
                 cl = null;
             }
@@ -184,7 +193,11 @@ public class SpawningMethod extends MethodGen {
 
     private boolean containsType(ObjectType type, ObjectType[] types) {
 	for (ObjectType i : types) {
-	    if (i.equals(type) || type.subclassOf(i)) return true;
+            try {
+                if (i.equals(type) || type.subclassOf(i)) return true;
+            } catch(ClassNotFoundException e) {
+                continue;
+            }
 	}
 	return false;
     }
