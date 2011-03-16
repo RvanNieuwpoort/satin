@@ -17,6 +17,7 @@ import org.apache.bcel.generic.ConstantPoolGen;
 import org.apache.bcel.generic.INVOKESTATIC;
 import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LoadInstruction;
+import org.apache.bcel.generic.Type;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 
 
@@ -218,7 +219,7 @@ public class ControlFlow implements Analyzer {
 		    (INVOKESTATIC) (ih.getInstruction());
 		if (pauseInstruction.getMethodName(cp).equals("pause") &&
 			pauseInstruction.getType(cp).getSignature().equals("V") &&
-			pauseInstruction.getClassName(cp).equals("ibis.satin.SatinObject")) {
+			pauseInstruction.getReferenceType(cp).equals(Type.OBJECT)) {
 		    return ih;
 		}
 	    }

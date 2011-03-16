@@ -792,11 +792,9 @@ public final class Satinc extends IbiscComponent {
                     // correct invocationRecord type
                     il.insert(pos, new DUP());
                     il.insert(pos, new ASTORE(maxLocals + 3));
-                    il
-                        .insert(pos, ins_f.createFieldAccess(invClass, "ref",
-                            new ObjectType("java.lang.Object"),
-                            Constants.GETFIELD));
-                    il.insert(pos, ins_f.createCheckCast(pf.getClassType(cpg)));
+                    il.insert(pos, ins_f.createFieldAccess(invClass, "ref",
+                            Type.OBJECT, Constants.GETFIELD));
+                    il.insert(pos, ins_f.createCheckCast(pf.getReferenceType(cpg)));
                     il.insert(pos, new ALOAD(maxLocals + 3));
                 }
                 il.insert(pos, ins_f.createFieldAccess(invClass, "result",
@@ -1241,16 +1239,14 @@ public final class Satinc extends IbiscComponent {
     public Method findMethod(InvokeInstruction ins) {
         String name = ins.getMethodName(cpg);
         String sig = ins.getSignature(cpg);
-        String cls = ins.getClassName(cpg);
+        ReferenceType cls = ins.getReferenceType(cpg);
 
-        if (cls.startsWith("[")) {
-            cls = "java.lang.Object";
-        }
+        String s = (cls instanceof ObjectType) ? ((ObjectType) cls).getClassName() : "java.lang.Object";
 
-        JavaClass cl = lookupClass(cls);
+        JavaClass cl = lookupClass(s);
 
         if (cl == null) {
-            System.out.println("findMethod: could not find class " + cls);
+            System.out.println("findMethodClass: could not find class " + s);
             return null;
         }
 
@@ -1262,12 +1258,12 @@ public final class Satinc extends IbiscComponent {
                     return methods[i];
                 }
             }
-            cls = cl.getSuperclassName();
-            if (cls != null) {
-                cl = lookupClass(cls);
-            } else {
-                cl = null;
-            }
+            try {
+		cl = cl.getSuperClass();
+	    } catch (ClassNotFoundException e) {
+		System.out.println("findMethod: could not find class " + cl.getSuperclassName());
+	        return null;
+	    }
         }
         System.out.println("findMethod: could not find method " + name + sig);
         return null;
@@ -1276,15 +1272,14 @@ public final class Satinc extends IbiscComponent {
     public JavaClass findMethodClass(InvokeInstruction ins) {
         String name = ins.getMethodName(cpg);
         String sig = ins.getSignature(cpg);
-        String cls = ins.getClassName(cpg);
+        ReferenceType cls = ins.getReferenceType(cpg);
 
-        if (cls.startsWith("[")) {
-            cls = "java.lang.Object";
-        }
-        JavaClass cl = lookupClass(cls);
+        String s = (cls instanceof ObjectType) ? ((ObjectType) cls).getClassName() : "java.lang.Object";
+
+        JavaClass cl = lookupClass(s);
 
         if (cl == null) {
-            System.out.println("findMethod: could not find class " + cls);
+            System.out.println("findMethodClass: could not find class " + s);
             return null;
         }
 
@@ -1292,18 +1287,18 @@ public final class Satinc extends IbiscComponent {
             Method[] methods = cl.getMethods();
             for (int i = 0; i < methods.length; i++) {
                     if (methods[i].getName().equals(name)
-                    && methods[i].getSignature().equals(sig)) {
+                	    && methods[i].getSignature().equals(sig)) {
                     return cl;
                 }
             }
-            cls = cl.getSuperclassName();
-            if (cls != null) {
-                cl = lookupClass(cls);
-            } else {
-                cl = null;
-            }
+            try {
+		cl = cl.getSuperClass();
+	    } catch (ClassNotFoundException e) {
+		System.out.println("findMethodClass: could not find class " + cl.getSuperclassName());
+	        return null;
+	    }
         }
-        System.out.println("findMethod: could not find method " + name + sig);
+        System.out.println("findMethodClass: could not find method " + name + sig);
         return null;
     }
 
