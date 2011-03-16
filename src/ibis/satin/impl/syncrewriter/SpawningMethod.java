@@ -19,6 +19,7 @@ import org.apache.bcel.generic.InstructionList;
 import org.apache.bcel.generic.InvokeInstruction;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.ObjectType;
+import org.apache.bcel.generic.ReferenceType;
 
 
 /** This class represents a spawnable method. 
@@ -159,12 +160,11 @@ public class SpawningMethod extends MethodGen {
     private JavaClass findMethodClass(InvokeInstruction ins, ConstantPoolGen cpg) {
         String name = ins.getMethodName(cpg);
         String sig = ins.getSignature(cpg);
-        String cls = ins.getClassName(cpg);
+        ReferenceType cls = ins.getReferenceType(cpg);
 
-        if (cls.startsWith("[")) {
-            cls = "java.lang.Object";
-        }
-        JavaClass cl = lookupClass(cls);
+        String className = (cls instanceof ObjectType) ? ((ObjectType) cls).getClassName() : "java.lang.Object";
+
+        JavaClass cl = lookupClass(className);
 
         if (cl == null) {
             return null;
@@ -178,12 +178,12 @@ public class SpawningMethod extends MethodGen {
                     return cl;
                 }
             }
-            cls = cl.getSuperclassName();
-            if (cls != null) {
-                cl = lookupClass(cls);
-            } else {
-                cl = null;
-            }
+            try {
+		cl = cl.getSuperClass();
+	    } catch (ClassNotFoundException e) {
+		System.out.println("findMethodClass: could not find class " + cl.getSuperclassName());
+	        return null;
+	    }
         }
         return null;
     }

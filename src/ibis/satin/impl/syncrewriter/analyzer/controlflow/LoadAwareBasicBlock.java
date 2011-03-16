@@ -20,6 +20,8 @@ import org.apache.bcel.generic.InstructionHandle;
 import org.apache.bcel.generic.LocalVariableGen;
 import org.apache.bcel.generic.MULTIANEWARRAY;
 import org.apache.bcel.generic.NEWARRAY;
+import org.apache.bcel.generic.ObjectType;
+import org.apache.bcel.generic.ReferenceType;
 import org.apache.bcel.verifier.structurals.InstructionContext;
 
 
@@ -141,7 +143,10 @@ class LoadAwareBasicBlock extends BasicBlock {
     }
     
     boolean isNonEscapingConstructor(INVOKESPECIAL invoker) {
-        String className = invoker.getClassName(methodGen.getConstantPool());
+        ReferenceType cls = invoker.getReferenceType(methodGen.getConstantPool());
+
+        String className = (cls instanceof ObjectType) ? ((ObjectType) cls).getClassName() : "java.lang.Object";
+
         JavaClass javaClass;
         try {
             javaClass = Repository.lookupClass(className);
