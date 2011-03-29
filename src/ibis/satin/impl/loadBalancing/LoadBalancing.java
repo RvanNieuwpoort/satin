@@ -128,7 +128,7 @@ public final class LoadBalancing implements Config {
             }
 
             if (stolenJob != null) {
-                ftLogger.warn("EEK: setting stolenJob when it is non-null!");
+                ftLogger.warn("SATIN '" + s.ident + "': EEK: setting stolenJob when it is non-null!");
             }
 
             gotStealReply = true;
@@ -151,7 +151,8 @@ public final class LoadBalancing implements Config {
         if (ASSERTS) {
             synchronized(this) {
         	if (stolenJob != null) {
-                        throw new Error(
+        	    ftLogger.error("SATIN '" + s.ident + "': EEK: stealing while stolenJob is non-null!");
+                    throw new Error(
                         	"EEEK, trying to steal while an unhandled stolen job is available.");
         	}
             }
