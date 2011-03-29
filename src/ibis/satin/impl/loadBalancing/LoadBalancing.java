@@ -148,9 +148,13 @@ public final class LoadBalancing implements Config {
      * MasterWorker algorithms.
      */
     public InvocationRecord stealJob(Victim v, boolean blockOnServer) {
-        if (ASSERTS && stolenJob != null) {
-            throw new Error(
-                "EEEK, trying to steal while an unhandled stolen job is available.");
+        if (ASSERTS) {
+            synchronized(this) {
+        	if (stolenJob != null) {
+                        throw new Error(
+                        	"EEEK, trying to steal while an unhandled stolen job is available.");
+        	}
+            }
         }
 
         if (s.exiting) return null;
@@ -272,17 +276,19 @@ public final class LoadBalancing implements Config {
     private InvocationRecord waitForStealReply(Victim v) {
         waitForStealReplyMessage(v);
 
-        /* If successfull, we now have a job in stolenJob. */
-        if (stolenJob == null) {
-            return null;
+        synchronized(this) {
+            /* If successfull, we now have a job in stolenJob. */
+            if (stolenJob == null) {
+        	return null;
+            }
+
+            /* I love it when a plan comes together! We stole a job. */
+            s.stats.stealSuccess++;
+            InvocationRecord myJob = stolenJob;
+            stolenJob = null;
+            
+            return myJob;
         }
-
-        /* I love it when a plan comes together! We stole a job. */
-        s.stats.stealSuccess++;
-        InvocationRecord myJob = stolenJob;
-        stolenJob = null;
-
-        return myJob;
     }
 
     private void addToJobResultList(InvocationRecord r) {
