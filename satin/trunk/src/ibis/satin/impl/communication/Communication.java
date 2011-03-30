@@ -278,6 +278,11 @@ public final class Communication implements Config, Protocol {
                         .info("SATIN '"
                                 + id
                                 + "': the port was already connected, but could not find it, retry!");
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e2) {
+                    // ignore
+                }
                 // return null;
             } catch (IOException e) {
                 connLogger

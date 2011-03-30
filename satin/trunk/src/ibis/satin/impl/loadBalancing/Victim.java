@@ -85,6 +85,10 @@ public final class Victim implements Config {
             connected = false;
             connectionCount--;
             sendPort.disconnect(r);
+            if (commLogger.isDebugEnabled()) {
+        	commLogger.debug("SATIN '" + sendPort.identifier().ibisIdentifier()
+                        + "': disconnected from " + ident);
+            }
         }
     }
 
@@ -100,6 +104,10 @@ public final class Victim implements Config {
         }
 
         if (!connected) {
+            if (commLogger.isDebugEnabled()) {
+        	commLogger.debug("SATIN '" + sendPort.identifier().ibisIdentifier()
+                        + "': connecting to " + ident);
+            }
             r = Communication.connect(sendPort, ident, "satin port",
                 Satin.CONNECT_TIMEOUT);
             if (r == null) {
