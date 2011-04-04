@@ -35,7 +35,7 @@ final class LBCommunication implements Config, Protocol {
     protected void sendStealRequest(Victim v, boolean synchronous,
         boolean blockUntilWorkIsAvailable) throws IOException {
         if (stealLogger.isDebugEnabled()) {
-            stealLogger.debug("SATIN '" + s.ident + "': sending"
+            stealLogger.debug("SATIN '" + s.ident + "': sending "
                 + (synchronous ? "SYNC" : "ASYNC") + "steal message to "
                 + v.getIdent());
         }
