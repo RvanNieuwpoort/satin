@@ -255,12 +255,16 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
     public void lostConnection(ReceivePort me, SendPortIdentifier johnDoe,
             Throwable reason) {
         if (reason == null) {
-            ftLogger.info("SATIN '" + s.ident + "': got lostConnection upcall: "
-                    + johnDoe.ibisIdentifier() + " closed connection");
+            if (ftLogger.isInfoEnabled()) {
+        	ftLogger.info("SATIN '" + s.ident + "': got lostConnection upcall: "
+        		+ johnDoe.ibisIdentifier() + " closed connection");
+            }
             return;
         }
-        ftLogger.info("SATIN '" + s.ident + "': got lostConnection upcall: "
-                + johnDoe.ibisIdentifier() + ", reason = " + reason);
+        if (ftLogger.isInfoEnabled()) {
+            ftLogger.info("SATIN '" + s.ident + "': got lostConnection upcall: "
+        	    + johnDoe.ibisIdentifier() + ", reason = " + reason, reason);
+        }
         if (connectionUpcallsDisabled) {
             return;
         }
@@ -269,9 +273,11 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
 
     public void lostConnection(SendPort me, ReceivePortIdentifier johnDoe,
             Throwable reason) {
-        ftLogger.info("SATIN '" + s.ident
-                + "': got SENDPORT lostConnection upcall: "
-                + johnDoe.ibisIdentifier());
+	if (ftLogger.isInfoEnabled()) {
+	    ftLogger.info("SATIN '" + s.ident
+		    + "': got SENDPORT lostConnection upcall: "
+		    + johnDoe.ibisIdentifier(), reason);
+	}
         if (connectionUpcallsDisabled) {
             return;
         }
