@@ -255,7 +255,7 @@ public interface Config {
 
     /** Close connections after use. Used for scalability. */
     static final boolean CLOSE_CONNECTIONS = properties.getBooleanProperty(
-            s_close_connections, true);
+            s_close_connections, false);
 
     /** When using CLOSE_CONNECTIONS, keep open MAX_CONNECTIONS connections. */
     static final int MAX_CONNECTIONS = properties.getIntProperty(
