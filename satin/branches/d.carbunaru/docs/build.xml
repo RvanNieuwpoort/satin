@@ -1,0 +1,80 @@
+<project
+    name="Satin documentation build"
+    default="manuals"
+    basedir=".">
+
+    <description>
+	Satin documentation build.
+    </description>
+
+    <property name="satin"       location=".."/>
+    <property name="src"         location="${satin}/src"/>
+    <property name="tmp"         location="tmp"/>
+
+    <target name="manuals" depends="progman.pdf, usersguide.pdf"/>
+
+    <target name="progman.pdf">
+	<tstamp/>
+	<mkdir dir="${tmp}"/>
+	<copy
+	    file="progman.tex"
+	    tofile="${tmp}/progman.tex">
+	</copy>
+	<exec   dir="${tmp}"
+	    executable="latex"
+	    vmlauncher="false">
+	    <arg line="progman.tex"/>
+	</exec>
+	<exec   dir="${tmp}"
+	    executable="latex"
+	    vmlauncher="false">
+	    <arg line="progman.tex"/>
+	</exec>
+	<exec   dir="${tmp}"
+	    executable="dvipdf"
+	    vmlauncher="false">
+	    <arg line="progman.dvi progman.pdf"/>
+	</exec>
+	<copy
+	    file="${tmp}/progman.pdf"
+	    tofile="progman.pdf">
+	</copy>
+	<delete dir="${tmp}"/>
+    </target>
+
+    <target name="usersguide.pdf">
+	<tstamp/>
+	<mkdir dir="${tmp}"/>
+	<copy
+	    file="usersguide.tex"
+	    tofile="${tmp}/usersguide.tex">
+	</copy>
+	<exec   dir="${tmp}"
+	    executable="latex"
+	    vmlauncher="false">
+	    <arg line="usersguide.tex"/>
+	</exec>
+	<exec   dir="${tmp}"
+	    executable="latex"
+	    vmlauncher="false">
+	    <arg line="usersguide.tex"/>
+	</exec>
+	<exec   dir="${tmp}"
+	    executable="dvipdf"
+	    vmlauncher="false">
+	    <arg line="usersguide.dvi usersguide.pdf"/>
+	</exec>
+	<copy
+	    file="${tmp}/usersguide.pdf"
+	    tofile="usersguide.pdf">
+	</copy>
+	<delete dir="${tmp}"/>
+    </target>
+
+    <target name="clean">
+	<delete dir="${tmp}"/>
+	<delete file="progman.pdf"/>
+	<delete file="usersguide.pdf"/>
+    </target>
+
+</project>
