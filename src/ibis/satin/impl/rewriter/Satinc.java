@@ -3,7 +3,6 @@
 package ibis.satin.impl.rewriter;
 
 import ibis.compile.IbiscComponent;
-import ibis.compile.util.BT_Analyzer;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
