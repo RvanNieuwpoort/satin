@@ -23,16 +23,21 @@ import ibis.satin.impl.spawnSync.IRVector;
 import ibis.satin.impl.spawnSync.InvocationRecord;
 import ibis.satin.impl.spawnSync.ReturnRecord;
 import ibis.satin.impl.spawnSync.SpawnCounter;
-
-import java.util.Vector;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class Satin implements Config {
+    
+    private Thread[] clientThreads;
 
     private static final int SUGGESTED_QUEUE_SIZE = 1000;
+    
+    private static final int NO_THREADS = 2;
 
     public static final boolean GLOBAL_PAUSE_RESUME = false;
 
-    private static Satin thisSatin;
+    public static Satin thisSatin;
 
     public final Communication comm;
 
@@ -92,7 +97,7 @@ public final class Satin implements Config {
      * time; the same ibis cannot crash and join the computation again.
      */
     public final Vector<IbisIdentifier> deadIbises = new Vector<IbisIdentifier>();
-
+    
     static {
         properties.checkProperties(PROPERTY_PREFIX, sysprops, null, true);
     }
@@ -109,7 +114,7 @@ public final class Satin implements Config {
                     "multiple satin instances are currently not supported");
         }
         thisSatin = this;
-
+        
         q = new DoubleEndedQueue(this);
 
         outstandingJobs = new IRVector(this);
@@ -140,6 +145,11 @@ public final class Satin implements Config {
         // this opens the world, other ibises might join from this point
         // we need the master to be set before this call
         ft.init(); 
+        
+        clientThreads = new Thread[NO_THREADS];
+        for (int i = 0; i < NO_THREADS; i++) {
+            clientThreads[i] = new ClientThread(thisSatin);
+        }
 
         stats.totalTimer.start();
     }
@@ -152,6 +162,8 @@ public final class Satin implements Config {
     }
 
     private void exit(int status) {
+        
+        System.out.println("exit(status)");
 
         stats.totalTimer.stop();
 
@@ -218,8 +230,11 @@ public final class Satin implements Config {
         // The app should register a shutdownhook. --Rob
         System.gc();
         System.runFinalization();
+        
+        System.out.println("before System.exit(status)");
 
         if (status != 0) {
+            System.out.println("status != 0");
             System.exit(status);
         }
     }
@@ -272,9 +287,9 @@ public final class Satin implements Config {
         if (s.getValue() == 0) { // A sync without spawns is a poll.
             handleDelayedMessages();
         } else while (s.getValue() > 0) {
-            InvocationRecord r = q.getFromHead(); // Try the local queue
+            InvocationRecord r = q.getFromHead(); // Try the local queue           
             if (r != null) {
-                callSatinFunction(r);
+              callSatinFunction(r);
             } else {
                 noWorkInQueue();
             }
@@ -301,17 +316,29 @@ public final class Satin implements Config {
         if (spawnLogger.isDebugEnabled()) {
             spawnLogger.debug("SATIN '" + ident + "': starting client!");
         }
-
-        while (!exiting) {
-            // steal and run jobs
-            noWorkInQueue();
-
-            // Maybe the master crashed, and we were elected the new master.
-            if (master) return;
+        
+        if(master) {
+            ExecutorService execServ = Executors.newFixedThreadPool(NO_THREADS - 1);
+            for(Thread clientThread : clientThreads) {
+                execServ.submit(clientThread);
+            }
+        } else {
+            ExecutorService execServ = Executors.newFixedThreadPool(NO_THREADS);
+            for(Thread clientThread : clientThreads) {
+                execServ.submit(clientThread);
+            }
         }
+
+//        while (!exiting) {
+//            // steal and run jobs
+//            noWorkInQueue();
+//
+//            // Maybe the master crashed, and we were elected the new master.
+//            if (master) return;
+//        }
     }
 
-    public void handleDelayedMessages() {
+    public synchronized void handleDelayedMessages() {
         // Handle messages received in upcalls.
         aborts.handleDelayedMessages();
         lb.handleDelayedMessages();
@@ -530,7 +557,7 @@ public final class Satin implements Config {
         }
     }
 
-    private void callSatinLocalFunction(InvocationRecord r) {
+    public void callSatinLocalFunction(InvocationRecord r) {
         stats.jobsExecuted++;
         try {
             r.runLocal();
@@ -556,7 +583,7 @@ public final class Satin implements Config {
         if (!FT_NAIVE) r.jobFinished();
     }
 
-    private void callSatinRemoteFunction(InvocationRecord r) {
+    public void callSatinRemoteFunction(InvocationRecord r) {
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
