@@ -205,7 +205,6 @@ public final class Aborts implements Config {
             // It is either on the stack or on a remote machine.
             // Here, this is OK, the child threw an exception,
             // the parent did not catch it, and must therefore die.
-            r.getParent().aborted = true;
             r.getParent().eek = r.eek; // rethrow exception
             killChildrenOf(r.getParent().getStamp());
         }
@@ -215,15 +214,18 @@ public final class Aborts implements Config {
                 inletLogger.debug("SATIN '" + s.ident
                     + ": sending exception result");
             }
+            r.getParent().aborted = true;
             s.lb.sendResult(r.getParent(), null);
             return;
         }
 
         // now the recursion step
         if (r.getParent().getParentLocals() != null) { // parent has inlet
+            r.getParent().aborted = true;
             handleInlet(r.getParent());
         } else {
             handleEmptyInlet(r.getParent());
+            r.getParent().aborted = true;
         }
     }
 
