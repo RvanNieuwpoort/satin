@@ -32,8 +32,7 @@
 
     <target name="compile" depends="clean,init"
 	    description="Compile application without any bytecode rewriting">
-	<javac destdir="${tmp}" debug="true" srcdir="src" source="1.5"
-target="1.5">
+	    <javac destdir="${tmp}" debug="true" srcdir="src">
 	    <classpath refid="default.classpath" />
             <include name="**/*.java" />
         </javac>
