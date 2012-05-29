@@ -8,4 +8,4 @@ if [ -z "$SATIN_HOME" ];  then
     exit 1
 fi
 
-exec "$SATIN_HOME"/bin/satin-run -Xmx256M ibis.satin.impl.syncrewriter.SyncAdviser "$@"
+exec "$SATIN_HOME"/scripts/satin-run -Xmx256M ibis.satin.impl.syncrewriter.SyncRewriter "$@"

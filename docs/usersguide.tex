@@ -45,7 +45,7 @@ your application, or you have only class files or jar files available
 for parts of your application, it is also possible to first compile
 your application to class files or jar files, and then process those
 using the \emph{satinc} script. This script can be found in the Satin
-bin directory. It takes either directories, class files, or jar files
+scripts directory. It takes either directories, class files, or jar files
 as parameter, and processes those, possibly rewriting them for Ibis.
 In case of a directory, all class files and jar files in that directory or
 its subdirectories are processed. The command sequence
@@ -56,7 +56,7 @@ $ mkdir tmp
 $ javac -d tmp -g \
      -classpath ../lib/satin-2.2.jar \
      src/fib/*.java
-$ CLASSPATH=tmp ../bin/satinc -satin "fib.Fib" tmp
+$ CLASSPATH=tmp ../scripts/satinc -satin "fib.Fib" tmp
 $ mkdir lib
 $ ( cd tmp ; jar c . ) > lib/satin-examples.jar
 $ rm -rf tmp
@@ -80,7 +80,7 @@ invocations. The examples include a special version of Fib to demonstrate this
 feature. For instance after calling javac, as above, you can call
 
 \begin{verbatim}
-$ CLASSPATH=tmp ../bin/satinc -syncadvise "fib.FibWithoutSync" tmp
+$ CLASSPATH=tmp ../scripts/satinc -syncadvise "fib.FibWithoutSync" tmp
 \end{verbatim}
 
 which will print suggested locations for sync method invocations on standard
@@ -92,7 +92,7 @@ locations, you can have them inserted in the bytecode automatically, by replacin
 the satin bytecode rewriter line with:
 
 \begin{verbatim}
-$ CLASSPATH=tmp ../bin/satinc -syncrewriter "fib.FibWithoutSync" -satin "fib.FibWithoutSync" tmp
+$ CLASSPATH=tmp ../scripts/satinc -syncrewriter "fib.FibWithoutSync" -satin "fib.FibWithoutSync" tmp
 \end{verbatim}
 
 \section{A Satin run}
@@ -124,7 +124,7 @@ possible between two instances due to firewalls or NAT boxes. This is
 done using the Smartsockets library of the Ibis project.
 
 The Ibis server is started with the \texttt{satin-server} script which is
-located in the \texttt{bin} directory of the Satin distribution.  Before
+located in the \texttt{scripts} directory of the Satin distribution.  Before
 starting a Satin application, an Ibis server needs to be running on a
 machine that is accessible from all nodes participating in the Satin run.
 The server listens to a TCP port. The port number can be specified using
@@ -292,7 +292,7 @@ run the \texttt{satin-server} script:
 \noindent
 {\small
 \begin{verbatim}
-$ $SATIN_HOME/bin/satin-server --events
+$ $SATIN_HOME/scripts/satin-server --events
 \end{verbatim}
 }
 \noindent
@@ -310,7 +310,7 @@ Run the following command in two different shells:
 {\small
 \begin{verbatim}
 $ CLASSPATH=$SATIN_HOME/examples/lib/satin-examples.jar \
-    $SATIN_HOME/bin/satin-run \
+    $SATIN_HOME/scripts/satin-run \
     -Dsatin.closed -Dibis.server.address=localhost \
     -Dibis.pool.size=2 -Dibis.pool.name=test \
     fib.Fib 32
@@ -365,7 +365,7 @@ run the \texttt{satin-server} script:
 \noindent
 {\small
 \begin{verbatim}
-C:\DOCUME~1\Temp> "%SATIN_HOME%"\bin\satin-server --events
+C:\DOCUME~1\Temp> "%SATIN_HOME%"\scripts\satin-server --events
 \end{verbatim}
 }
 \noindent
@@ -385,7 +385,7 @@ Run the following command in two different shells:
 {\small
 \begin{verbatim}
 C:\DOCUME~1\Temp> set CLASSPATH=%SATIN_HOME%\examples\lib\satin-examples.jar
-C:\DOCUME~1\Temp> "%SATIN_HOME%"\bin\satin-run
+C:\DOCUME~1\Temp> "%SATIN_HOME%"\scripts\satin-run
     "-Dsatin.closed" "-Dibis.server.address=localhost"
     "-Dibis.pool.size=2" "-Dibis.pool.name=test"
     fib.Fib 32
