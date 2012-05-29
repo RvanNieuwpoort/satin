@@ -145,7 +145,7 @@
             <zipfileset dir="."
                         prefix="${dist-name}"
                         filemode="755"
-                        includes="bin/**" />
+                        includes="scripts/**" />
         </zip>
 
     </target>
