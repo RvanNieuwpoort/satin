@@ -15,6 +15,7 @@ import ibis.ipl.SendPort;
 import ibis.ipl.SendPortDisconnectUpcall;
 import ibis.ipl.SendPortIdentifier;
 import ibis.ipl.WriteMessage;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.checkPointing.Checkpoint;
@@ -80,6 +81,7 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
      *            invocation record of the job
      * @return true if an entry was found, false otherwise
      */
+    // TODO:
     protected boolean askForJobResult(InvocationRecord r) {
         GlobalResultTableValue value = null;
         synchronized (s) {
@@ -243,9 +245,18 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
     private void handleCrash(IbisIdentifier dead) {
         synchronized (s) {
             s.ft.crashedIbises.add(dead);
-            if (dead.equals(s.lb.getCurrentVictim())) {
-                s.currentVictimCrashed = true;
-                s.lb.setCurrentVictim(null);
+            if (s.isMaster()) {
+                if (dead.equals(s.lb.getCurrentVictim())) {
+                    s.currentVictimCrashed = true;
+                    s.lb.setCurrentVictim(null);
+                }
+            } else {
+                for (ClientThread ct : s.clientThreads) {
+                    if (dead.equals(ct.lb.getCurrentVictim())) {
+                        ct.currentVictimCrashed = true;
+                        ct.lb.setCurrentVictim(null);
+                    }
+                }
             }
             s.ft.gotCrashes = true;
             s.notifyAll();
@@ -322,13 +333,13 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
             if (leaver.equals(s.getMasterIdent())) {
                 s.ft.masterHasCrashed = true;
                 s.ft.gotCrashes = true;
-            }
+                    }
             if (leaver.equals(s.ft.clusterCoordinatorIdent)) {
                 s.ft.clusterCoordinatorHasCrashed = true;
                 s.ft.gotCrashes = true;
-            }
+                    }
 
-            s.so.removeSOConnection(leaver);
+            s.so.removeSOConnection(leaver); // TODO:
             s.deadIbises.add(leaver);
             v = s.victims.remove(leaver);
             s.notifyAll();

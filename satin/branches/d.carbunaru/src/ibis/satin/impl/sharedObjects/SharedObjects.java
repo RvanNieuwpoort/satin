@@ -14,6 +14,7 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 
 class SharedObjectInfo {
@@ -67,7 +68,7 @@ public final class SharedObjects implements Config {
         soLogger.debug("SATIN '" + s.ident + "': " + "object added, id = "
             + object.getObjectId());
     }
-
+    
     /** Return a reference to a shared object */
     public SharedObject getSOReference(String objectId) {
         synchronized (s) {
@@ -174,14 +175,14 @@ public final class SharedObjects implements Config {
 
     /** returns false if the job must be aborted */
     public boolean executeGuard(InvocationRecord r) {
-        s.stats.soGuardTimer.start();
+        //s.stats.soGuardTimer.start();
         try {
             doExecuteGuard(r);
         } catch (SOReferenceSourceCrashedException e) {
             //the source has crashed - abort the job
             return false;
         } finally {
-            s.stats.soGuardTimer.stop();
+            //s.stats.soGuardTimer.stop();
         }
         return true;
     }

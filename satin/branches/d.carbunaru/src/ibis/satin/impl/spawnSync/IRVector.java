@@ -3,8 +3,10 @@
 package ibis.satin.impl.spawnSync;
 
 import ibis.ipl.IbisIdentifier;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
+import java.util.Random;
 
 /** A vector of invocation records. */
 
@@ -14,9 +16,19 @@ public final class IRVector implements Config {
     private int count = 0;
 
     private Satin satin;
+    private ClientThread clientThread;
 
     public IRVector(Satin s) {
         this.satin = s;
+    }
+
+    /** Daniela:
+     * 
+     * @param clientThread 
+     */
+    public IRVector(ClientThread clientThread) {
+        this.clientThread = clientThread;
+        this.satin = clientThread.satin;
     }
 
     public void add(InvocationRecord r) {
@@ -222,8 +234,14 @@ public final class IRVector implements Config {
                 } 
                 l[i].setReDone(true);
                 l[i].setStealer(null);
-                satin.q.addToTail(l[i]);
-                satin.stats.restartedJobs++;
+                if (satin.isMaster()) {
+                    satin.q.addToTail(l[i]);
+                } else {
+                    Random r = new Random();
+                    int j = r.nextInt(satin.clientThreads.length);
+                    satin.clientThreads[j].q.addToTail(l[i]);
+                }
+                //satin.stats.restartedJobs++;
                 count--;
                 l[i] = l[count];
             }

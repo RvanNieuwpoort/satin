@@ -35,7 +35,7 @@ public final class SpawnCounter {
      * 
      * @return a new spawn counter.
      */
-    static public final SpawnCounter newSpawnCounter() {
+    static public synchronized final SpawnCounter newSpawnCounter() {
         if (spawnCounterCache == null) {
             return new SpawnCounter();
         }
@@ -53,7 +53,7 @@ public final class SpawnCounter {
      * @param s
      *            the spawn counter made available.
      */
-    static public final void deleteSpawnCounter(SpawnCounter s) {
+    static public synchronized final void deleteSpawnCounter(SpawnCounter s) {
         if (Satin.ASSERTS && s.value < 0) {
             Satin.spawnLogger.error(
                 "deleteSpawnCounter: spawncouner < 0, val =" + s.value,
@@ -73,11 +73,14 @@ public final class SpawnCounter {
         }
     }
 
-    public void incr(InvocationRecord r) {
+    public synchronized void incr(InvocationRecord r) {
         if (Satin.ASSERTS && Satin.spawnLogger.isDebugEnabled()) {
             debugIncr(r);
         } else {
             value++;
+            if (value == 3) {
+                System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
         }
         if (Satin.spawnLogger.isDebugEnabled()) {
             Satin.spawnLogger.debug("Incremented spawnCounter for " + r.getStamp()
@@ -120,7 +123,7 @@ public final class SpawnCounter {
         }
     }
 
-    public void decr(InvocationRecord r) {
+    public synchronized void decr(InvocationRecord r) {
         if (Satin.ASSERTS && Satin.spawnLogger.isDebugEnabled()) {
             decrDebug(r);
         } else {
@@ -132,6 +135,7 @@ public final class SpawnCounter {
         }
         if (Satin.ASSERTS && value < 0) {
             System.err.println("Just made spawncounter < 0");
+            System.out.println("\t " + r.toString());
             new Exception().printStackTrace();
             System.exit(1); // Failed assertion
         }

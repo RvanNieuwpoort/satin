@@ -2,6 +2,7 @@
 
 package ibis.satin.impl.loadBalancing;
 
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.InvocationRecord;
 
@@ -15,6 +16,14 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
         super(s);
     }
 
+    /**
+     * Daniela:
+     * @param ct 
+     */
+    public RandomWorkStealing(ClientThread ct) {
+        super(ct);
+    }
+
     public InvocationRecord clientIteration() {
         Victim v;
 
@@ -25,14 +34,30 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
              * in case it crashes..
              */
             if (v != null) {
-                satin.lb.setCurrentVictim(v.getIdent());
+                if (clientThread != null) {
+                    clientThread.lb.setCurrentVictim(v.getIdent());
+                } else {
+                    satin.lb.setCurrentVictim(v.getIdent());
+                }
             }
         }
+        
         if (v == null) {
             return null; //can happen with open world if nobody joined.
         }
-
-        InvocationRecord job = satin.lb.stealJob(v, false);
+        
+        InvocationRecord job;
+        
+        if (clientThread != null) {
+            job =  clientThread.lb.stealJob(v, false);
+        } else {
+            if (satin.isMaster()) {
+                job = satin.lb.stealJob(v, false);
+            } else {
+                job = null;
+            }
+        }
+        
         if(job != null) {
             failedAttempts = 0;
             return job;

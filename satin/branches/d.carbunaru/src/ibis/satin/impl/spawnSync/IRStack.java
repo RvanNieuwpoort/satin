@@ -3,6 +3,7 @@
 package ibis.satin.impl.spawnSync;
 
 import ibis.ipl.IbisIdentifier;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.loadBalancing.Victim;
@@ -17,9 +18,19 @@ public final class IRStack implements Config {
     private int count = 0;
 
     private Satin s;
+    private ClientThread ct;
 
     public IRStack(Satin s) {
         this.s = s;
+    }
+
+    /** DAniela:
+     * 
+     * @param ct 
+     */
+    public IRStack(ClientThread ct) {
+        this.ct = ct;
+        this.s = ct.satin;
     }
 
     public int size() {
@@ -117,7 +128,7 @@ public final class IRStack implements Config {
                 || curr.getOwner().equals(targetOwner)) {
 
                 curr.aborted = true;
-                s.stats.killedOrphans++;
+                //s.stats.killedOrphans++;
                 toStore.add(curr);
             }
         }

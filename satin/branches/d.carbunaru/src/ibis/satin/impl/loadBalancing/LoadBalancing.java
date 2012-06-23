@@ -6,6 +6,7 @@ package ibis.satin.impl.loadBalancing;
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.SendPortIdentifier;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.IRVector;
@@ -16,7 +17,7 @@ import ibis.satin.impl.spawnSync.Stamp;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public final class LoadBalancing implements Config {
+public final class LoadBalancing implements Config {    
 
     static final class StealRequest {
         int opcode;
@@ -44,7 +45,7 @@ public final class LoadBalancing implements Config {
                 if (CONTINUOUS_STATS
                     && System.currentTimeMillis() - lastPrintTime > CONTINUOUS_STATS_INTERVAL) {
                     lastPrintTime = System.currentTimeMillis();
-                    s.stats.printDetailedStats(s.ident);
+                    //s.stats.printDetailedStats(s.ident);
                 }
 
                 StealRequest sr = null;
@@ -76,6 +77,9 @@ public final class LoadBalancing implements Config {
     private LBCommunication lbComm;
 
     private Satin s;
+    
+    //Daniela:
+    private ClientThread ct;
 
     private volatile boolean receivedResults = false;
 
@@ -96,6 +100,7 @@ public final class LoadBalancing implements Config {
 
     public LoadBalancing(Satin s) {
         this.s = s;
+        this.ct = null;
 
         if (QUEUE_STEALS) {
             stealQueue = new ArrayList<StealRequest>();
@@ -107,20 +112,43 @@ public final class LoadBalancing implements Config {
         resultList = new IRVector(s);
         lbComm = new LBCommunication(s, this);
     }
+    
+    /**
+     * Daniela:
+     * @param ct 
+     */
+    public LoadBalancing(ClientThread ct) {        
+        this.ct = ct;
+        this.s = ct.satin;
+
+        if (QUEUE_STEALS) {
+            stealQueue = new ArrayList<StealRequest>();
+            new StealRequestHandler().start();
+        } else {
+            stealQueue = null;
+        }
+
+        resultList = new IRVector(ct);
+        lbComm = new LBCommunication(ct, this);
+    }
 
     public synchronized void gotJobResult(InvocationRecord ir, IbisIdentifier sender) {
-            // This might be a job that came in after a STEAL_WAIT_TIMEOUT.
-            // If this is the case, this job has to be added to the queue,
-            // it is not the result of the current steal request.
+        // This might be a job that came in after a STEAL_WAIT_TIMEOUT.
+        // If this is the case, this job has to be added to the queue,
+        // it is not the result of the current steal request.
+
+        // Daniela:
+        if (s.isMaster()) {
             if (!sender.equals(currentVictim)) {
                 if (s.deadIbises.contains(sender)) {
                     // A dead Ibis is alive after all. Ignore it.
                     ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
-                        + sender + " which is supposed to be dead");
+                            + sender + " which is supposed to be dead");
                     return;
                 }
                 ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
-                    + sender + " who caused a timeout before. I am stealing from " + currentVictim);
+                        + sender + " who caused a timeout before. I am stealing from " + currentVictim);
+
                 if (ir != null) {
                     s.q.addToTail(ir);
                 }
@@ -135,6 +163,53 @@ public final class LoadBalancing implements Config {
             stolenJob = ir;
             currentVictim = null;
             notifyAll();
+        } else {
+            if (ct == null) {
+                // we are in the non-master Satin loadbalancer
+                // get a thread from the queue of waiting stealing threads and:
+                synchronized(s) {
+                    // there is always at least 1 thread id in the list in the map: <ibisident, list<threadid>>.
+                    // because this is a steal response, and at the steal request
+                    // there was an inserted threadId in the map.
+                   
+                    int threadId = s.waitingStealMap.get(sender).remove(0);
+                    
+                    if (s.waitingStealMap.get(sender).isEmpty()) {
+                        s.waitingStealMap.remove(sender);
+                    }
+                    
+                    s.clientThreads[threadId].lb.gotJobResult(ir, sender);
+                    return;
+                }
+            }
+
+            if (!sender.equals(currentVictim)) {
+                if (s.deadIbises.contains(sender)) {
+                    // A dead Ibis is alive after all. Ignore it.
+                    ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
+                            + sender + " which is supposed to be dead");
+                    return;
+                }
+                ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
+                        + sender + " who caused a timeout before. I am stealing from " + currentVictim);
+
+                // Daniela:
+                if (ir != null) {
+                    // we are good: in a thread's load balancer.
+                    ct.q.addToTail(ir, true);
+                }
+                return;
+            }
+
+            if (stolenJob != null) {
+                ftLogger.warn("SATIN '" + s.ident + "': EEK: setting stolenJob when it is non-null!");
+            }
+
+            gotStealReply = true;
+            stolenJob = ir;
+            currentVictim = null;
+            notifyAll();
+        }
     }
 
     public void addToOutstandingJobList(InvocationRecord r) {
@@ -178,8 +253,8 @@ public final class LoadBalancing implements Config {
             }
         }
 
-        s.stats.stealTimer.start();
-        s.stats.stealAttempts++;
+        //s.stats.stealTimer.start();
+        //s.stats.stealAttempts++;
 
         try {
             lbComm.sendStealRequest(v, true, blockOnServer);
@@ -189,7 +264,7 @@ public final class LoadBalancing implements Config {
                 + "': got exception during steal request", e);
             return null;
         } finally {
-            s.stats.stealTimer.stop();
+            //s.stats.stealTimer.stop();
         }
     }
 
@@ -204,7 +279,11 @@ public final class LoadBalancing implements Config {
                 }
 
                 if (r.eek != null) {
-                    s.aborts.handleInlet(r);
+                    if (ct == null) {
+                        s.aborts.handleInlet(r);
+                    } else {
+                        ct.aborts.handleInlet(r);
+                    }
                 }
 
                 r.decrSpawnCounter();
@@ -228,31 +307,47 @@ public final class LoadBalancing implements Config {
             synchronized (this) {
                 boolean gotTimeout = System.currentTimeMillis() - start >= STEAL_WAIT_TIMEOUT;
                 if (gotTimeout && !gotStealReply) {
-                    if (! ("MW".equals(SUPPLIED_ALG))) {
-                	ftLogger
-                	.warn("SATIN '"
-                		+ s.ident
-                		+ "': a timeout occurred while waiting for a steal reply from victim " + v.getIdent() + ", timeout = "
-                		+ STEAL_WAIT_TIMEOUT / 1000 + " seconds.");
+                    if (!("MW".equals(SUPPLIED_ALG))) {
+                        ftLogger.warn("SATIN '"
+                                + s.ident
+                                + "': a timeout occurred while waiting for a steal reply from victim " + v.getIdent() + ", timeout = "
+                                + STEAL_WAIT_TIMEOUT / 1000 + " seconds.");
                     }
                 }
-                
+
                 // At least handle aborts! Otherwise an older abort
                 // can kill a job that was stolen later.
-                s.aborts.handleDelayedMessages();
+                if (ct == null) {
+                    s.aborts.handleDelayedMessages();
+                } else {
+                    ct.aborts.handleDelayedMessages();
+                }
 
                 if (gotStealReply || gotTimeout) {
                     // Immediately reset gotStealReply, a reply has arrived.
                     gotStealReply = false;
-                    s.currentVictimCrashed = false;
+                    if (ct == null) {
+                        s.currentVictimCrashed = false;
+                    } else {
+                        ct.currentVictimCrashed = false;
+                    }
                     return;
                 }
 
-                if (s.currentVictimCrashed) {
-                    s.currentVictimCrashed = false;
-                    ftLogger.debug("SATIN '" + s.ident
-                        + "': current victim crashed");
-                    return;
+                if (ct == null) {
+                    if (s.currentVictimCrashed) {
+                        s.currentVictimCrashed = false;
+                        ftLogger.debug("SATIN '" + s.ident
+                                + "': current victim crashed");
+                        return;
+                    }
+                } else {
+                    if (ct.currentVictimCrashed) {
+                        ct.currentVictimCrashed = false;
+                        ftLogger.debug("SATIN '" + s.ident
+                                + "': current victim crashed");
+                        return;
+                    }
                 }
 
                 if (s.exiting) {
@@ -266,10 +361,15 @@ public final class LoadBalancing implements Config {
                         // ignore
                     }
                 }
+
             }
 
             if (HANDLE_MESSAGES_IN_LATENCY) {
-                s.handleDelayedMessages();
+                if (ct == null) {
+                    s.handleDelayedMessages();
+                } else {
+                    ct.handleDelayedMessages();
+                }
             }
         }
     }
@@ -284,7 +384,7 @@ public final class LoadBalancing implements Config {
             }
 
             /* I love it when a plan comes together! We stole a job. */
-            s.stats.stealSuccess++;
+            //s.stats.stealSuccess++;
             InvocationRecord myJob = stolenJob;
             stolenJob = null;
             
@@ -322,7 +422,11 @@ public final class LoadBalancing implements Config {
                 if (r.eek != null) {
                     // we have an exception, add it to the list.
                     // the list will be read during the sync
-                    s.aborts.addToExceptionList(r);
+                    if (ct == null) {
+                        s.aborts.addToExceptionList(r);
+                    } else {
+                        ct.aborts.addToExceptionList(r);
+                    }
                 } else {
                     addToJobResultList(r);
                 }
@@ -339,7 +443,11 @@ public final class LoadBalancing implements Config {
         InvocationRecord result = null;
 
         while (true) {
-            result = s.q.getFromTail();
+            /**
+             * Daniela:
+             */
+            // TODO aici ar trebui sa caut prin q-urile threadurilor
+            result = s.returnJob();//q.getFromTail();
             if (result != null) {
                 result.setStealer(ident.ibisIdentifier());
 
@@ -397,6 +505,17 @@ public final class LoadBalancing implements Config {
     public void sendStealRequest(Victim v, boolean synchronous, boolean blocking)
         throws IOException {
         lbComm.sendStealRequest(v, synchronous, blocking);
+    }
+
+    public void handleSharedResult(InvocationRecord r, ReturnRecord rr) {
+        //System.out.println("Thread " + ct.id + " solved shared job");
+        
+        Stamp stamp = r.getStamp();
+        int threadId = s.stampToThreadIdMap.get(stamp);
+        synchronized (s.stampToThreadIdMap) {
+            s.stampToThreadIdMap.remove(stamp);
+        }
+        s.clientThreads[threadId].lb.addJobResult(rr, r.eek, stamp);
     }
 
     /**

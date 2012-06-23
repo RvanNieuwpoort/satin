@@ -434,8 +434,8 @@ public final class Communication implements Config, Protocol {
             writeMessage = v.newMessage();
             writeMessage.writeByte(Protocol.EXIT_REPLY);
             if (STATS) {
-                s.stats.fillInStats();
-                writeMessage.writeObject(s.stats);
+                //s.stats.fillInStats();
+                //writeMessage.writeObject(s.stats);
             }
             v.finish(writeMessage);
         } catch (IOException e) {
@@ -548,15 +548,15 @@ public final class Communication implements Config, Protocol {
         commLogger.debug("SATIN '" + s.ident + "': got exit ACK message from "
                 + ident.ibisIdentifier());
 
-        if (STATS) {
-            try {
-                Statistics stats = (Statistics) m.readObject();
-                s.totalStats.add(stats);
-            } catch (Exception e) {
-                commLogger.warn("SATIN '" + s.ident
-                        + "': Got Exception while reading stats: " + e, e);
-            }
-        }
+//        if (STATS) {
+//            try {
+//                Statistics stats = (Statistics) m.readObject();
+//                //s.totalStats.add(stats);
+//            } catch (Exception e) {
+//                commLogger.warn("SATIN '" + s.ident
+//                        + "': Got Exception while reading stats: " + e, e);
+//            }
+//        }
 
         try {
             m.finish();

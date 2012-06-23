@@ -3,6 +3,7 @@
 package ibis.satin.impl.loadBalancing;
 
 import ibis.ipl.IbisIdentifier;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.communication.Protocol;
@@ -14,6 +15,9 @@ public final class ClusterAwareRandomWorkStealing extends
         LoadBalancingAlgorithm implements Protocol, Config {
 
     private Satin s;
+    
+    //Daniela:
+    private ClientThread ct;
 
     private boolean gotAsyncStealReply = false;
 
@@ -37,6 +41,16 @@ public final class ClusterAwareRandomWorkStealing extends
         this.s = s;
     }
 
+    /**Daniela:
+     * 
+     * @param ct 
+     */
+    public ClusterAwareRandomWorkStealing(ClientThread ct) {
+        super(ct);
+        this.ct = ct;
+        this.s = ct.satin;
+    }
+
     public InvocationRecord clientIteration() {
         Victim localVictim;
         Victim remoteVictim = null;
@@ -54,39 +68,77 @@ public final class ClusterAwareRandomWorkStealing extends
         }
 
         // Else .. we are idle, try to steal a job.
-        synchronized (satin) {
-            localVictim = satin.victims.getRandomLocalVictim();
-            if (localVictim != null) {
-                satin.lb.setCurrentVictim(localVictim.getIdent());
-            }
-            if (!asyncStealInProgress) {
-                remoteVictim = satin.victims.getRandomRemoteVictim();
-                if (remoteVictim != null) {
-                    asyncCurrentVictim = remoteVictim.getIdent();
+        if (satin.isMaster()) {
+            synchronized (satin) {
+                localVictim = satin.victims.getRandomLocalVictim();
+                if (localVictim != null) {
+                    satin.lb.setCurrentVictim(localVictim.getIdent());
+                }
+                if (!asyncStealInProgress) {
+                    remoteVictim = satin.victims.getRandomRemoteVictim();
+                    if (remoteVictim != null) {
+                        asyncCurrentVictim = remoteVictim.getIdent();
+                    }
+                }
+                // Until we download the table, only the cluster coordinator can
+                // issue wide-area steal requests 
+                // @@@ why? --Rob
+                if (satin.ft.getTable && !satin.clusterCoordinator) {
+                    canDoAsync = false;
                 }
             }
-            // Until we download the table, only the cluster coordinator can
-            // issue wide-area steal requests 
-            // @@@ why? --Rob
-            if (satin.ft.getTable && !satin.clusterCoordinator) {
-                canDoAsync = false;
+        } else {
+            synchronized (clientThread) {
+                localVictim = clientThread.victims.getRandomLocalVictim();
+                if (localVictim != null) {
+                    clientThread.lb.setCurrentVictim(localVictim.getIdent());
+                }
+                if (!asyncStealInProgress) {
+                    remoteVictim = clientThread.victims.getRandomRemoteVictim();
+                    if (remoteVictim != null) {
+                        asyncCurrentVictim = remoteVictim.getIdent();
+                    }
+                }
+                // Until we download the table, only the cluster coordinator can
+                // issue wide-area steal requests 
+                // @@@ why? --Rob
+                if (satin.ft.getTable && !satin.clusterCoordinator) {
+                    canDoAsync = false;
+                }
             }
         }
 
         // Send an asynchronous wide-area steal request,
         // if not is outstanding
         // remoteVictim can be null on a single cluster run.
-        if (remoteVictim != null && !asyncStealInProgress) {
-            if (FT_NAIVE || canDoAsync) {
-                asyncStealInProgress = true;
-                s.stats.asyncStealAttempts++;
-                try {
-                    asyncStealStart = System.currentTimeMillis();
-                    satin.lb.sendStealRequest(remoteVictim, false, false);
-                } catch (IOException e) {
-                    commLogger.warn("SATIN '" + s.ident
-                            + "': Got exception during wa steal request: " + e);
-                    // Ignore this?
+        if (satin.isMaster()) {
+            if (remoteVictim != null && !asyncStealInProgress) {
+                if (FT_NAIVE || canDoAsync) {
+                    asyncStealInProgress = true;
+                    //s.stats.asyncStealAttempts++;
+                    try {
+                        asyncStealStart = System.currentTimeMillis();
+                        satin.lb.sendStealRequest(remoteVictim, false, false);
+                    } catch (IOException e) {
+                        commLogger.warn("SATIN '" + s.ident
+                                + "': Got exception during wa steal request: " + e);
+                        // Ignore this?
+                    }
+                }
+            }
+        } else if (clientThread != null) {
+            if (remoteVictim != null && !asyncStealInProgress) {
+                if (FT_NAIVE || canDoAsync) {
+                    asyncStealInProgress = true;
+                    //s.stats.asyncStealAttempts++;
+                    try {
+                        asyncStealStart = System.currentTimeMillis();
+                        clientThread.lb.sendStealRequest(remoteVictim, false, false);
+                    } catch (IOException e) {
+                        commLogger.warn("SATIN '" + s.ident
+                                + "': Got exception during wa steal request: " + e);
+                        // Ignore this?
+                    }
                 }
             }
         }
@@ -94,13 +146,24 @@ public final class ClusterAwareRandomWorkStealing extends
         // do a local steal, if possible (we might be the only node in this
         // cluster)
         if (localVictim != null) {
-            job = satin.lb.stealJob(localVictim, false);
-            if (job != null) {
-                failedLocalAttempts = 0;
-                return job;
+            if (ct == null) {
+                job = satin.lb.stealJob(localVictim, false);
+                if (job != null) {
+                    failedLocalAttempts = 0;
+                    return job;
+                } else {
+                    failedLocalAttempts++;
+                    throttle(failedLocalAttempts);
+                }
             } else {
-                failedLocalAttempts++;
-                throttle(failedLocalAttempts);
+                job = ct.lb.stealJob(localVictim, false);
+                if (job != null) {
+                    failedLocalAttempts = 0;
+                    return job;
+                } else {
+                    failedLocalAttempts++;
+                    throttle(failedLocalAttempts);
+                }
             }
         }
 
@@ -135,7 +198,7 @@ public final class ClusterAwareRandomWorkStealing extends
                 asyncStealStart = 0;
 
                 if (remoteJob != null) {
-                    s.stats.asyncStealSuccess++;
+                    //s.stats.asyncStealSuccess++;
                     failedRemoteAttempts = 0;
                     return remoteJob;
                 }
@@ -163,24 +226,8 @@ public final class ClusterAwareRandomWorkStealing extends
         case ASYNC_STEAL_REPLY_FAILED:
         case ASYNC_STEAL_REPLY_SUCCESS_TABLE:
         case ASYNC_STEAL_REPLY_FAILED_TABLE:
-            if (stealLogger.isInfoEnabled() && ir != null) {
-                stealLogger.info("Stole intercluster job " + ir.getStamp());
-            }
-            synchronized (satin) {
-                if (sender.equals(asyncCurrentVictim)) {
-                    gotAsyncStealReply = true;
-                    asyncStolenJob = ir;
-                    //            		satin.notifyAll(); // not needed I think, we naver wait for the async job.
-                } else {
-                    ftLogger
-                            .warn("SATIN '"
-                                    + s.ident
-                                    + "': received an async job from a node that caused a timeout before.");
-                    if (ir != null) {
-                        s.q.addToTail(ir);
-                    }
-                }
-            }
+            //Daniela:
+            asyncStealReply(ir, sender); 
             break;
         default:
             s.assertFailed("illegal opcode in CRS stealReplyHandler",
@@ -193,13 +240,26 @@ public final class ClusterAwareRandomWorkStealing extends
         if (asyncStealInProgress) {
             stealLogger.info("waiting for a pending async steal reply from "
                     + asyncCurrentVictim);
-            synchronized (satin) {
-                while (asyncStealInProgress && !gotAsyncStealReply) {
-                    try {
-                        satin.handleDelayedMessages(); //TODO move outside lock --Rob
-                        satin.wait(250);
-                    } catch (InterruptedException e) {
-                        //ignore
+            if (clientThread == null) {
+                synchronized (satin) {
+                    while (asyncStealInProgress && !gotAsyncStealReply) {
+                        try {
+                            satin.handleDelayedMessages(); //TODO move outside lock --Rob
+                            satin.wait(250);
+                        } catch (InterruptedException e) {
+                            //ignore
+                        }
+                    }
+                }
+            } else {
+                synchronized (clientThread) {
+                    while (asyncStealInProgress && !gotAsyncStealReply) {
+                        try {
+                            clientThread.handleDelayedMessages(); //TODO move outside lock --Rob
+                            clientThread.wait(250);
+                        } catch (InterruptedException e) {
+                            //ignore
+                        }
                     }
                 }
             }
@@ -233,6 +293,53 @@ public final class ClusterAwareRandomWorkStealing extends
         if (asyncStolenJob != null) {
             if (asyncStolenJob.getOwner().equals(crashedIbis)) {
                 asyncStolenJob = null;
+            }
+        }
+    }
+
+    // Daniela:
+    private void asyncStealReply(InvocationRecord ir, IbisIdentifier sender) {
+        if (stealLogger.isInfoEnabled() && ir != null) {
+            stealLogger.info("Stole intercluster job " + ir.getStamp());
+        }
+        synchronized (satin) {
+            if (s.isMaster()) {
+                if (sender.equals(asyncCurrentVictim)) {
+                    gotAsyncStealReply = true;
+                    asyncStolenJob = ir;
+                    //satin.notifyAll(); 
+                    // not needed I think, we never wait for the async job.
+                } else {
+                    ftLogger.warn("SATIN '"
+                            + s.ident
+                            + "': received an async job from a node that caused a timeout before.");
+                    if (ir != null) {
+                        s.q.addToTail(ir);
+                    }
+                }
+            } else {
+                int threadId = s.waitingStealMap.get(sender).remove(0);
+
+                if (s.waitingStealMap.get(sender).isEmpty()) {
+                    s.waitingStealMap.remove(sender);
+                }
+                
+                s.clientThreads[threadId].algorithm.asyncJobResultWorkerThread(ir, sender);
+            }
+        }
+    }
+    
+    
+    public void asyncJobResultWorkerThread(InvocationRecord ir, IbisIdentifier sender) {
+        if (sender.equals(asyncCurrentVictim)) {
+            gotAsyncStealReply = true;
+            asyncStolenJob = ir;
+        } else {
+            ftLogger.warn("SATIN '"
+                    + s.ident
+                    + "': received an async job from a node that caused a timeout before.");
+            if (ir != null) {
+                ct.q.addToTail(ir);
             }
         }
     }

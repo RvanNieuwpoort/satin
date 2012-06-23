@@ -4,6 +4,7 @@
 package ibis.satin.impl.aborts;
 
 import ibis.ipl.ReadMessage;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.IRVector;
@@ -13,6 +14,9 @@ import ibis.satin.impl.spawnSync.StampVector;
 
 public final class Aborts implements Config {
     private Satin s;
+    
+    //Daniela:
+    private ClientThread ct;
 
     private AbortsCommunication abortsComm;
 
@@ -30,6 +34,14 @@ public final class Aborts implements Config {
         this.s = s;
         abortsComm = new AbortsCommunication(s);
         exceptionList = new IRVector(s);
+    }
+    
+    // Daniela:
+    public Aborts(ClientThread ct) {
+        this.ct = ct;
+        s = ct.satin;
+        abortsComm = s.aborts.abortsComm;//new AbortsCommunication(ct);
+        exceptionList = new IRVector(ct);
     }
 
     public void waitForAborts() {
@@ -78,9 +90,17 @@ public final class Aborts implements Config {
             return;
         }
 
-        s.onStack.push(r);
-        InvocationRecord oldParent = s.parent;
-        s.parent = r;
+        // Daniela: checking if I am the master, thus single-threaded...
+        InvocationRecord oldParent;
+        if (ct == null) {
+            s.onStack.push(r);
+            oldParent = s.parent;
+            s.parent = r;
+        } else {
+            ct.onStack.push(r);
+            oldParent = ct.parent;
+            ct.parent = r;
+        }
 
         try {
             if (inletLogger.isDebugEnabled()) {
@@ -92,8 +112,14 @@ public final class Aborts implements Config {
             r.setInletExecuted(true);
 
             // restore this, there may be more spawns afterwards...
-            s.parent = oldParent;
-            s.onStack.pop();
+            // Daniela: first, checking if I am the master... 
+            if (ct == null) {
+                s.parent = oldParent;
+                s.onStack.pop();
+            } else {
+                ct.parent = oldParent;
+                ct.onStack.pop();
+            }
         } catch (Throwable t) {
             // The inlet has thrown an exception itself.
             // The semantics of this: throw the exception to the parent,
@@ -102,8 +128,14 @@ public final class Aborts implements Config {
             r.setInletExecuted(true);
 
             // restore this, there may be more spawns afterwards...
-            s.parent = oldParent;
-            s.onStack.pop();
+            // Daniela: first, checking if I am the master...
+            if (ct == null) {
+                s.parent = oldParent;
+                s.onStack.pop();
+            } else {
+                ct.parent = oldParent;
+                ct.onStack.pop();
+            }
 
             if (inletLogger.isDebugEnabled()) {
                 inletLogger.debug("Got an exception from exception handler! "
@@ -126,7 +158,7 @@ public final class Aborts implements Config {
                 throw new Error("Inlet threw exception: ", t);
             }
 
-            s.stats.abortsDone++;
+            //s.stats.abortsDone++;
 
             synchronized (s) {
                 // also kill the parent itself.
@@ -146,7 +178,11 @@ public final class Aborts implements Config {
                     inletLogger.debug("SATIN '" + s.ident
                         + ": sending exception result");
                 }
-                s.lb.sendResult(r.getParent(), null);
+                if (ct == null) {
+                    s.lb.sendResult(r.getParent(), null);
+                } else {
+                    ct.lb.sendResult(r.getParent(), null);
+                }
                 return;
             }
 
@@ -161,7 +197,7 @@ public final class Aborts implements Config {
 
     public void killChildrenOf(Stamp targetStamp) {
         try {
-            s.stats.abortTimer.start();
+            //s.stats.abortTimer.start();
 
             if (ASSERTS) {
                 Satin.assertLocked(s);
@@ -169,11 +205,17 @@ public final class Aborts implements Config {
 
             // try work queue, outstanding jobs and jobs on the stack
             // but try stack first, many jobs in q are children of stack jobs.
-            s.onStack.killChildrenOf(targetStamp, false);
-            s.q.killChildrenOf(targetStamp);
+            // Daniela: first, check if I am a worker thread or the master...
+            if (ct == null) {
+                s.onStack.killChildrenOf(targetStamp, false);
+                s.q.killChildrenOf(targetStamp);
+            } else {
+                ct.onStack.killChildrenOf(targetStamp, false);
+                ct.q.killChildrenOf(targetStamp);
+            }
             s.outstandingJobs.killChildrenOf(targetStamp, false);
         } finally {
-            s.stats.abortTimer.stop();
+            //s.stats.abortTimer.stop();
         }
     }
 
@@ -192,7 +234,11 @@ public final class Aborts implements Config {
             throw new Error("Spawned job threw exception. Invocation record = " + r, r.eek);
         }
         if (ASSERTS && r.getParentLocals() != null) {
-            s.assertFailed("parenlocals is not null in empty inlet", new Exception());
+            if (ct == null) {
+                s.assertFailed("parentLocals is not null in empty inlet", new Exception());
+            } else {
+                ct.assertFailed("parentLocals is not null in empty inlet", new Exception());
+            }
         }
 
         if (inletLogger.isDebugEnabled()) {
@@ -215,7 +261,11 @@ public final class Aborts implements Config {
                 inletLogger.debug("SATIN '" + s.ident
                     + ": sending exception result");
             }
-            s.lb.sendResult(r.getParent(), null);
+            if (ct == null) {
+                s.lb.sendResult(r.getParent(), null);
+            } else {
+                ct.lb.sendResult(r.getParent(), null);
+            }
             return;
         }
 
@@ -276,7 +326,7 @@ public final class Aborts implements Config {
                     + ": handling abort message: stamp = " + stamp);
             }
 
-            s.stats.abortsDone++;
+            //s.stats.abortsDone++;
             killChildrenOf(stamp);
 
             if (abortLogger.isDebugEnabled()) {

@@ -17,19 +17,29 @@ import ibis.satin.impl.loadBalancing.RandomWorkStealing;
 import ibis.satin.impl.loadBalancing.VictimTable;
 import ibis.satin.impl.sharedObjects.SOInvocationRecord;
 import ibis.satin.impl.sharedObjects.SharedObjects;
-import ibis.satin.impl.spawnSync.DoubleEndedQueue;
-import ibis.satin.impl.spawnSync.IRStack;
-import ibis.satin.impl.spawnSync.IRVector;
-import ibis.satin.impl.spawnSync.InvocationRecord;
-import ibis.satin.impl.spawnSync.ReturnRecord;
-import ibis.satin.impl.spawnSync.SpawnCounter;
+import ibis.satin.impl.spawnSync.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class Satin implements Config {
     
-    private Thread[] clientThreads;
+    //Daniela:
+    public ClientThread[] clientThreads;
+    
+    public final Object keepAlive;
+    
+    public boolean endThread;
+    
+    public final Map<Stamp, Integer> stampToThreadIdMap;
+    
+    public final Map<IbisIdentifier, List<Integer>> waitingStealMap;
+    
+    public final Map<String, ClientThread> threadIdToThreadMap;
 
     private static final int SUGGESTED_QUEUE_SIZE = 1000;
     
@@ -93,7 +103,7 @@ public final class Satin implements Config {
 
     /**
      * Used for fault tolerance. All ibises that once took part in the
-     * computation, but then crashed. Assumption: ibis identifiers are uniqe in
+     * computation, but then crashed. Assumption: ibis identifiers are unique in
      * time; the same ibis cannot crash and join the computation again.
      */
     public final Vector<IbisIdentifier> deadIbises = new Vector<IbisIdentifier>();
@@ -101,6 +111,8 @@ public final class Satin implements Config {
     static {
         properties.checkProperties(PROPERTY_PREFIX, sysprops, null, true);
     }
+    
+    public static final Logger log = Logger.getLogger("daniela");
 
     /**
      * Creates a Satin instance and also an Ibis instance to run Satin on. This
@@ -146,12 +158,28 @@ public final class Satin implements Config {
         // we need the master to be set before this call
         ft.init(); 
         
-        clientThreads = new Thread[NO_THREADS];
+        //Daniela:
+        
+        //log.addHandler(new ConsoleHandler());
+        // log.addHandler(file handler);
+        
+        stampToThreadIdMap = new HashMap<Stamp, Integer>();
+        waitingStealMap = new HashMap<IbisIdentifier, List<Integer>>();
+        threadIdToThreadMap = new HashMap<String, ClientThread>();
+        
+        clientThreads = new ClientThread[NO_THREADS];
         for (int i = 0; i < NO_THREADS; i++) {
-            clientThreads[i] = new ClientThread(thisSatin);
+            clientThreads[i] = new ClientThread(thisSatin, i);
+            clientThreads[i].setName("thread" + i);
+            threadIdToThreadMap.put(clientThreads[i].getName(), clientThreads[i]);
+            
         }
+        
+        endThread = false;
+        
+        keepAlive = new Object();
 
-        stats.totalTimer.start();
+        //stats.totalTimer.start();
     }
 
     /**
@@ -163,14 +191,14 @@ public final class Satin implements Config {
 
     private void exit(int status) {
         
-        System.out.println("exit(status)");
+        log.log(Level.INFO, "satin exits with status={0}", status);
 
-        stats.totalTimer.stop();
+        //stats.totalTimer.stop();
 
         if (STATS && DETAILED_STATS) {
-            stats.printDetailedStats(ident);
+            //stats.printDetailedStats(ident);
             try {
-                comm.ibis.setManagementProperty("statistics", "");
+                //comm.ibis.setManagementProperty("statistics", "");
             } catch(Throwable e) {
                 // ignored
             }
@@ -199,6 +227,12 @@ public final class Satin implements Config {
         // now we know that there will be no further communication between nodes.
 
         algorithm.exit(); // give the algorithm time to clean up
+        
+        if (!master) {
+            for (ClientThread ct : clientThreads) {
+                ct.algorithm.exit();
+            }
+        }
 
         int size;
         synchronized (this) {
@@ -207,10 +241,10 @@ public final class Satin implements Config {
 
         if (master && STATS) {
             // add my own stats
-            stats.fillInStats();
-            totalStats.add(stats);
+//            stats.fillInStats();
+//            totalStats.add(stats);
 
-            totalStats.printStats(size, stats.totalTimer.totalTimeVal());
+//            totalStats.printStats(size, stats.totalTimer.totalTimeVal());
         }
 
         so.exit();
@@ -220,7 +254,15 @@ public final class Satin implements Config {
         comm.end();
 
         ft.end();
-
+        
+        //Daniela: let the threads die
+        if (!master) {
+            synchronized (keepAlive) {
+                endThread = true;
+                keepAlive.notifyAll();
+            }
+        }
+        
         if (commLogger.isDebugEnabled()) {
             commLogger.debug("SATIN '" + ident + "': exited");
         }
@@ -231,10 +273,10 @@ public final class Satin implements Config {
         System.gc();
         System.runFinalization();
         
-        System.out.println("before System.exit(status)");
+        //System.out.println("before System.exit(status)");
 
         if (status != 0) {
-            System.out.println("status != 0");
+            //System.out.println("status != 0");
             System.exit(status);
         }
     }
@@ -257,21 +299,50 @@ public final class Satin implements Config {
      * @param r the invocation record specifying the spawned invocation.
      */
     public void spawn(InvocationRecord r) {
-        stats.spawns++;
+        if (master) {
+//            stats.spawns++;
 
-        // If my parent is aborted, so am I.
-        if (parent != null && parent.aborted) return;
+            // If my parent is aborted, so am I.
+            if (parent != null && parent.aborted) {
+                return;
+            }
 
-        // Maybe this job is already in the global result table.
-        // If so, we don't have to do it again.
-        // Ouch, this cannot be the right place: there is no stamp allocated
-        // yet for the job! --Ceriel
-        // Fixed by first calling r.spawn.
-        r.spawn(ident, parent);
-        if (ft.checkForDuplicateWork(parent, r)) return;
+            // Maybe this job is already in the global result table.
+            // If so, we don't have to do it again.
+            // Ouch, this cannot be the right place: there is no stamp allocated
+            // yet for the job! --Ceriel
+            // Fixed by first calling r.spawn.
+            r.spawn(ident, parent);
+//            if (ft.checkForDuplicateWork(parent, r)) {
+//                return;
+//            }
 
-        q.addToHead(r);
-        algorithm.jobAdded();
+            q.addToHead(r);
+            algorithm.jobAdded();
+        } else {
+            String threadName = Thread.currentThread().getName();
+            ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
+            
+//            t.stats.spawns++;
+
+            // If my parent is aborted, so am I.
+            if (t.parent != null && t.parent.aborted) {
+                return;
+            }
+
+            // Maybe this job is already in the global result table.
+            // If so, we don't have to do it again.
+            // Ouch, this cannot be the right place: there is no stamp allocated
+            // yet for the job! --Ceriel
+            // Fixed by first calling r.spawn.
+            r.spawn(ident, t.parent);
+//            if (t.ft.checkForDuplicateWork(t.parent, r)) {
+//                return;
+//            }
+
+            t.q.addToHead(r, true);
+            t.algorithm.jobAdded();
+        }
     }
 
     /**
@@ -282,17 +353,39 @@ public final class Satin implements Config {
      * @param s the spawncounter.
      */
     public void sync(SpawnCounter s) {
-        stats.syncs++;
+//        stats.syncs++;
 
         if (s.getValue() == 0) { // A sync without spawns is a poll.
-            handleDelayedMessages();
-        } else while (s.getValue() > 0) {
-            InvocationRecord r = q.getFromHead(); // Try the local queue           
-            if (r != null) {
-              callSatinFunction(r);
+            if (master) {
+                handleDelayedMessages();
             } else {
-                noWorkInQueue();
+                String threadName = Thread.currentThread().getName();
+                ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
+                
+                t.handleDelayedMessages();
             }
+        } else while (s.getValue() > 0) {
+            if (master) {
+                InvocationRecord r = q.getFromHead(); // Try the local queue  
+                
+                if (r != null) {
+                    callSatinFunction(r);
+                } else {
+                    noWorkInQueue();
+                }   
+            } else {
+                String threadName = Thread.currentThread().getName();
+                ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
+                
+                InvocationRecord r = t.q.getFromHead(true);
+                                
+                if (r != null) {
+                    t.callSatinFunction(r);
+                } else {
+                    t.noWorkInQueue();
+                } 
+            }
+            
             // Wait for abort sender. Otherwise, if the current job starts
             // spawning again, jobs may be aborted that are spawned after
             // this sync!
@@ -316,26 +409,92 @@ public final class Satin implements Config {
         if (spawnLogger.isDebugEnabled()) {
             spawnLogger.debug("SATIN '" + ident + "': starting client!");
         }
-        
+                
         if(master) {
-            ExecutorService execServ = Executors.newFixedThreadPool(NO_THREADS - 1);
-            for(Thread clientThread : clientThreads) {
-                execServ.submit(clientThread);
-            }
+            //TODO: 
         } else {
-            ExecutorService execServ = Executors.newFixedThreadPool(NO_THREADS);
+            //execServ = Executors.newFixedThreadPool(NO_THREADS);
             for(Thread clientThread : clientThreads) {
-                execServ.submit(clientThread);
+                //execServ.submit(clientThread);
+                clientThread.start();
             }
         }
-
-//        while (!exiting) {
-//            // steal and run jobs
-//            noWorkInQueue();
-//
-//            // Maybe the master crashed, and we were elected the new master.
-//            if (master) return;
+        
+        
+        
+//        try {
+//            execServ.awaitTermination(7, TimeUnit.DAYS);
+//        } catch (InterruptedException ex) {
+//            Logger.getLogger(Satin.class.getName()).log(Level.SEVERE, null, ex);
 //        }
+
+    //        while (!exiting) {
+    //            // steal and run jobs
+    //            noWorkInQueue();
+    //
+    //            // Maybe the master crashed, and we were elected the new master.
+    //            if (master) return;
+    //        }
+
+    }
+    
+    /**
+     * Daniela: 
+     */
+    
+    public InvocationRecord returnJob() {
+        if (master) {
+            return q.getFromTail();
+        } else {
+            for (ClientThread ct : clientThreads) {
+                if (ct.q.size(true) != 0) {
+                    InvocationRecord ir = ct.q.getFromTail(true);
+                    if (ir != null) {
+                        synchronized(stampToThreadIdMap) {
+                            stampToThreadIdMap.put(ir.getStamp(), ct.id);
+                        }
+                    }
+                    
+                    return ir;
+                }
+            }
+            return null;
+        }
+    }
+    
+    /** Daniela:
+     * called only by clients which have multiple threads running. Thread-safe.
+     * @param t
+     * @return 
+     */
+    public InvocationRecord returnSharedMemoryJob(ClientThread t) {
+        for (ClientThread ct : clientThreads) {
+            if (ct.id != t.id) {
+                if (ct.q.size(true) != 0) {
+                    InvocationRecord ir = ct.q.getFromTail(true);
+                    
+                    if (ir != null) {
+                        synchronized(stampToThreadIdMap) {
+                            stampToThreadIdMap.put(ir.getStamp(), ct.id);
+                        }
+                        
+                        ir.setStealer(ident);
+
+                        // store the job in the outstanding list
+                        synchronized (this) {
+                            outstandingJobs.add(ir);
+                        }
+                    }
+                    
+                    //System.out.println("\t Thread " + t.id + " stole job " + ir.getStamp() +
+                    //        " from thread " + ct.id);
+                    
+                    return ir;
+                }
+            }
+        }
+        
+        return null;
     }
 
     public synchronized void handleDelayedMessages() {
@@ -362,7 +521,7 @@ public final class Satin implements Config {
         // it is just used for assigning results.
         // get the lock, so no-one can steal jobs now, and no-one can change my
         // tables.
-        stats.abortsDone++;
+//        stats.abortsDone++;
 
         if (abortLogger.isDebugEnabled()) {
             abortLogger.debug("ABORT called: outstandingSpanws = "
@@ -370,14 +529,30 @@ public final class Satin implements Config {
                     + ", exceptionThrower = " + exceptionThrower);
         }
 
-        if (exceptionThrower != null) { // can be null if root does an abort.
-            // kill all children of the parent of the thrower.
-            aborts.killChildrenOf(exceptionThrower.getParentStamp());
-        }
+        if (master) {
+            if (exceptionThrower != null) { // can be null if root does an abort.
+                // kill all children of the parent of the thrower.
+                aborts.killChildrenOf(exceptionThrower.getParentStamp());
+            }
 
-        // now kill mine
-        if (outstandingSpawns != null) {
-            aborts.killChildrenOf(outstandingSpawns.getParentStamp());
+            // now kill mine
+            if (outstandingSpawns != null) {
+                aborts.killChildrenOf(outstandingSpawns.getParentStamp());
+            }
+        } else {
+            String threadName = Thread.currentThread().getName();
+            ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
+            
+            if (exceptionThrower != null) { // can be null if root does an abort.
+                // kill all children of the parent of the thrower.
+                t.aborts.killChildrenOf(exceptionThrower.getParentStamp());
+            }
+
+            // now kill mine
+            if (outstandingSpawns != null) {
+                t.aborts.killChildrenOf(outstandingSpawns.getParentStamp());
+            }
+
         }
 
     }
@@ -589,7 +764,7 @@ public final class Satin implements Config {
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
         }
         ReturnRecord rr = null;
-        stats.jobsExecuted++;
+//        stats.jobsExecuted++;
         rr = r.runRemote();
         rr.setEek(r.eek);
 
@@ -669,13 +844,13 @@ public final class Satin implements Config {
     }
 
     public static void addInterClusterStats(long cnt) {
-        thisSatin.stats.interClusterMessages++;
-        thisSatin.stats.interClusterBytes += cnt;
+//        thisSatin.stats.interClusterMessages++;
+//        thisSatin.stats.interClusterBytes += cnt;
     }
 
     public static void addIntraClusterStats(long cnt) {
-        thisSatin.stats.intraClusterMessages++;
-        thisSatin.stats.intraClusterBytes += cnt;
+//        thisSatin.stats.intraClusterMessages++;
+//        thisSatin.stats.intraClusterBytes += cnt;
     }
 
     public static java.io.Serializable deepCopy(java.io.Serializable o) {

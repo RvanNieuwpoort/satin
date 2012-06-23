@@ -6,6 +6,7 @@ package ibis.satin.impl.aborts;
 import ibis.ipl.IbisIdentifier;
 import ibis.ipl.ReadMessage;
 import ibis.ipl.WriteMessage;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.communication.Protocol;
@@ -58,6 +59,9 @@ final class AbortsCommunication implements Config {
     }
 
     private Satin s;
+    
+    // Daniela: 
+    private ClientThread ct;
 
     private ArrayList<StampListElement> stampsToAbortList =
             new ArrayList<StampListElement>();
@@ -66,7 +70,7 @@ final class AbortsCommunication implements Config {
         this.s = s;
         new AbortMessageSender().start();
     }
-
+    
     protected void sendAbortMessage(InvocationRecord r) {
         if (s.deadIbises.contains(r.getStealer())) {
             /* don't send abort and store messages to crashed ibises */
@@ -132,7 +136,13 @@ final class AbortsCommunication implements Config {
         try {
             Stamp stamp = (Stamp) m.readObject();
             synchronized (s) {
-                s.aborts.addToAbortList(stamp);
+                if (s.isMaster()) {
+                    s.aborts.addToAbortList(stamp);
+                } else {
+                    for (ClientThread ct : s.clientThreads) {
+                        ct.aborts.addToAbortList(stamp);
+                    }
+                }
             }
             // m.finish();
         } catch (IOException e) {
