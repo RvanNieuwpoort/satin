@@ -3,6 +3,7 @@
 package ibis.satin.impl.loadBalancing;
 
 import ibis.ipl.IbisIdentifier;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.InvocationRecord;
@@ -10,9 +11,20 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 public abstract class LoadBalancingAlgorithm implements Config {
 
     protected Satin satin;
+    
+    protected ClientThread clientThread;
 
     protected LoadBalancingAlgorithm(Satin s) {
         satin = s;
+    }
+    
+    /**Daniela:
+     * 
+     * @param ct 
+     */
+    protected LoadBalancingAlgorithm(ClientThread ct) {
+        clientThread = ct;
+        satin = ct.satin;
     }
 
     /**
@@ -77,15 +89,20 @@ public abstract class LoadBalancingAlgorithm implements Config {
         }
 
         if (time > 0) {
-            satin.stats.stealThrottleTimer.start();
+            //satin.stats.stealThrottleTimer.start();
 
             try {
                 Thread.sleep(time);
             } catch (InterruptedException e) {
                 // ignore
             } finally {
-                satin.stats.stealThrottleTimer.stop();
+                //satin.stats.stealThrottleTimer.stop();
             }
         }
+    }
+    
+    //Daniela:
+    public void asyncJobResultWorkerThread(InvocationRecord ir, IbisIdentifier sender) {
+        //by default, do nothing
     }
 }

@@ -2,6 +2,7 @@
 
 package ibis.satin.impl.loadBalancing;
 
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.InvocationRecord;
@@ -13,6 +14,14 @@ public final class MasterWorker extends LoadBalancingAlgorithm implements
 
     public MasterWorker(Satin s) {
         super(s);
+    }
+
+    /** Daniela:
+     * 
+     * @param ct 
+     */
+    public MasterWorker(ClientThread ct) {
+        super(ct);
     }
 
     public InvocationRecord clientIteration() {
@@ -27,10 +36,12 @@ public final class MasterWorker extends LoadBalancingAlgorithm implements
         }
 
         if (v == null) return null; // node might have crashed
-
-        satin.lb.setCurrentVictim(v.getIdent());
-
-        return satin.lb.stealJob(v, true); // blocks at the server side
+        
+        //DAniela:
+            //satin.lb.setCurrentVictim(v.getIdent());
+            //return satin.lb.stealJob(v, true); // blocks at the server side
+            clientThread.lb.setCurrentVictim(v.getIdent());
+            return clientThread.lb.stealJob(v, true);        
     }
 
     public void jobAdded() {

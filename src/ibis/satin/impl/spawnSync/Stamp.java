@@ -37,7 +37,7 @@ public final class Stamp implements java.io.Serializable {
      * @param parentStamp stamp of the spawner, or <code>null</code> if there
      * is no parent.
      */
-    public static Stamp createStamp(Stamp parentStamp) {
+    public synchronized static Stamp createStamp(Stamp parentStamp) {
         if (!ENABLE_CACHE || stampCache == null) {
             return new Stamp(parentStamp);
         }
@@ -49,7 +49,7 @@ public final class Stamp implements java.io.Serializable {
         return res;
     }
 
-    public static void deleteStamp(Stamp s) {
+    public synchronized static void deleteStamp(Stamp s) {
         if (!ENABLE_CACHE) return;
         s.cacheNext = stampCache;
         stampCache = s;

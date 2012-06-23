@@ -2,6 +2,7 @@
 
 package ibis.satin.impl.spawnSync;
 
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 
@@ -17,13 +18,46 @@ public final class DoubleEndedQueue implements Config {
     private int length = 0;
 
     private Satin satin;
+    
+    private final ClientThread clientThread;
 
     public DoubleEndedQueue(Satin satin) {
         this.satin = satin;
+        this.clientThread = null;
+    }
+
+     /**
+     * Daniela:
+     * @param clientThread
+     */
+    public DoubleEndedQueue(ClientThread clientThread) {
+        this.clientThread = clientThread;
+        this.satin = clientThread.satin;
     }
 
     public InvocationRecord getFromHead() {
         synchronized (satin) {
+            if (length == 0) {
+                return null;
+            }
+
+            InvocationRecord rtn = head;
+            head = head.getQnext();
+            if (head == null) {
+                tail = null;
+            } else {
+                head.setQprev(null);
+            }
+            length--;
+
+            rtn.setQnext(null);
+            rtn.setQprev(null);
+            return rtn;
+        }
+    }
+    
+    public InvocationRecord getFromHead(boolean b) {
+        synchronized (clientThread) {
             if (length == 0) {
                 return null;
             }
@@ -63,6 +97,32 @@ public final class DoubleEndedQueue implements Config {
             return rtn;
         }
     }
+    
+        /**
+     * Daniela
+     * @param b --> for the q's from threads
+     * @return rtn 
+     */
+    public InvocationRecord getFromTail(boolean b) {
+        synchronized (clientThread) {
+            if (length == 0) {
+                return null;
+            }
+
+            InvocationRecord rtn = tail;
+            tail = tail.getQprev();
+            if (tail == null) {
+                head = null;
+            } else {
+                tail.setQnext(null);
+            }
+            length--;
+
+            rtn.setQnext(null);
+            rtn.setQprev(null);
+            return rtn;
+        }
+    }
 
     public void addToHead(InvocationRecord o) {
         synchronized (satin) {
@@ -76,9 +136,35 @@ public final class DoubleEndedQueue implements Config {
             length++;
         }
     }
+    
+    public void addToHead(InvocationRecord o, boolean b) {
+        synchronized (clientThread) {
+            if (length == 0) {
+                head = tail = o;
+            } else {
+                o.setQnext(head);
+                head.setQprev(o);
+                head = o;
+            }
+            length++;
+        }
+    }
 
     public void addToTail(InvocationRecord o) {
         synchronized (satin) {
+            if (length == 0) {
+                head = tail = o;
+            } else {
+                o.setQprev(tail);
+                tail.setQnext(o);
+                tail = o;
+            }
+            length++;
+        }
+    }
+    
+    public void addToTail(InvocationRecord o, boolean b) {
+        synchronized (clientThread) {
             if (length == 0) {
                 head = tail = o;
             } else {
@@ -120,6 +206,17 @@ public final class DoubleEndedQueue implements Config {
             return length;
         }
     }
+    
+    /**Daniela:
+     * 
+     * @param b
+     * @return 
+     */
+    public int size(boolean b) {
+        synchronized (clientThread) {
+            return length;
+        }
+    }
 
     public void killChildrenOf(Stamp targetStamp) {
         if (ASSERTS) {
@@ -143,7 +240,7 @@ public final class DoubleEndedQueue implements Config {
                 }
 
                 curr.decrSpawnCounter();
-                satin.stats.abortedJobs++;
+                //satin.stats.abortedJobs++;
                 curr.aborted = true;
 
                 // Curr is removed, but not put back in cache.
@@ -187,8 +284,8 @@ public final class DoubleEndedQueue implements Config {
 
                 curr.aborted = true;
 
-                satin.stats.abortedJobs++;
-                satin.stats.killedOrphans++;
+                //satin.stats.abortedJobs++;
+                //satin.stats.killedOrphans++;
                 removeElement(curr);
             }
 

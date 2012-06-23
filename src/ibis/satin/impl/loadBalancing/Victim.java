@@ -122,7 +122,7 @@ public final class Victim implements Config {
         
         return sendPort;
     }
-
+    
     public WriteMessage newMessage() throws IOException {
         SendPort send;
         synchronized (sendPort) {
@@ -136,7 +136,7 @@ public final class Victim implements Config {
         }
         return send.newMessage();
     }
-
+    
     public long finish(WriteMessage m) throws IOException {
         try {
             long cnt = m.finish();
@@ -162,7 +162,7 @@ public final class Victim implements Config {
         }
     }
     
-         
+    
     public void finish(WriteMessage m, IOException e) {
         m.finish(e);
     }

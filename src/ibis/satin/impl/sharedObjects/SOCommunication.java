@@ -22,8 +22,7 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 import ibis.util.TypedProperties;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
 
 final class SOCommunication implements Config, Protocol {
@@ -54,7 +53,9 @@ final class SOCommunication implements Config, Protocol {
     private HashMap<IbisIdentifier, ReceivePortIdentifier> ports =
             new HashMap<IbisIdentifier, ReceivePortIdentifier>();
 
-    private SharedObject sharedObject = null;
+    private Map<String, SharedObject> sharedObject = new HashMap<String, SharedObject>();
+    
+    private Set<String> requestsSent = new HashSet<String>(); 
 
     private boolean receivedNack = false;
 
@@ -220,7 +221,7 @@ final class SOCommunication implements Config, Protocol {
         }
         if (tmp.length == 0) return;
 
-        s.stats.broadcastSOInvocationsTimer.start();
+        //s.stats.broadcastSOInvocationsTimer.start();
 
         try {
             s.so.registerMulticast(s.so.getSOReference(r.getObjectId()), tmp);
@@ -252,14 +253,14 @@ final class SOCommunication implements Config, Protocol {
                 if (SO_MAX_INVOCATION_DELAY > 0) {
                     soCurrTotalMessageSize += byteCount;
                 } else {
-                    s.stats.soRealMessageCount++;
+                    //s.stats.soRealMessageCount++;
                 }
             }
 
             s.stats.soInvocations++;
             s.stats.soInvocationsBytes += byteCount;
         } finally {
-            s.stats.broadcastSOInvocationsTimer.stop();
+            //s.stats.broadcastSOInvocationsTimer.stop();
         }
 
         // Try to send immediately if needed.
@@ -275,7 +276,7 @@ final class SOCommunication implements Config, Protocol {
         long byteCount = 0;
         WriteMessage w = null;
 
-        s.stats.broadcastSOInvocationsTimer.start();
+        //s.stats.broadcastSOInvocationsTimer.start();
 
         try {
 
@@ -321,7 +322,7 @@ final class SOCommunication implements Config, Protocol {
             s.stats.soInvocations++;
             s.stats.soInvocationsBytes += byteCount;
         } finally {
-            s.stats.broadcastSOInvocationsTimer.stop();
+            //s.stats.broadcastSOInvocationsTimer.stop();
         }
 
         // Try to send immediately if needed.
@@ -351,14 +352,14 @@ final class SOCommunication implements Config, Protocol {
         WriteMessage w = null;
         long size = 0;
 
-        s.stats.soBroadcastTransferTimer.start();
+        //s.stats.soBroadcastTransferTimer.start();
 
         try {
 
             connectSendPortToNewReceivers();
 
             if (soSendPort == null) {
-                s.stats.soBroadcastTransferTimer.stop();
+                //s.stats.soBroadcastTransferTimer.stop();
                 return;
             }
 
@@ -377,12 +378,12 @@ final class SOCommunication implements Config, Protocol {
                 }
 
                 w.writeByte(SO_TRANSFER);
-                s.stats.soBroadcastSerializationTimer.start();
+                //s.stats.soBroadcastSerializationTimer.start();
                 try {
                     w.writeObject(object);
                     size = w.finish();
                 } finally {
-                    s.stats.soBroadcastSerializationTimer.stop();
+                    //s.stats.soBroadcastSerializationTimer.stop();
                 }
                 w = null;
                 if (SO_MAX_INVOCATION_DELAY > 0) {
@@ -399,7 +400,7 @@ final class SOCommunication implements Config, Protocol {
             s.stats.soBcasts++;
             s.stats.soBcastBytes += size;
         } finally {
-            s.stats.soBroadcastTransferTimer.stop();
+            //s.stats.soBroadcastTransferTimer.stop();
         }
     }
 
@@ -423,7 +424,7 @@ final class SOCommunication implements Config, Protocol {
             return;
         }
 
-        s.stats.soBroadcastTransferTimer.start();
+        //s.stats.soBroadcastTransferTimer.start();
 
         try {
             s.so.registerMulticast(s.so.getSOReference(object.getObjectId()), tmp);
@@ -437,12 +438,12 @@ final class SOCommunication implements Config, Protocol {
                 }
 
                 w.writeByte(SO_TRANSFER);
-                s.stats.soBroadcastSerializationTimer.start();
+                //s.stats.soBroadcastSerializationTimer.start();
                 try {
                     w.writeObject(object);
                     size = w.finish();
                 } finally {
-                    s.stats.soBroadcastSerializationTimer.stop();
+                    //s.stats.soBroadcastSerializationTimer.stop();
                 }
                 w = null;
                 if (SO_MAX_INVOCATION_DELAY > 0) {
@@ -459,7 +460,7 @@ final class SOCommunication implements Config, Protocol {
             s.stats.soBcasts++;
             s.stats.soBcastBytes += size;
         } finally {
-            s.stats.soBroadcastTransferTimer.stop();
+            //s.stats.soBroadcastTransferTimer.stop();
         }
     }
 
@@ -488,10 +489,14 @@ final class SOCommunication implements Config, Protocol {
         soLogger.debug("SATIN '" + s.ident
             + "': did not receive object in time, demanding it now");
 
-        // haven't got it, demand it now.
-        sendSORequest(objectId, source, true);
+        if (!requestsSent.contains(objectId)) {
+            requestsSent.add(objectId);
+        
+            // haven't got it, demand it now.
+            sendSORequest(objectId, source, true);
+        }
 
-        boolean gotIt = waitForSOReply();
+        boolean gotIt = waitForSOReply(objectId);
         if (gotIt) {
             soLogger.debug("SATIN '" + s.ident
                 + "': received demanded object");
@@ -540,7 +545,7 @@ final class SOCommunication implements Config, Protocol {
         }
     }
 
-    private boolean waitForSOReply() throws SOReferenceSourceCrashedException {
+    private boolean waitForSOReply(String objId) throws SOReferenceSourceCrashedException {
         // wait for the reply
         // there are three possibilities:
         // 1. we get the object back -> return true
@@ -548,13 +553,23 @@ final class SOCommunication implements Config, Protocol {
         // 3. the source crashed -> exception
         while (true) {
             synchronized (s) {
-                if (sharedObject != null) {
-                    s.so.addObject(sharedObject);
-                    sharedObject = null;
-                    s.currentVictimCrashed = false;
-                    soLogger.info("SATIN '" + s.ident
-                        + "': received shared object");
+                // another thread already took care of the updated for objId
+                if (!requestsSent.contains(objId)) {
                     return true;
+                }
+                
+                if (!sharedObject.isEmpty()) {// != null) {
+                    if (sharedObject.containsKey(objId)) {
+                        s.so.addObject(sharedObject.get(objId));
+                        sharedObject.remove(objId);
+                        requestsSent.remove(objId);
+                        //s.so.addObjectList(sharedObject);
+                        //sharedObject.clear();
+                        s.currentVictimCrashed = false;
+                        soLogger.info("SATIN '" + s.ident
+                            + "': received shared object");
+                        return true;
+                    }
                 }
                 if (s.currentVictimCrashed) {
                     s.currentVictimCrashed = false;
@@ -720,7 +735,7 @@ final class SOCommunication implements Config, Protocol {
     protected void handleSOTransfer(ReadMessage m) { // normal so transfer (not exportObject)
         SharedObject obj = null;
 
-        s.stats.soDeserializationTimer.start();
+        //s.stats.soDeserializationTimer.start();
         try {
             obj = (SharedObject) m.readObject();
         } catch (IOException e) {
@@ -730,13 +745,13 @@ final class SOCommunication implements Config, Protocol {
             soLogger.error("SATIN '" + s.ident
                 + "': got exception while reading" + " shared object", e);
         } finally {
-            s.stats.soDeserializationTimer.stop();
+            //s.stats.soDeserializationTimer.stop();
         }
 
         // no need to finish the read message here. 
         // We don't block and don't do any communication
         synchronized (s) {
-            sharedObject = obj;
+            sharedObject.put(obj.getObjectId(), obj);
             s.notifyAll();
         }
     }

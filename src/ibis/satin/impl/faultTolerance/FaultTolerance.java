@@ -8,6 +8,7 @@ import ibis.ipl.ReadMessage;
 import ibis.ipl.ReceivePortConnectUpcall;
 import ibis.ipl.RegistryEventHandler;
 import ibis.ipl.WriteMessage;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.checkPointing.Checkpoint;
@@ -35,7 +36,7 @@ import org.gridlab.gat.io.FileOutputStream;
 
 public final class FaultTolerance implements Config {
     private Satin s;
-
+    
     /** True if the master crashed and the whole work was restarted. */
     private boolean restarted = false;
 
@@ -202,7 +203,7 @@ public final class FaultTolerance implements Config {
     public void handleCrashes() {
         ftLogger.debug("SATIN '" + s.ident + ": handling crashes");
 
-        s.stats.crashTimer.start();
+        //s.stats.crashTimer.start();
         
         HashSet<IbisIdentifier> crashedCopy;
 
@@ -252,8 +253,14 @@ public final class FaultTolerance implements Config {
                     ftLogger.debug("SATIN '" + s.ident + ": handling crash of "
                         + id);
 
-                    // give the load-balancing algorith a chance to clean up
-                    s.algorithm.handleCrash(id);
+                    // give the load-balancing algorithm a chance to clean up
+                    if (s.isMaster()) {
+                        s.algorithm.handleCrash(id);
+                    } else {
+                        for (ClientThread ct : s.clientThreads) {
+                            ct.algorithm.handleCrash(id);
+                        }
+                    }
 
                     if (!FT_NAIVE) {
                         // abort all jobs stolen from id or descendants of jobs
@@ -264,7 +271,7 @@ public final class FaultTolerance implements Config {
                     }
 
                     s.outstandingJobs.redoStolenBy(id);
-                    s.stats.numCrashesHandled++;
+                    //s.stats.numCrashesHandled++;
                     
                     s.so.handleCrash(id);
                 }
@@ -272,14 +279,14 @@ public final class FaultTolerance implements Config {
                 s.notifyAll();
             }
         } finally {
-            s.stats.crashTimer.stop();
+            //s.stats.crashTimer.stop();
         }
         
         if (CHECKPOINTING && coordinator){
             synchronized(s) {
-                s.stats.useCheckpointTimer.start();
+                //s.stats.useCheckpointTimer.start();
                 checkpointFile.read(crashedCopy, globalResultTable);
-                s.stats.useCheckpointTimer.stop();
+                //s.stats.useCheckpointTimer.stop();
             }
         }
     }
@@ -326,15 +333,29 @@ public final class FaultTolerance implements Config {
         Satin.assertLocked(s);
         // try work queue, outstanding jobs and jobs on the stack
         // but try stack first, many jobs in q are children of stack jobs
-        ArrayList<InvocationRecord> toStore = s.onStack.killChildrenOf(targetStamp, true);
+        if (s.isMaster()) {
+            ArrayList<InvocationRecord> toStore = s.onStack.killChildrenOf(targetStamp, true);
 
-        //update the global result table
+            //update the global result table
 
-        for (int i = 0; i < toStore.size(); i++) {
-            storeFinishedChildrenOf(toStore.get(i));
+            for (int i = 0; i < toStore.size(); i++) {
+                storeFinishedChildrenOf(toStore.get(i));
+            }
+
+            s.q.killChildrenOf(targetStamp);
+        } else {
+            for (ClientThread ct : s.clientThreads) {
+                ArrayList<InvocationRecord> toStore = ct.onStack.killChildrenOf(targetStamp, true);
+
+                //update the global result table
+
+                for (int i = 0; i < toStore.size(); i++) {
+                    storeFinishedChildrenOf(toStore.get(i));
+                }
+
+                ct.q.killChildrenOf(targetStamp);
+            }
         }
-
-        s.q.killChildrenOf(targetStamp);
         s.outstandingJobs.killChildrenOf(targetStamp, true);
     }
 
@@ -347,21 +368,41 @@ public final class FaultTolerance implements Config {
     }
 
     public void killAndStoreSubtreeOf(IbisIdentifier targetOwner) {
-        ArrayList<InvocationRecord> toStore = s.onStack.killSubtreesOf(targetOwner);
+        if (s.isMaster()) {
+            ArrayList<InvocationRecord> toStore = s.onStack.killSubtreesOf(targetOwner);
 
-        // update the global result table
-        for (int i = 0; i < toStore.size(); i++) {
-            storeFinishedChildrenOf(toStore.get(i));
+            // update the global result table
+            for (int i = 0; i < toStore.size(); i++) {
+                storeFinishedChildrenOf(toStore.get(i));
+            }
+
+            s.q.killSubtreeOf(targetOwner);
+        } else {
+            for (ClientThread ct : s.clientThreads) {
+                ArrayList<InvocationRecord> toStore = ct.onStack.killSubtreesOf(targetOwner);
+
+                // update the global result table
+                for (int i = 0; i < toStore.size(); i++) {
+                    storeFinishedChildrenOf(toStore.get(i));
+                }
+
+                ct.q.killSubtreeOf(targetOwner);
+            }
         }
-
-        s.q.killSubtreeOf(targetOwner);
         s.outstandingJobs.killAndStoreSubtreeOf(targetOwner);
     }
     
 
     public void killSubtreeOf(IbisIdentifier targetOwner) {
-        s.onStack.killSubtreesOf(targetOwner);
-        s.q.killSubtreeOf(targetOwner);
+        if (s.isMaster()) {
+            s.onStack.killSubtreesOf(targetOwner);
+            s.q.killSubtreeOf(targetOwner);
+        } else {
+            for (ClientThread ct : s.clientThreads) {
+                ct.onStack.killSubtreesOf(targetOwner);
+                ct.q.killSubtreeOf(targetOwner);
+            }
+        }
         s.outstandingJobs.killSubtreeOf(targetOwner);
     }
 
@@ -406,7 +447,7 @@ public final class FaultTolerance implements Config {
         }
         pushJobs(victim);
         if (STATS && DETAILED_STATS) {
-            s.stats.printDetailedStats(s.ident);
+            //s.stats.printDetailedStats(s.ident);
         }
         System.exit(0);
     }
@@ -419,7 +460,7 @@ public final class FaultTolerance implements Config {
         }
         pushJobs(victim);
         if (STATS && DETAILED_STATS) {
-            s.stats.printDetailedStats(s.ident);
+            //s.stats.printDetailedStats(s.ident);
         }
         System.exit(0);
     }
@@ -427,23 +468,37 @@ public final class FaultTolerance implements Config {
     private void pushJobs(Victim v) {
         Map<Stamp, GlobalResultTableValue> toPush = new HashMap<Stamp, GlobalResultTableValue>();
         synchronized (s) {
-            ArrayList<InvocationRecord> tmp = s.onStack.getAllFinishedChildren(v);
+            if (s.isMaster()) {
+                ArrayList<InvocationRecord> tmp = s.onStack.getAllFinishedChildren(v);
 
-            for (int i = 0; i < tmp.size(); i++) {
-                InvocationRecord curr = tmp.get(i);
-                Stamp key = curr.getStamp();
-                GlobalResultTableValue value = new GlobalResultTableValue(
-                    GlobalResultTableValue.TYPE_RESULT, curr);
-                toPush.put(key, value);
+                for (int i = 0; i < tmp.size(); i++) {
+                    InvocationRecord curr = tmp.get(i);
+                    Stamp key = curr.getStamp();
+                    GlobalResultTableValue value = new GlobalResultTableValue(
+                            GlobalResultTableValue.TYPE_RESULT, curr);
+                    toPush.put(key, value);
+                }
+            } else {
+                for (ClientThread ct : s.clientThreads) {
+                    ArrayList<InvocationRecord> tmp = ct.onStack.getAllFinishedChildren(v);
+
+                    for (int i = 0; i < tmp.size(); i++) {
+                        InvocationRecord curr = tmp.get(i);
+                        Stamp key = curr.getStamp();
+                        GlobalResultTableValue value = new GlobalResultTableValue(
+                                GlobalResultTableValue.TYPE_RESULT, curr);
+                        toPush.put(key, value);
+                    }
+                }
             }
 
-            s.stats.killedOrphans += s.onStack.size();
-            s.stats.killedOrphans += s.q.size();
+            //s.stats.killedOrphans += s.onStack.size();
+            //s.stats.killedOrphans += s.q.size();
         }
 
         ftComm.pushResults(v, toPush);
     }
-
+/*
     public void handleDelayedMessages() {
         if (gotCrashes) {
             s.ft.handleCrashes();
@@ -474,6 +529,80 @@ public final class FaultTolerance implements Config {
                         checkpointFile.write(checkpoints);
                     } finally {
                         s.stats.writeCheckpointTimer.stop();
+                    }
+                }
+                gotCheckpoints = false;
+            }
+            if (becomeCoordinator){
+                coordinatorInit();
+                becomeCoordinator = false;
+            }
+            if (findNewCoordinator){
+                findNewCoordinator();
+                findNewCoordinator = false;
+            }
+            if (setCoordinator){
+                setCoordinator();
+                setCoordinator = false;
+            }   
+            if (takeCheckpoint){
+//                              if (coordinator && !CHECKPOINT_PUSH){
+//                    broadcastCheckpointRequest();
+//                    takeCoordinatorCheckpoint();
+//                } else if (coordinator && CHECKPOINT_PUSH){
+//                    takeCoordinatorCheckpoint();
+//                } else if (!coordinator && CHECKPOINT_PUSH){
+//                    takeAndSendCheckpoint();
+//                    }
+                if (coordinator) {
+                    if (!CHECKPOINT_PUSH) {
+                        broadcastCheckpointRequest();
+                    }
+                    takeCoordinatorCheckpoint();
+                } else {
+                    if (CHECKPOINT_PUSH) {
+                        takeAndSendCheckpoint();
+                    }
+                }
+                takeCheckpoint = false;
+            }
+            if (gotCheckpointAndQuit) {
+                handleCheckpointAndQuit();
+            }
+        }
+
+    } */
+    
+    public void handleDelayedMessages() {
+        if (gotCrashes) {
+            handleCrashes();
+        }
+        if (gotAbortsAndStores) {
+            handleAbortsAndStores();
+        }
+        if (gotDelete) {
+            handleDelete();
+        }
+        if (gotDeleteCluster) {
+            handleDeleteCluster();
+        }
+        if (masterHasCrashed) {
+            handleMasterCrash();
+        }
+        if (clusterCoordinatorHasCrashed) {
+            handleClusterCoordinatorCrash();
+        }
+        if (updatesToSend) {
+            globalResultTable.sendUpdates();
+        }
+        if (CHECKPOINTING) {
+            if (gotCheckpoints){
+                synchronized (s){
+                    //s.stats.writeCheckpointTimer.start();
+                    try {
+                        checkpointFile.write(checkpoints);
+                    } finally {
+                        //s.stats.writeCheckpointTimer.stop();
                     }
                 }
                 gotCheckpoints = false;
@@ -768,7 +897,7 @@ public final class FaultTolerance implements Config {
 
     /**
      * Makes this node coordinator:
-     *  - start the necessairy threads
+     *  - start the necessary threads
      *  - initialize the checkpoint file
      *  - broadcast checkpoint info to other nodes
      **/
