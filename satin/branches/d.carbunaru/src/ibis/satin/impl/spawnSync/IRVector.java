@@ -234,13 +234,23 @@ public final class IRVector implements Config {
                 } 
                 l[i].setReDone(true);
                 l[i].setStealer(null);
+                
+                int n = satin.clientThreads.length;
+                Random r = new Random();
+                int j;
                 if (satin.isMaster()) {
+                    n++;//satin.q.addToTail(l[i]);
+                    j = r.nextInt(n) - 1;
+                } else {
+                    j = r.nextInt(n);
+                }
+                    
+                if (j == -1) {
                     satin.q.addToTail(l[i]);
                 } else {
-                    Random r = new Random();
-                    int j = r.nextInt(satin.clientThreads.length);
                     satin.clientThreads[j].q.addToTail(l[i]);
                 }
+                
                 //satin.stats.restartedJobs++;
                 count--;
                 l[i] = l[count];

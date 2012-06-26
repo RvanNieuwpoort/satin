@@ -250,12 +250,11 @@ final class FTCommunication implements Config, ReceivePortConnectUpcall,
                     s.currentVictimCrashed = true;
                     s.lb.setCurrentVictim(null);
                 }
-            } else {
-                for (ClientThread ct : s.clientThreads) {
-                    if (dead.equals(ct.lb.getCurrentVictim())) {
-                        ct.currentVictimCrashed = true;
-                        ct.lb.setCurrentVictim(null);
-                    }
+            }
+            for (ClientThread ct : s.clientThreads) {
+                if (dead.equals(ct.lb.getCurrentVictim())) {
+                    ct.currentVictimCrashed = true;
+                    ct.lb.setCurrentVictim(null);
                 }
             }
             s.ft.gotCrashes = true;

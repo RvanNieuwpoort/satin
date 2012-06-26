@@ -138,10 +138,10 @@ final class AbortsCommunication implements Config {
             synchronized (s) {
                 if (s.isMaster()) {
                     s.aborts.addToAbortList(stamp);
-                } else {
-                    for (ClientThread ct : s.clientThreads) {
-                        ct.aborts.addToAbortList(stamp);
-                    }
+                }
+                
+                for (ClientThread ct : s.clientThreads) {
+                    ct.aborts.addToAbortList(stamp);
                 }
             }
             // m.finish();

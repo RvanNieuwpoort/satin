@@ -90,7 +90,7 @@ public final class Aborts implements Config {
             return;
         }
 
-        // Daniela: checking if I am the master, thus single-threaded...
+        // Daniela: checking if I am the master...
         InvocationRecord oldParent;
         if (ct == null) {
             s.onStack.push(r);
@@ -158,7 +158,11 @@ public final class Aborts implements Config {
                 throw new Error("Inlet threw exception: ", t);
             }
 
-            //s.stats.abortsDone++;
+            if (ct == null) {
+                s.stats.abortsDone++;
+            } else {
+                ct.stats.abortsDone++;
+            }
 
             synchronized (s) {
                 // also kill the parent itself.
@@ -197,7 +201,11 @@ public final class Aborts implements Config {
 
     public void killChildrenOf(Stamp targetStamp) {
         try {
-            //s.stats.abortTimer.start();
+            if (ct == null) {
+                s.stats.abortTimer.start();
+            } else {
+                ct.stats.abortTimer.start();
+            }
 
             if (ASSERTS) {
                 Satin.assertLocked(s);
@@ -215,7 +223,11 @@ public final class Aborts implements Config {
             }
             s.outstandingJobs.killChildrenOf(targetStamp, false);
         } finally {
-            //s.stats.abortTimer.stop();
+            if (ct == null) {
+                s.stats.abortTimer.stop();
+            } else {
+                ct.stats.abortTimer.stop();
+            }
         }
     }
 

@@ -100,18 +100,26 @@ final class LBCommunication implements Config, Protocol {
         // Daniela: each thread registers itself to the Satin object
         // that it has sent a stealrequest, so that when the steal response
         // comes back, the Satin LB object knows to which thread to send it.
-        if (ct != null) {
-            synchronized (s) {
-                if (s.waitingStealMap.containsKey(v.getIdent())) {
-                    List<Integer> list = s.waitingStealMap.get(v.getIdent());
+
+        synchronized (s) {
+            if (s.waitingStealMap.containsKey(v.getIdent())) {
+                List<Integer> list = s.waitingStealMap.get(v.getIdent());
+                if (ct != null) {
                     list.add(ct.id);
                 } else {
-                    List<Integer> list = new LinkedList<Integer>();
-                    list.add(ct.id);
-                    s.waitingStealMap.put(v.getIdent(), list);
+                    list.add(-1);
                 }
+            } else {
+                List<Integer> list = new LinkedList<Integer>();
+                if (ct != null) {
+                    list.add(ct.id);
+                } else {
+                    list.add(-1);
+                }
+                s.waitingStealMap.put(v.getIdent(), list);
             }
         }
+
 
         try {
             writeMessage.writeByte(opcode);
@@ -161,7 +169,7 @@ final class LBCommunication implements Config, Protocol {
         } finally {
             returnRecordReadTimer.stop();
         }
-        //s.stats.returnRecordReadTimer.add(returnRecordReadTimer);
+        s.stats.returnRecordReadTimer.add(returnRecordReadTimer);
 
         if (gotException) {
             return;
@@ -180,17 +188,14 @@ final class LBCommunication implements Config, Protocol {
         
         
         // Daniela
-        if(s.isMaster()) {
+        int threadId = s.stampToThreadIdMap.get(stamp);
+        synchronized(s.stampToThreadIdMap) {
+            s.stampToThreadIdMap.remove(stamp);
+        }
+        
+        if (threadId == -1) {
             lb.addJobResult(rr, eek, stamp);
         } else {
-            if (s.stampToThreadIdMap == null) {
-                System.out.println("\t !!!!null");
-            }
-            int threadId = s.stampToThreadIdMap.get(stamp);
-            synchronized(s.stampToThreadIdMap) {
-                s.stampToThreadIdMap.remove(stamp);
-            }
-            
             s.clientThreads[threadId].lb.addJobResult(rr, eek, stamp);
         }
     }
@@ -208,8 +213,16 @@ final class LBCommunication implements Config, Protocol {
         }
 
         Victim v = null;
+        
+        if (ct != null) {
+            ct.stats.waitingForLockTimer.start();
+        }
 
         synchronized (s) {
+            if (ct != null) {
+                ct.stats.waitingForLockTimer.stop();
+            }
+            
             if (!FT_NAIVE && r.isOrphan()) {
                 IbisIdentifier owner = s.ft.lookupOwner(r);
                 if (ASSERTS && owner == null) {
@@ -241,14 +254,13 @@ final class LBCommunication implements Config, Protocol {
             return;
         }
 
-        //s.stats.returnRecordWriteTimer.start();
+        if (ct == null) {
+            s.stats.returnRecordWriteTimer.start();
+        } else {
+            ct.stats.returnRecordWriteTimer.start();
+        }
         WriteMessage writeMessage = null;
         try {
-//            if (!s.isMaster() && ct == null) {
-//                String str = "Satin-worker -> sendResult <- ";
-//                writeMessage = v.newMessage(str);
-//                System.out.println("Satin-worker -> sendResult <- return from v.newMessage.");
-//            } else {
             writeMessage = v.newMessage();//}
             if (r.eek == null) {
                 writeMessage.writeByte(Protocol.JOB_RESULT_NORMAL);
@@ -262,17 +274,13 @@ final class LBCommunication implements Config, Protocol {
                 writeMessage.writeObject(r.getStamp());
             }
 
-            //boolean aux = (!s.isMaster()) && (ct == null);
-            //String auxS = "Satin-worker -> sendResult <- ";
             long cnt = v.finish(writeMessage);
-//            if (aux) {
-//                cnt = v.finish(writeMessage, aux, auxS);
-//                System.out.println(auxS + " aici!!!!!!");
-//                System.out.flush();
-//            } else {
-                //cnt = v.finish(writeMessage);
-            //}
-            //s.stats.returnRecordBytes += cnt;
+            if (ct == null) {
+                s.stats.returnRecordBytes += cnt;
+            } else {
+                ct.stats.returnRecordBytes += cnt;
+            }
+            
         } catch (IOException e) {
             if (writeMessage != null) {
                 writeMessage.finish(e);
@@ -285,7 +293,11 @@ final class LBCommunication implements Config, Protocol {
                     + "': Got exception while sending result of stolen job", e);
             }
         } finally {
-            //s.stats.returnRecordWriteTimer.stop();
+            if (ct == null) {
+                s.stats.returnRecordWriteTimer.stop();
+            } else {
+                ct.stats.returnRecordWriteTimer.stop();
+            }
         }
     }
 
@@ -299,12 +311,12 @@ final class LBCommunication implements Config, Protocol {
 
         Timer handleStealTimer = null;
         if (QUEUE_STEALS) {
-            //s.stats.handleStealTimer.start();
+            s.stats.handleStealTimer.start();
         } else {
             handleStealTimer = Timer.createTimer();
             handleStealTimer.start();
         }
-        //s.stats.stealRequests++;
+        s.stats.stealRequests++;
 
         try {
 
@@ -330,10 +342,8 @@ final class LBCommunication implements Config, Protocol {
                 }
 
                 try {
-                    //if (!s.isMaster()) System.out.println("trying to get a job for the steal request");
                     result = lb.stealJobFromLocalQueue(ident,
                         opcode == BLOCKING_STEAL_REQUEST);
-                    //if (!s.isMaster()) System.out.println("got one job for the steal request");
                 } catch (IOException e) {
                     stealLogger.warn("SATIN '" + s.ident
                     + "': EEK!! got exception during steal request: "
@@ -350,22 +360,18 @@ final class LBCommunication implements Config, Protocol {
             }
 
             if (result == null) {
-                //if (!s.isMaster()) System.out.println("stole null job");
                 sendStealFailedMessage(ident, opcode, v, table);
-                //System.out.println("stole null job -> sent failed message");
                 return;
             }
 
             // we stole a job
-            //if (!s.isMaster()) System.out.println("send stolen job");
             sendStolenJobMessage(ident, opcode, v, result, table);
-            //if (!s.isMaster()) System.out.println("sent stolen job");
         } finally {
             if (QUEUE_STEALS) {
-                //s.stats.handleStealTimer.stop();
+                s.stats.handleStealTimer.stop();
             } else {
                 handleStealTimer.stop();
-                //s.stats.handleStealTimer.add(handleStealTimer);
+                s.stats.handleStealTimer.add(handleStealTimer);
             }
         }
     }
@@ -390,7 +396,7 @@ final class LBCommunication implements Config, Protocol {
         case STEAL_REPLY_SUCCESS:
         case ASYNC_STEAL_REPLY_SUCCESS:
             try {
-                //s.stats.invocationRecordReadTimer.start();
+                s.stats.invocationRecordReadTimer.start();
                 tmp = (InvocationRecord) m.readObject();
 
                 if (ASSERTS && tmp.aborted) {
@@ -402,7 +408,7 @@ final class LBCommunication implements Config, Protocol {
                     + "': Got Exception while reading steal " + "reply from "
                     + ident + ", opcode:" + opcode + ", exception: " + e, e);
             } finally {
-                //s.stats.invocationRecordReadTimer.stop();
+                s.stats.invocationRecordReadTimer.stop();
             }
 
             synchronized (s) {
@@ -468,18 +474,9 @@ final class LBCommunication implements Config, Protocol {
 
         WriteMessage m = null;
         try {
-            //if (ct == null) System.out.print("suntem in s.lbcomm: ");
-            //if (!s.isMaster()) System.out.println("write null job message");
-//            if (ct == null) {
-//                String str = "Satin or Thread -> sendStealFailedMessage <- ";
-//                m = v.newMessage(str);
-//                System.out.println("Satin or Thread -> sendStealFailedMessage <- return from v.newMessage.");
-//            } else {
-            m = v.newMessage();//}
+            m = v.newMessage();
             if (opcode == STEAL_REQUEST || opcode == BLOCKING_STEAL_REQUEST) {
-                //if (!s.isMaster()) System.out.println("before writing opcode");
                 m.writeByte(STEAL_REPLY_FAILED);
-                //if (!s.isMaster()) System.out.println("after writing opcode");
             } else if (opcode == ASYNC_STEAL_REQUEST) {
                 m.writeByte(ASYNC_STEAL_REPLY_FAILED);
             } else if (opcode == STEAL_AND_TABLE_REQUEST) {
@@ -501,18 +498,7 @@ final class LBCommunication implements Config, Protocol {
                     + " in handleStealRequest");
             }
 
-            //if (!s.isMaster()) System.out.println("finishing stole null job msg");
-//            boolean aux = (ct == null);
-//            String auxS = "Satin-worker -> sendStealFailedMessage <- ";
-//            
-//            if (aux) {
-//                v.finish(m, aux, auxS);
-//                System.out.println(auxS + " aici!!!!!!");
-//                System.out.flush();
-//            } else {
-                v.finish(m);
-            //}
-            //if (!s.isMaster()) System.out.println("finished stole null job msg");
+            v.finish(m);
 
             if (stealLogger.isDebugEnabled()) {
                 stealLogger.debug("SATIN '" + s.ident
@@ -535,7 +521,7 @@ final class LBCommunication implements Config, Protocol {
                 + ": trying to send aborted job!");
         }
 
-        //s.stats.stolenJobs++;
+        s.stats.stolenJobs++;
 
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + s.ident
@@ -545,13 +531,7 @@ final class LBCommunication implements Config, Protocol {
 
         WriteMessage m = null;
         try {
-//            if (!s.isMaster() && ct == null) {
-//                String str = "Satin-worker -> sendStolenJobMessage <- ";
-//                m = v.newMessage(str);
-//                System.out.println("Satin-worker -> sendStolenJobMessage <- return from v.newMessage.");
-//            } else {
-                m = v.newMessage();
-            //}
+            m = v.newMessage();
             if (opcode == STEAL_REQUEST || opcode == BLOCKING_STEAL_REQUEST) {
                 m.writeByte(STEAL_REPLY_SUCCESS);
             } else if (opcode == ASYNC_STEAL_REQUEST) {
@@ -582,17 +562,8 @@ final class LBCommunication implements Config, Protocol {
             invocationRecordWriteTimer.start();
             m.writeObject(result);
             invocationRecordWriteTimer.stop();
-//            boolean aux = (!s.isMaster()) && (ct == null);
-//            String auxS = "Satin-worker -> sendStolenJobMessage <- ";
-//            
-//            if (aux) {
-//                v.finish(m, aux, auxS);
-//                System.out.println(auxS + " aici!!!!!!");
-//                System.out.flush();
-//            } else {
-                v.finish(m);
-            //}
-            //s.stats.invocationRecordWriteTimer.add(invocationRecordWriteTimer);
+            v.finish(m);
+            s.stats.invocationRecordWriteTimer.add(invocationRecordWriteTimer);
         } catch (IOException e) {
             if (m != null) {
                 m.finish(e); // TODO always use victim.finish
