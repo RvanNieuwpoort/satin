@@ -256,10 +256,10 @@ public final class FaultTolerance implements Config {
                     // give the load-balancing algorithm a chance to clean up
                     if (s.isMaster()) {
                         s.algorithm.handleCrash(id);
-                    } else {
-                        for (ClientThread ct : s.clientThreads) {
-                            ct.algorithm.handleCrash(id);
-                        }
+                    }
+                    
+                    for (ClientThread ct : s.clientThreads) {
+                        ct.algorithm.handleCrash(id);
                     }
 
                     if (!FT_NAIVE) {
@@ -343,19 +343,20 @@ public final class FaultTolerance implements Config {
             }
 
             s.q.killChildrenOf(targetStamp);
-        } else {
-            for (ClientThread ct : s.clientThreads) {
-                ArrayList<InvocationRecord> toStore = ct.onStack.killChildrenOf(targetStamp, true);
-
-                //update the global result table
-
-                for (int i = 0; i < toStore.size(); i++) {
-                    storeFinishedChildrenOf(toStore.get(i));
-                }
-
-                ct.q.killChildrenOf(targetStamp);
-            }
         }
+        
+        for (ClientThread ct : s.clientThreads) {
+            ArrayList<InvocationRecord> toStore = ct.onStack.killChildrenOf(targetStamp, true);
+
+            //update the global result table
+
+            for (int i = 0; i < toStore.size(); i++) {
+                storeFinishedChildrenOf(toStore.get(i));
+            }
+
+            ct.q.killChildrenOf(targetStamp);
+        }
+
         s.outstandingJobs.killChildrenOf(targetStamp, true);
     }
 
@@ -377,18 +378,19 @@ public final class FaultTolerance implements Config {
             }
 
             s.q.killSubtreeOf(targetOwner);
-        } else {
-            for (ClientThread ct : s.clientThreads) {
-                ArrayList<InvocationRecord> toStore = ct.onStack.killSubtreesOf(targetOwner);
-
-                // update the global result table
-                for (int i = 0; i < toStore.size(); i++) {
-                    storeFinishedChildrenOf(toStore.get(i));
-                }
-
-                ct.q.killSubtreeOf(targetOwner);
-            }
         }
+        
+        for (ClientThread ct : s.clientThreads) {
+            ArrayList<InvocationRecord> toStore = ct.onStack.killSubtreesOf(targetOwner);
+
+            // update the global result table
+            for (int i = 0; i < toStore.size(); i++) {
+                storeFinishedChildrenOf(toStore.get(i));
+            }
+
+            ct.q.killSubtreeOf(targetOwner);
+        }
+
         s.outstandingJobs.killAndStoreSubtreeOf(targetOwner);
     }
     
@@ -397,12 +399,12 @@ public final class FaultTolerance implements Config {
         if (s.isMaster()) {
             s.onStack.killSubtreesOf(targetOwner);
             s.q.killSubtreeOf(targetOwner);
-        } else {
-            for (ClientThread ct : s.clientThreads) {
-                ct.onStack.killSubtreesOf(targetOwner);
-                ct.q.killSubtreeOf(targetOwner);
-            }
         }
+        for (ClientThread ct : s.clientThreads) {
+            ct.onStack.killSubtreesOf(targetOwner);
+            ct.q.killSubtreeOf(targetOwner);
+        }
+
         s.outstandingJobs.killSubtreeOf(targetOwner);
     }
 
@@ -478,17 +480,17 @@ public final class FaultTolerance implements Config {
                             GlobalResultTableValue.TYPE_RESULT, curr);
                     toPush.put(key, value);
                 }
-            } else {
-                for (ClientThread ct : s.clientThreads) {
-                    ArrayList<InvocationRecord> tmp = ct.onStack.getAllFinishedChildren(v);
+            }
 
-                    for (int i = 0; i < tmp.size(); i++) {
-                        InvocationRecord curr = tmp.get(i);
-                        Stamp key = curr.getStamp();
-                        GlobalResultTableValue value = new GlobalResultTableValue(
-                                GlobalResultTableValue.TYPE_RESULT, curr);
-                        toPush.put(key, value);
-                    }
+            for (ClientThread ct : s.clientThreads) {
+                ArrayList<InvocationRecord> tmp = ct.onStack.getAllFinishedChildren(v);
+
+                for (int i = 0; i < tmp.size(); i++) {
+                    InvocationRecord curr = tmp.get(i);
+                    Stamp key = curr.getStamp();
+                    GlobalResultTableValue value = new GlobalResultTableValue(
+                            GlobalResultTableValue.TYPE_RESULT, curr);
+                    toPush.put(key, value);
                 }
             }
 

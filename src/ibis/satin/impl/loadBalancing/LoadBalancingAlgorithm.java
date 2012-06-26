@@ -89,14 +89,22 @@ public abstract class LoadBalancingAlgorithm implements Config {
         }
 
         if (time > 0) {
-            //satin.stats.stealThrottleTimer.start();
+            if (clientThread == null) {
+                satin.stats.stealThrottleTimer.start();
+            } else {
+                clientThread.stats.stealThrottleTimer.start();
+            }
 
             try {
                 Thread.sleep(time);
             } catch (InterruptedException e) {
                 // ignore
             } finally {
-                //satin.stats.stealThrottleTimer.stop();
+                if (clientThread == null) {
+                    satin.stats.stealThrottleTimer.stop();
+                } else {
+                    clientThread.stats.stealThrottleTimer.stop();
+                }
             }
         }
     }

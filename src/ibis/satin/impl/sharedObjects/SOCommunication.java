@@ -489,11 +489,13 @@ final class SOCommunication implements Config, Protocol {
         soLogger.debug("SATIN '" + s.ident
             + "': did not receive object in time, demanding it now");
 
-        if (!requestsSent.contains(objectId)) {
-            requestsSent.add(objectId);
+        synchronized (s) {
+            if (!requestsSent.contains(objectId)) {
+                requestsSent.add(objectId);
         
-            // haven't got it, demand it now.
-            sendSORequest(objectId, source, true);
+                // haven't got it, demand it now.
+                sendSORequest(objectId, source, true);
+            }
         }
 
         boolean gotIt = waitForSOReply(objectId);

@@ -68,7 +68,7 @@ public final class ClusterAwareRandomWorkStealing extends
         }
 
         // Else .. we are idle, try to steal a job.
-        if (satin.isMaster()) {
+        if (clientThread == null) {
             synchronized (satin) {
                 localVictim = satin.victims.getRandomLocalVictim();
                 if (localVictim != null) {
@@ -111,11 +111,11 @@ public final class ClusterAwareRandomWorkStealing extends
         // Send an asynchronous wide-area steal request,
         // if not is outstanding
         // remoteVictim can be null on a single cluster run.
-        if (satin.isMaster()) {
+        if (clientThread == null) {
             if (remoteVictim != null && !asyncStealInProgress) {
                 if (FT_NAIVE || canDoAsync) {
                     asyncStealInProgress = true;
-                    //s.stats.asyncStealAttempts++;
+                    s.stats.asyncStealAttempts++;
                     try {
                         asyncStealStart = System.currentTimeMillis();
                         satin.lb.sendStealRequest(remoteVictim, false, false);
@@ -126,11 +126,11 @@ public final class ClusterAwareRandomWorkStealing extends
                     }
                 }
             }
-        } else if (clientThread != null) {
+        } else {
             if (remoteVictim != null && !asyncStealInProgress) {
                 if (FT_NAIVE || canDoAsync) {
                     asyncStealInProgress = true;
-                    //s.stats.asyncStealAttempts++;
+                    ct.stats.asyncStealAttempts++;
                     try {
                         asyncStealStart = System.currentTimeMillis();
                         clientThread.lb.sendStealRequest(remoteVictim, false, false);
@@ -198,7 +198,11 @@ public final class ClusterAwareRandomWorkStealing extends
                 asyncStealStart = 0;
 
                 if (remoteJob != null) {
-                    //s.stats.asyncStealSuccess++;
+                    if (ct == null) {
+                        s.stats.asyncStealSuccess++;
+                    } else {
+                        ct.stats.asyncStealSuccess++;
+                    }
                     failedRemoteAttempts = 0;
                     return remoteJob;
                 }
@@ -302,8 +306,17 @@ public final class ClusterAwareRandomWorkStealing extends
         if (stealLogger.isInfoEnabled() && ir != null) {
             stealLogger.info("Stole intercluster job " + ir.getStamp());
         }
+
         synchronized (satin) {
-            if (s.isMaster()) {
+            int threadId = s.waitingStealMap.get(sender).remove(0);
+
+            if (s.waitingStealMap.get(sender).isEmpty()) {
+                s.waitingStealMap.remove(sender);
+            }
+
+            if (threadId != -1) {
+                s.clientThreads[threadId].algorithm.asyncJobResultWorkerThread(ir, sender);
+            } else {
                 if (sender.equals(asyncCurrentVictim)) {
                     gotAsyncStealReply = true;
                     asyncStolenJob = ir;
@@ -317,14 +330,6 @@ public final class ClusterAwareRandomWorkStealing extends
                         s.q.addToTail(ir);
                     }
                 }
-            } else {
-                int threadId = s.waitingStealMap.get(sender).remove(0);
-
-                if (s.waitingStealMap.get(sender).isEmpty()) {
-                    s.waitingStealMap.remove(sender);
-                }
-                
-                s.clientThreads[threadId].algorithm.asyncJobResultWorkerThread(ir, sender);
             }
         }
     }

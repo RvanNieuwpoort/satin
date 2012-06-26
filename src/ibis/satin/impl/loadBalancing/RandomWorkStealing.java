@@ -27,7 +27,14 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
     public InvocationRecord clientIteration() {
         Victim v;
 
+        if (clientThread != null) {
+            clientThread.stats.waitingForLockTimer.start();
+        }
+        
         synchronized (satin) {
+            if (clientThread != null) {
+                clientThread.stats.waitingForLockTimer.stop();
+            }
             v = satin.victims.getRandomVictim();
             /*
              * Used for fault tolerance; we must know who the current victim is
@@ -58,7 +65,7 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
             }
         }
         
-        if(job != null) {
+        if (job != null) {
             failedAttempts = 0;
             return job;
         } else {

@@ -11,39 +11,43 @@ public final class Statistics implements java.io.Serializable, Config {
      */
     private static final long serialVersionUID = 7954856934035669311L;
 
-    public long spawns;
+    public long spawns; //ok
 
-    public long syncs;
+    public long syncs; //ok
 
-    public long abortsDone;
+    public long abortsDone; //ok
 
-    public long jobsExecuted;
+    public long jobsExecuted; //ok
 
     public long abortedJobs;
 
     public long abortMessages;
+    
+    public long localStealAttempts; //ok
+    
+    public long localStealSuccess; //ok
 
-    public long stealAttempts;
+    public long stealAttempts; //ok
 
-    public long stealSuccess;
+    public long stealSuccess; //ok
 
-    public long asyncStealAttempts;
+    public long asyncStealAttempts; //ok
 
-    public long asyncStealSuccess;
+    public long asyncStealSuccess; //ok
 
-    public long stolenJobs;
+    public long stolenJobs; //ok 1 per machine
 
-    public long stealRequests;
+    public long stealRequests; //ok 1 per machine
 
-    public long stealThrottles;
+    public long stealThrottles; 
 
-    public long interClusterMessages;
+    public long interClusterMessages; //ok 1 per machine
 
-    public long intraClusterMessages;
+    public long intraClusterMessages; //ok 1 per machine
 
-    public long interClusterBytes;
+    public long interClusterBytes; //ok 1 per machine
 
-    public long intraClusterBytes;
+    public long intraClusterBytes; //ok 1 per machine
 
     public double stealTime;
 
@@ -174,25 +178,25 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public long getSOReferences;
 
-    public Timer totalTimer = Timer.createTimer();
+    public Timer totalTimer = Timer.createTimer(); //ok 1 per machine
 
-    public Timer stealTimer = Timer.createTimer();
+    public Timer stealTimer = Timer.createTimer(); //ok
 
-    public Timer handleStealTimer = Timer.createTimer();
+    public Timer handleStealTimer = Timer.createTimer(); //ok 1 per machine
 
-    public Timer abortTimer = Timer.createTimer();
+    public Timer abortTimer = Timer.createTimer(); //ok
 
     public Timer idleTimer = Timer.createTimer();
 
     public Timer pollTimer = Timer.createTimer();
 
-    public Timer invocationRecordWriteTimer = Timer.createTimer();
+    public Timer invocationRecordWriteTimer = Timer.createTimer(); // ok 1 per machine
 
-    public Timer returnRecordWriteTimer = Timer.createTimer();
+    public Timer returnRecordWriteTimer = Timer.createTimer(); //ok
 
-    public Timer invocationRecordReadTimer = Timer.createTimer();
+    public Timer invocationRecordReadTimer = Timer.createTimer(); // ok 1 per machine
 
-    public Timer returnRecordReadTimer = Timer.createTimer();
+    public Timer returnRecordReadTimer = Timer.createTimer(); // ok 1 per machine
 
     public Timer lookupTimer = Timer.createTimer();
 
@@ -246,8 +250,10 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public Timer soGuardTimer = Timer.createTimer();
 
-    public Timer stealThrottleTimer = Timer.createTimer();
-
+    public Timer stealThrottleTimer = Timer.createTimer(); //ok
+    
+    public Timer waitingForLockTimer = Timer.createTimer(); //ok
+    
     public void add(Statistics s) {
         spawns += s.spawns;
         jobsExecuted += s.jobsExecuted;
@@ -918,5 +924,20 @@ public final class Statistics implements java.io.Serializable, Config {
             return 0.0;
         }
         return tm / cnt;
+    }
+    
+    public void myThreadStatistics(int id) {
+        System.out.println("\t Thread " + id + ":");
+        System.out.println("Total thread time: " + totalTimer.totalTimeVal());
+        System.out.println("Steal Time: " + stealTimer.totalTimeVal());
+        System.out.println("Handle Steal Time: " + handleStealTimer.totalTimeVal());
+        System.out.println("Waiting Time: " + waitingForLockTimer.totalTimeVal());
+        System.out.println("Return rr Time: " + returnRecordWriteTimer.totalTimeVal());
+        System.out.println("Spawns: " + spawns);
+        System.out.println("Local Steal Attempts: " + localStealAttempts);
+        System.out.println("Local Steal Success: " + localStealSuccess);
+        System.out.println("Steal Attempts: " + stealAttempts);
+        System.out.println("Steal Success: " + stealSuccess);
+               
     }
 }

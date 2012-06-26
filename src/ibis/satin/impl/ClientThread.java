@@ -34,28 +34,12 @@ public class ClientThread extends Thread implements Config {
 
     public final LoadBalancing lb;
 
-    //public final FaultTolerance ft;
-
-    //public final SharedObjects so;
-
     public final Aborts aborts;
 
     public final IbisIdentifier ident; // this ibis
 
-    /** Am I the root (the one running main)? */
-    //private boolean master;
-
-    /** The ibis identifier for the master (the one running main). */
-    //private IbisIdentifier masterIdent;
-
-    /** Am I the cluster coordinator? */
-    //public boolean clusterCoordinator;
-
     /** My scheduling algorithm. */
     public LoadBalancingAlgorithm algorithm;
-
-//    /** Set to true if we need to exit for some reason. */
-//    public volatile boolean exiting;
 
     /** The work queue. Contains jobs that were spawned, but not yet executed. */
     public final DoubleEndedQueue q;
@@ -93,83 +77,53 @@ public class ClientThread extends Thread implements Config {
         
         id = i;
 
-        //q = new DoubleEndedQueue(satin);
         q = new DoubleEndedQueue(this);
 
         outstandingJobs = new IRVector(this);
         onStack = new IRStack(this);
 
-        // TODO: change this or not?! 1 ft per thread or per machine
-        //ft = new FaultTolerance(this); // this must be first, it handles registry upcalls 
+        comm = satin.comm;
         
-        // TODO: 1 comm/thread or 1 comm/machine
-        comm = satin.comm;//new Communication(satin); // creates ibis
+        ident = satin.ident; 
         
-        // TODO: be careful: if 1 comm/machine, ident will have same value for all threads.
-        ident = satin.ident; //comm.ibis.identifier();
-        
-        
-        // does every thread need to elect a cCoord?
-        //ft.electClusterCoordinator(); // need ibis for this
-
-        //so = new SharedObjects(this);
         aborts = new Aborts(this);
-        lb = new LoadBalancing(this); //satin.lb;
+        lb = new LoadBalancing(this); 
         victims = satin.victims;
-        createLoadBalancingAlgorithm(); //algorithm = satin.algorithm;
+        createLoadBalancingAlgorithm();
         
-//        so = new SharedObjects(satin);
-//        aborts = new Aborts(satin);
-//        victims = new VictimTable(satin); // need ibis for this
-
-//        lb = new LoadBalancing(satin);
-//        createLoadBalancingAlgorithm();
-        
-//        // elect the master
-//        setMaster(comm.electMaster());
-//        comm.enableConnections();
-
-        // this opens the world, other ibises might join from this point
-        // we need the master to be set before this call
-        //ft.init(); // TODO 
-
-//        stats.totalTimer.start();
     }
     
     @Override
     public void run(){
+        stats.totalTimer.start();
+        
+        System.out.println("Client: !!!!!!!!!!!!!!!");
 
         while (!satin.exiting) {
             // steal and run jobs
-            // System.out.println("Thread " + id + ": Trying to get jobs...");
             noWorkInQueue();
-
-            // Maybe the master crashed, and we were elected the new master.
-            // trebuie sa ai mare grija: ca e 1 master per masina, asadar, toate
-            // threadurile de pe master se considera master.
-            if (satin.isMaster()) return;
         }
         
         System.out.println("exiting");
+        
+        algorithm.exit();
+        
+        stats.totalTimer.stop();
+        
+        stats.handleStealTimer = satin.stats.handleStealTimer;
+        
+        stats.myThreadStatistics(id);
 
-        // Hold thread alive:
-        synchronized (satin.keepAlive) {
-            while (!satin.endThread) {
-                try {
-                    satin.keepAlive.wait();
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(ClientThread.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-        }
     }
 
     public void noWorkInQueue() {
-        InvocationRecord r = satin.returnSharedMemoryJob(this);
+        stats.localStealAttempts++;
+        InvocationRecord r = satin.returnSharedMemoryJob(this.id);
 
         if (r == null) {
-            //System.out.println("Thread " + id + " trying to steal from remote machine.");
             r = algorithm.clientIteration();
+        } else {
+            stats.localStealSuccess++;
         }
         
         if (r != null && satin.so.executeGuard(r)) {
@@ -220,7 +174,6 @@ public class ClientThread extends Thread implements Config {
             } else {
                 callSatinLocalFunction(r);
             }
-            
         } else { // we are running a job that I stole from another machine
             callSatinRemoteFunction(r);
         }
@@ -246,7 +199,7 @@ public class ClientThread extends Thread implements Config {
     }
     
     private void callSatinLocalFunction(InvocationRecord r) {
-//        stats.jobsExecuted++;
+        stats.jobsExecuted++;
         try {
             r.runLocal();
         } catch (Throwable t) {
@@ -280,7 +233,7 @@ public class ClientThread extends Thread implements Config {
                     + "': RUNNING SHARED CODE, STAMP = " + r.getStamp() + "!");
         }
 
-//        stats.jobsExecuted++;
+        stats.jobsExecuted++;
         ReturnRecord rr = null;
         
         rr = r.runRemote();
@@ -316,12 +269,9 @@ public class ClientThread extends Thread implements Config {
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
         }
         ReturnRecord rr = null;
-        //stats.jobsExecuted++;
+        stats.jobsExecuted++;
         
         rr = r.runRemote();
-        
-//        satin.log.log(Level.INFO, 
-//                "Thread {0}: Just resolved job {1}.", new Object[]{this.id, r.getStamp()});
         
         rr.setEek(r.eek);
 
@@ -339,9 +289,6 @@ public class ClientThread extends Thread implements Config {
         if (!r.aborted) {
             lb.sendResult(r, rr);
             
-//            satin.log.log(Level.INFO, 
-//                "Thread {0}: Just sent the result for job {1}.", new Object[]{this.id, r.getStamp()});
-//            
             if (Satin.stealLogger.isInfoEnabled()) {
                 Satin.stealLogger.info("SATIN '" + ident
                         + "': REMOTE CODE SEND RESULT DONE!");
