@@ -85,6 +85,7 @@ public final class IRStack implements Config {
 
         for (int i = 0; i < count; i++) {
             InvocationRecord curr = l[i];
+            synchronized (curr) {
             if (curr.aborted) {
                 continue; // already handled.
             }
@@ -105,6 +106,8 @@ public final class IRStack implements Config {
                         + curr.getStamp() + ", it depends on " + targetStamp);
                 }
             }
+            
+        }
         }
 
         return toStore;
@@ -121,6 +124,7 @@ public final class IRStack implements Config {
         for (int i = 0; i < count; i++) {
             InvocationRecord curr = l[i];
 
+            synchronized (curr) {
             if (curr.aborted) continue; // already handled
 
             if ((curr.getParent() != null && curr.getParent().aborted)
@@ -131,7 +135,9 @@ public final class IRStack implements Config {
                 //s.stats.killedOrphans++;
                 toStore.add(curr);
             }
+            
         }
+    }
         return toStore;
     }
 

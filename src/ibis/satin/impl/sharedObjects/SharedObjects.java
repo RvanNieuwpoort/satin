@@ -35,7 +35,7 @@ public final class SharedObjects implements Config {
     /** Used for storing pending shared object invocations (SOInvocationRecords) */
     private Vector<SOInvocationRecord> soInvocationList = new Vector<SOInvocationRecord>();
 
-    private Satin s;
+    private final Satin s;
 
     /** A hash containing all shared objects: 
      * (String objectID, SharedObject object) */
@@ -174,15 +174,23 @@ public final class SharedObjects implements Config {
     }
 
     /** returns false if the job must be aborted */
-    public boolean executeGuard(InvocationRecord r) {
-        //s.stats.soGuardTimer.start();
+    public boolean executeGuard(InvocationRecord r, int threadId) {
+        if (threadId == -1) {
+            s.stats.soGuardTimer.start();
+        } else {
+            s.clientThreads[threadId].stats.soGuardTimer.start();
+        }
         try {
             doExecuteGuard(r);
         } catch (SOReferenceSourceCrashedException e) {
             //the source has crashed - abort the job
             return false;
         } finally {
-            //s.stats.soGuardTimer.stop();
+            if (threadId == -1) {
+                s.stats.soGuardTimer.stop();
+            } else {
+                s.clientThreads[threadId].stats.soGuardTimer.stop();
+            }
         }
         return true;
     }
@@ -232,6 +240,7 @@ public final class SharedObjects implements Config {
             }
 
             String ref = objRefs.remove(0);
+            System.out.println("Satin is fetching a SO.");
             soComm.fetchObject(ref, r.getOwner(), r);
         }
     }

@@ -17,17 +17,17 @@ import ibis.satin.impl.spawnSync.Stamp;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public final class LoadBalancing implements Config {    
+public final class LoadBalancing implements Config {
 
     static final class StealRequest {
-        int opcode;
 
+        int opcode;
         SendPortIdentifier sp;
     }
 
     final class StealRequestHandler extends Thread {
-        static final boolean CONTINUOUS_STATS = false;
 
+        static final boolean CONTINUOUS_STATS = false;
         static final long CONTINUOUS_STATS_INTERVAL = 60 * 1000;
 
         public StealRequestHandler() {
@@ -43,7 +43,7 @@ public final class LoadBalancing implements Config {
 
             while (true) {
                 if (CONTINUOUS_STATS
-                    && System.currentTimeMillis() - lastPrintTime > CONTINUOUS_STATS_INTERVAL) {
+                        && System.currentTimeMillis() - lastPrintTime > CONTINUOUS_STATS_INTERVAL) {
                     lastPrintTime = System.currentTimeMillis();
                     //s.stats.printDetailedStats(s.ident);
                 }
@@ -73,28 +73,21 @@ public final class LoadBalancing implements Config {
             }
         }
     }
-
     private LBCommunication lbComm;
-
     private Satin s;
-    
     //Daniela:
     private ClientThread ct;
-
     private volatile boolean receivedResults = false;
-
-    /** Used to store reply messages. */
-    private boolean gotStealReply = false;
-
-    private InvocationRecord stolenJob = null;
-
-    private final IRVector resultList;
-
-    private final ArrayList<StealRequest> stealQueue;
-
     /**
-     * Used for fault tolerance, we must know who the current victim is,
-     * in case it crashes.
+     * Used to store reply messages.
+     */
+    private boolean gotStealReply = false;
+    private InvocationRecord stolenJob = null;
+    private final IRVector resultList;
+    private final ArrayList<StealRequest> stealQueue;
+    /**
+     * Used for fault tolerance, we must know who the current victim is, in case
+     * it crashes.
      */
     private IbisIdentifier currentVictim = null;
 
@@ -112,12 +105,13 @@ public final class LoadBalancing implements Config {
         resultList = new IRVector(s);
         lbComm = new LBCommunication(s, this);
     }
-    
+
     /**
      * Daniela:
-     * @param ct 
+     *
+     * @param ct
      */
-    public LoadBalancing(ClientThread ct) {        
+    public LoadBalancing(ClientThread ct) {
         this.ct = ct;
         this.s = ct.satin;
 
@@ -194,7 +188,7 @@ public final class LoadBalancing implements Config {
                 // Daniela:
                 if (ir != null) {
                     // we are good: in a thread's load balancer.
-                    ct.q.addToTail(ir, true);
+                    ct.q.addToTail(ir);
                 }
                 return;
             }
@@ -222,16 +216,18 @@ public final class LoadBalancing implements Config {
      */
     public InvocationRecord stealJob(Victim v, boolean blockOnServer) {
         if (ASSERTS) {
-            synchronized(this) {
-        	if (stolenJob != null) {
-        	    ftLogger.error("SATIN '" + s.ident + "': EEK: stealing while stolenJob is non-null!");
+            synchronized (this) {
+                if (stolenJob != null) {
+                    ftLogger.error("SATIN '" + s.ident + "': EEK: stealing while stolenJob is non-null!");
                     throw new Error(
-                        	"EEEK, trying to steal while an unhandled stolen job is available.");
-        	}
+                            "EEEK, trying to steal while an unhandled stolen job is available.");
+                }
             }
         }
 
-        if (s.exiting) return null;
+        if (s.exiting) {
+            return null;
+        }
 
         if (Satin.GLOBAL_PAUSE_RESUME) {
             synchronized (s) {
@@ -246,7 +242,7 @@ public final class LoadBalancing implements Config {
                     }
                     long end = System.currentTimeMillis();
                     commLogger.info("SATIN '" + s.ident + "': paused for "
-                        + (end - start) + " ms");
+                            + (end - start) + " ms");
                 }
             }
         }
@@ -264,7 +260,7 @@ public final class LoadBalancing implements Config {
             return waitForStealReply(v);
         } catch (IOException e) {
             ftLogger.info("SATIN '" + s.ident
-                + "': got exception during steal request", e);
+                    + "': got exception during steal request", e);
             return null;
         } finally {
             if (ct == null) {
@@ -276,12 +272,14 @@ public final class LoadBalancing implements Config {
     }
 
     public void handleDelayedMessages() {
-        if (!receivedResults) return;
+        if (!receivedResults) {
+            return;
+        }
 
         if (ct != null) {
             ct.stats.waitingForLockTimer.start();
         }
-        
+
         synchronized (s) {
             if (ct != null) {
                 ct.stats.waitingForLockTimer.stop();
@@ -391,13 +389,17 @@ public final class LoadBalancing implements Config {
     private InvocationRecord waitForStealReply(Victim v) {
         waitForStealReplyMessage(v);
 
-        synchronized(this) {
-            /* If successfull, we now have a job in stolenJob. */
+        synchronized (this) {
+            /*
+             * If successfull, we now have a job in stolenJob.
+             */
             if (stolenJob == null) {
-        	return null;
+                return null;
             }
 
-            /* I love it when a plan comes together! We stole a job. */
+            /*
+             * I love it when a plan comes together! We stole a job.
+             */
             if (ct == null) {
                 s.stats.stealSuccess++;
             } else {
@@ -405,7 +407,7 @@ public final class LoadBalancing implements Config {
             }
             InvocationRecord myJob = stolenJob;
             stolenJob = null;
-            
+
             return myJob;
         }
     }
@@ -450,14 +452,14 @@ public final class LoadBalancing implements Config {
                 }
             } else {
                 abortLogger.debug("SATIN '" + s.ident
-                    + "': got result for aborted job, ignoring.");
+                        + "': got result for aborted job, ignoring.");
             }
         }
     }
 
     // throws an IO exception when the ibis that tried to steal the job dies
     protected InvocationRecord stealJobFromLocalQueue(SendPortIdentifier ident,
-        boolean blocking) throws IOException {
+            boolean blocking) throws IOException {
         InvocationRecord result = null;
 
         while (true) {
@@ -521,25 +523,25 @@ public final class LoadBalancing implements Config {
     }
 
     public void sendStealRequest(Victim v, boolean synchronous, boolean blocking)
-        throws IOException {
+            throws IOException {
         lbComm.sendStealRequest(v, synchronous, blocking);
     }
 
     public void handleSharedResult(InvocationRecord r, ReturnRecord rr) {
         Stamp stamp = r.getStamp();
         int threadId = s.stampToThreadIdMap.get(stamp);
-        
+
         if (ct != null) {
             ct.stats.waitingForLockTimer.start();
         }
-        
+
         synchronized (s.stampToThreadIdMap) {
             if (ct != null) {
                 ct.stats.waitingForLockTimer.stop();
             }
             s.stampToThreadIdMap.remove(stamp);
         }
-        
+
         if (threadId != -1) {
             s.clientThreads[threadId].lb.addJobResult(rr, r.eek, stamp);
         } else {
@@ -548,8 +550,8 @@ public final class LoadBalancing implements Config {
     }
 
     /**
-     * Used for fault tolerance, we must know who the current victim is,
-     * in case it crashes.
+     * Used for fault tolerance, we must know who the current victim is, in case
+     * it crashes.
      */
     public IbisIdentifier getCurrentVictim() {
         return currentVictim;
