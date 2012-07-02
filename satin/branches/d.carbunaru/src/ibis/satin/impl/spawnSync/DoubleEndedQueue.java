@@ -17,7 +17,7 @@ public final class DoubleEndedQueue implements Config {
 
     private int length = 0;
 
-    private Satin satin;
+    private final Satin satin;
     
     private final ClientThread clientThread;
 
@@ -37,27 +37,6 @@ public final class DoubleEndedQueue implements Config {
 
     public InvocationRecord getFromHead() {
         synchronized (satin) {
-            if (length == 0) {
-                return null;
-            }
-
-            InvocationRecord rtn = head;
-            head = head.getQnext();
-            if (head == null) {
-                tail = null;
-            } else {
-                head.setQprev(null);
-            }
-            length--;
-
-            rtn.setQnext(null);
-            rtn.setQprev(null);
-            return rtn;
-        }
-    }
-    
-    public InvocationRecord getFromHead(boolean b) {
-        synchronized (clientThread) {
             if (length == 0) {
                 return null;
             }
@@ -97,48 +76,9 @@ public final class DoubleEndedQueue implements Config {
             return rtn;
         }
     }
-    
-        /**
-     * Daniela
-     * @param b --> for the q's from threads
-     * @return rtn 
-     */
-    public InvocationRecord getFromTail(boolean b) {
-        synchronized (clientThread) {
-            if (length == 0) {
-                return null;
-            }
-
-            InvocationRecord rtn = tail;
-            tail = tail.getQprev();
-            if (tail == null) {
-                head = null;
-            } else {
-                tail.setQnext(null);
-            }
-            length--;
-
-            rtn.setQnext(null);
-            rtn.setQprev(null);
-            return rtn;
-        }
-    }
-
+   
     public void addToHead(InvocationRecord o) {
         synchronized (satin) {
-            if (length == 0) {
-                head = tail = o;
-            } else {
-                o.setQnext(head);
-                head.setQprev(o);
-                head = o;
-            }
-            length++;
-        }
-    }
-    
-    public void addToHead(InvocationRecord o, boolean b) {
-        synchronized (clientThread) {
             if (length == 0) {
                 head = tail = o;
             } else {
@@ -152,19 +92,6 @@ public final class DoubleEndedQueue implements Config {
 
     public void addToTail(InvocationRecord o) {
         synchronized (satin) {
-            if (length == 0) {
-                head = tail = o;
-            } else {
-                o.setQprev(tail);
-                tail.setQnext(o);
-                tail = o;
-            }
-            length++;
-        }
-    }
-    
-    public void addToTail(InvocationRecord o, boolean b) {
-        synchronized (clientThread) {
             if (length == 0) {
                 head = tail = o;
             } else {
@@ -206,17 +133,6 @@ public final class DoubleEndedQueue implements Config {
             return length;
         }
     }
-    
-    /**Daniela:
-     * 
-     * @param b
-     * @return 
-     */
-    public int size(boolean b) {
-        synchronized (clientThread) {
-            return length;
-        }
-    }
 
     public void killChildrenOf(Stamp targetStamp) {
         if (ASSERTS) {
@@ -225,6 +141,7 @@ public final class DoubleEndedQueue implements Config {
 
         InvocationRecord curr = tail;
         while (curr != null) {
+            synchronized (curr) {
             if (curr.aborted) {
                 curr = curr.getQprev();
                 // This is correct, even if curr was just removed.
@@ -239,9 +156,10 @@ public final class DoubleEndedQueue implements Config {
                         + ", it depends on " + targetStamp);
                 }
 
+                curr.aborted = true;
                 curr.decrSpawnCounter();
                 //satin.stats.abortedJobs++;
-                curr.aborted = true;
+                //curr.aborted = true;
 
                 // Curr is removed, but not put back in cache.
                 // this is OK. Moreover, it might have children,
@@ -249,9 +167,11 @@ public final class DoubleEndedQueue implements Config {
                 // cleanup is done inside the spawner itself.
                 removeElement(curr);
             }
+            
 
             curr = curr.getQprev();
             // This is correct, even if curr was just removed.
+        }
         }
     }
 
@@ -271,6 +191,7 @@ public final class DoubleEndedQueue implements Config {
 
         InvocationRecord curr = tail;
         while (curr != null) {
+            synchronized (curr) {
             if (curr.aborted) {
                 curr = curr.getQprev();
                 // This is correct, even if curr was just removed.
@@ -288,9 +209,11 @@ public final class DoubleEndedQueue implements Config {
                 //satin.stats.killedOrphans++;
                 removeElement(curr);
             }
+            
 
             curr = curr.getQprev();
         }
+    }
     }
 
     public void print(java.io.PrintStream out) {

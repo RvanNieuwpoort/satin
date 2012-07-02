@@ -285,14 +285,15 @@ public abstract class InvocationRecord implements java.io.Serializable, Config {
         return parentStamp;
     }
 
-    public final void decrSpawnCounter() {
+    // TODO: where is the spawnCounter set to null?
+    public final synchronized void decrSpawnCounter() {
         if (spawnCounter != null) {     
             // Can be null in case of stolen job.
             spawnCounter.decr(this);
         }
     }   
-
-    public final void incrSpawnCounter() {
+    
+    public final synchronized void incrSpawnCounter() {
         spawnCounter.incr(this);
     }
 

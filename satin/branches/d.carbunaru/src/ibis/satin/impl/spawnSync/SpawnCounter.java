@@ -21,10 +21,10 @@ public final class SpawnCounter {
     private HashMap<InvocationRecord, Throwable> m = null;
 
     /** For debugging purposes ... */
-    private Throwable lastIncr = null;
+    public Throwable lastIncr = null;
 
     /** For debugging purposes ... */
-    private Throwable lastDecr = null;
+    public Throwable lastDecr = null;
 
     /** For debugging purposes ... */
     private int lastvalue = 0;
@@ -73,22 +73,22 @@ public final class SpawnCounter {
         }
     }
 
-    public synchronized void incr(InvocationRecord r) {
+    public void incr(InvocationRecord r) {
+        synchronized (SpawnCounter.class) {
         if (Satin.ASSERTS && Satin.spawnLogger.isDebugEnabled()) {
             debugIncr(r);
         } else {
             value++;
-            if (value == 3) {
-                System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            }
         }
         if (Satin.spawnLogger.isDebugEnabled()) {
             Satin.spawnLogger.debug("Incremented spawnCounter for " + r.getStamp()
                     + ", value = " + value);
         }
+        }
     }
 
-    private synchronized void debugIncr(InvocationRecord r) {
+    private void debugIncr(InvocationRecord r) {
+        synchronized (SpawnCounter.class) {
         Throwable e = new Throwable();
         Throwable x;
         if (m == null) {
@@ -121,27 +121,32 @@ public final class SpawnCounter {
                 + ", value = " + value);
             e.printStackTrace();
         }
+        }
     }
 
-    public synchronized void decr(InvocationRecord r) {
+    public void decr(InvocationRecord r) {
+        synchronized (SpawnCounter.class) {
         if (Satin.ASSERTS && Satin.spawnLogger.isDebugEnabled()) {
             decrDebug(r);
         } else {
             value--;
-        }
+        }        
         if (Satin.spawnLogger.isDebugEnabled()) {
             Satin.spawnLogger.debug("Decremented spawnCounter for " + r.getStamp()
                     + ", value = " + value);
         }
         if (Satin.ASSERTS && value < 0) {
+            System.out.println("Stolen by " + r.getStealer().name());
             System.err.println("Just made spawncounter < 0");
             System.out.println("\t " + r.toString());
             new Exception().printStackTrace();
             System.exit(1); // Failed assertion
         }
+        }
     }
 
-    private synchronized void decrDebug(InvocationRecord r) {
+    private void decrDebug(InvocationRecord r) {
+        synchronized (SpawnCounter.class) {
         if (m == null) {
             m = new HashMap<InvocationRecord, Throwable>();
         }
@@ -169,6 +174,7 @@ public final class SpawnCounter {
             System.out.println("Decr: hashmap size = " + m.size()
                 + ", value = " + value);
             lastDecr.printStackTrace();
+        }
         }
     }
 

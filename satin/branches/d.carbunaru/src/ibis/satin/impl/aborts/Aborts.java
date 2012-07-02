@@ -13,7 +13,7 @@ import ibis.satin.impl.spawnSync.Stamp;
 import ibis.satin.impl.spawnSync.StampVector;
 
 public final class Aborts implements Config {
-    private Satin s;
+    private final Satin s;
     
     //Daniela:
     private ClientThread ct;
@@ -22,7 +22,7 @@ public final class Aborts implements Config {
 
     /** Abort messages are queued until the sync. */
     private StampVector abortList = new StampVector();
-
+    
     /* use these to avoid locking */
     private volatile boolean gotExceptions = false;
 
@@ -165,16 +165,18 @@ public final class Aborts implements Config {
             }
 
             synchronized (s) {
-                // also kill the parent itself.
-                // It is either on the stack or on a remote machine.
-                // Here, this is OK, the child threw an exception,
-                // the parent did not catch it, and must therefore die.
-                if (r.getParent().aborted) {
-                    return;
+                synchronized (r.getParent()) {
+                    // also kill the parent itself.
+                    // It is either on the stack or on a remote machine.
+                    // Here, this is OK, the child threw an exception,
+                    // the parent did not catch it, and must therefore die.
+                    if (r.getParent().aborted) {
+                        return;
+                    }
+                    r.getParent().aborted = true;
+                    r.getParent().eek = t; // rethrow exception
+                    killChildrenOf(r.getParent().getStamp());
                 }
-                r.getParent().aborted = true;
-                r.getParent().eek = t; // rethrow exception
-                killChildrenOf(r.getParent().getStamp());
             }
 
             if (!r.getParentOwner().equals(s.ident)) {
@@ -217,11 +219,13 @@ public final class Aborts implements Config {
             if (ct == null) {
                 s.onStack.killChildrenOf(targetStamp, false);
                 s.q.killChildrenOf(targetStamp);
+                s.outstandingJobs.killChildrenOf(targetStamp, false, -1);
             } else {
                 ct.onStack.killChildrenOf(targetStamp, false);
                 ct.q.killChildrenOf(targetStamp);
+                s.outstandingJobs.killChildrenOf(targetStamp, false, ct.id);
             }
-            s.outstandingJobs.killChildrenOf(targetStamp, false);
+            //s.outstandingJobs.killChildrenOf(targetStamp, false);
         } finally {
             if (ct == null) {
                 s.stats.abortTimer.stop();
@@ -238,40 +242,43 @@ public final class Aborts implements Config {
         // that the PARENT does not have a try catch block around the spawn.
         // there is thus no inlet to call in the parent.
 
-        if (r.eek == null || r.aborted) {
-            return;
-        }
-        if (r.getParent() == null) {
-            // Throw the exception, otherwise it will just disappear ...
-            throw new Error("Spawned job threw exception. Invocation record = " + r, r.eek);
-        }
-        if (ASSERTS && r.getParentLocals() != null) {
-            if (ct == null) {
-                s.assertFailed("parentLocals is not null in empty inlet", new Exception());
-            } else {
-                ct.assertFailed("parentLocals is not null in empty inlet", new Exception());
+        synchronized (r) {
+            if (r.eek == null || r.aborted) {
+                return;
             }
-        }
+            //}
+            if (r.getParent() == null) {
+                // Throw the exception, otherwise it will just disappear ...
+                throw new Error("Spawned job threw exception. Invocation record = " + r, r.eek);
+            }
+            if (ASSERTS && r.getParentLocals() != null) {
+                if (ct == null) {
+                    s.assertFailed("parentLocals is not null in empty inlet", new Exception());
+                } else {
+                    ct.assertFailed("parentLocals is not null in empty inlet", new Exception());
+                }
+            }
 
-        if (inletLogger.isDebugEnabled()) {
-            inletLogger.debug("SATIN '" + s.ident
-                + ": Got exception, empty inlet: " + r.eek, r.eek);
-        }
+            if (inletLogger.isDebugEnabled()) {
+                inletLogger.debug("SATIN '" + s.ident
+                        + ": Got exception, empty inlet: " + r.eek, r.eek);
+            }
 
-        synchronized (s) {
-            // also kill the parent itself.
-            // It is either on the stack or on a remote machine.
-            // Here, this is OK, the child threw an exception,
-            // the parent did not catch it, and must therefore die.
-            r.getParent().aborted = true;
-            r.getParent().eek = r.eek; // rethrow exception
-            killChildrenOf(r.getParent().getStamp());
+            synchronized (s) {
+                // also kill the parent itself.
+                // It is either on the stack or on a remote machine.
+                // Here, this is OK, the child threw an exception,
+                // the parent did not catch it, and must therefore die.
+                r.getParent().aborted = true;
+                r.getParent().eek = r.eek; // rethrow exception
+                killChildrenOf(r.getParent().getStamp());
+            }
         }
 
         if (!r.getParentOwner().equals(s.ident)) {
             if (inletLogger.isDebugEnabled()) {
                 inletLogger.debug("SATIN '" + s.ident
-                    + ": sending exception result");
+                        + ": sending exception result");
             }
             if (ct == null) {
                 s.lb.sendResult(r.getParent(), null);
@@ -347,7 +354,7 @@ public final class Aborts implements Config {
             }
         }
     }
-
+    
     public void handleAbort(ReadMessage m) {
         abortsComm.handleAbort(m);
     }

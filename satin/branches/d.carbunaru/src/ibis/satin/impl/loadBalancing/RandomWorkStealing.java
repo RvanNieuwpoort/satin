@@ -1,24 +1,25 @@
 /* $Id$ */
-
 package ibis.satin.impl.loadBalancing;
 
 import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.InvocationRecord;
 
-/** The random work-stealing distributed computing algorithm. */
-
+/**
+ * The random work-stealing distributed computing algorithm.
+ */
 public final class RandomWorkStealing extends LoadBalancingAlgorithm {
 
     long failedAttempts;
-    
+
     public RandomWorkStealing(Satin s) {
         super(s);
     }
 
     /**
      * Daniela:
-     * @param ct 
+     *
+     * @param ct
      */
     public RandomWorkStealing(ClientThread ct) {
         super(ct);
@@ -30,12 +31,16 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
         if (clientThread != null) {
             clientThread.stats.waitingForLockTimer.start();
         }
-        
+
         synchronized (satin) {
             if (clientThread != null) {
                 clientThread.stats.waitingForLockTimer.stop();
             }
-            v = satin.victims.getRandomVictim();
+            if (clientThread == null) {
+                v = satin.victims.getRandomVictim();
+            } else {
+                v = clientThread.victims.getRandomVictim();
+            }
             /*
              * Used for fault tolerance; we must know who the current victim is
              * in case it crashes..
@@ -48,15 +53,15 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
                 }
             }
         }
-        
+
         if (v == null) {
             return null; //can happen with open world if nobody joined.
         }
-        
+
         InvocationRecord job;
-        
+
         if (clientThread != null) {
-            job =  clientThread.lb.stealJob(v, false);
+            job = clientThread.lb.stealJob(v, false);
         } else {
             if (satin.isMaster()) {
                 job = satin.lb.stealJob(v, false);
@@ -64,7 +69,7 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
                 job = null;
             }
         }
-        
+
         if (job != null) {
             failedAttempts = 0;
             return job;
@@ -72,7 +77,7 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
             failedAttempts++;
             throttle(failedAttempts);
         }
-        
+
         return null;
     }
 }

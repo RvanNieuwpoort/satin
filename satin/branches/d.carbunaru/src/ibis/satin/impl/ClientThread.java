@@ -25,94 +25,87 @@ import java.util.logging.Logger;
  * @author daniela
  */
 public class ClientThread extends Thread implements Config {
-    
+
     public Satin satin;
-
     public final int id;
-    
     public final Communication comm;
-
     public final LoadBalancing lb;
-
     public final Aborts aborts;
-
     public final IbisIdentifier ident; // this ibis
-
-    /** My scheduling algorithm. */
-    public LoadBalancingAlgorithm algorithm;
-
-    /** The work queue. Contains jobs that were spawned, but not yet executed. */
-    public final DoubleEndedQueue q;
-
     /**
-     * This vector contains all jobs that were stolen from me. 
-     * Used to locate the invocation record corresponding to the result of a
-     * remote job.
+     * My scheduling algorithm.
      */
-    public final IRVector outstandingJobs;
-
-    /** The jobs that are currently being executed, they are on the Java stack. */
+    public LoadBalancingAlgorithm algorithm;
+    /**
+     * The work queue. Contains jobs that were spawned, but not yet executed.
+     */
+    public final DoubleEndedQueue q;
+    /**
+     * The jobs that are currently being executed, they are on the Java stack.
+     */
     public final IRStack onStack;
-
     public Statistics stats = new Statistics();
-
-    /** The invocation record that is the parent of the current job. */
+    /**
+     * The invocation record that is the parent of the current job.
+     */
     public InvocationRecord parent;
-
     public volatile boolean currentVictimCrashed;
-
-    /** All victims, myself NOT included. The elements are Victims. */
+    /**
+     * All victims, myself NOT included. The elements are Victims.
+     */
     public final VictimTable victims;
 
-    /**
-     * Used for fault tolerance. All ibises that once took part in the
-     * computation, but then crashed. Assumption: ibis identifiers are unique in
-     * time; the same ibis cannot crash and join the computation again.
-     */
-    public final Vector<IbisIdentifier> deadIbises = new Vector<IbisIdentifier>();
-    
-    
     public ClientThread(Satin satin, int i) {
         this.satin = satin;
-        
+
         id = i;
 
         q = new DoubleEndedQueue(this);
 
-        outstandingJobs = new IRVector(this);
         onStack = new IRStack(this);
 
         comm = satin.comm;
-        
-        ident = satin.ident; 
-        
+
+        ident = satin.ident;
+
         aborts = new Aborts(this);
-        lb = new LoadBalancing(this); 
+        lb = new LoadBalancing(this);
         victims = satin.victims;
         createLoadBalancingAlgorithm();
-        
-    }
-    
-    @Override
-    public void run(){
-        stats.totalTimer.start();
-        
-        System.out.println("Client: !!!!!!!!!!!!!!!");
 
-        while (!satin.exiting) {
-            // steal and run jobs
-            noWorkInQueue();
+    }
+
+    @Override
+    public void run() {
+        stats.totalTimer.start();
+
+        if (!satin.isMaster()) {
+            while (!satin.exiting) {
+                // steal and run jobs
+                noWorkInQueue();
+            }
+        } else {
+            while (!satin.masterThreadsExiting) {
+                // steal and run jobs
+                noWorkInQueue();
+            }
         }
-        
+
         System.out.println("exiting");
-        
+
         algorithm.exit();
-        
+
         stats.totalTimer.stop();
-        
+
         stats.handleStealTimer = satin.stats.handleStealTimer;
-        
+
         stats.myThreadStatistics(id);
+
+        synchronized (satin.waitForThreads) {
+            satin.threadsEnded++;
+            System.out.println("Thread " + id + ": threadsEnded = " + satin.threadsEnded);
+            satin.waitForThreads.notifyAll();
+        }
 
     }
 
@@ -125,28 +118,34 @@ public class ClientThread extends Thread implements Config {
         } else {
             stats.localStealSuccess++;
         }
-        
-        if (r != null && satin.so.executeGuard(r)) {
+
+        if (r != null && satin.so.executeGuard(r, id)) {
             callSatinFunction(r);
         } else {
             handleDelayedMessages();
         }
     }
-    
+
     public void handleDelayedMessages() {
         // Handle messages received in upcalls.
+        stats.handlingDelayedMsgsTimer.start();
         aborts.handleDelayedMessages();
         lb.handleDelayedMessages();
         satin.ft.handleDelayedMessages();
         satin.so.handleDelayedMessages();
+        stats.handlingDelayedMsgsTimer.stop();
     }
-    
-    public void callSatinFunction(InvocationRecord r) {
-        if (Satin.ASSERTS) callSatinFunctionPreAsserts(r);
 
-        if (r.getParent() != null && r.getParent().aborted) {
-            r.decrSpawnCounter();
-            return;
+    public void callSatinFunction(InvocationRecord r) {
+        synchronized (r) {
+            if (Satin.ASSERTS) {
+                callSatinFunctionPreAsserts(r);
+            }
+            if (r.getParent() != null && r.getParent().aborted) {
+                System.out.println("Thread " + id + " descreased for " + r.getStamp());
+                r.decrSpawnCounter();
+                return;
+            }
         }
 
         if (ftLogger.isDebugEnabled()) {
@@ -154,19 +153,19 @@ public class ClientThread extends Thread implements Config {
                 ftLogger.debug("Redoing job " + r.getStamp());
             }
         }
-        
+
         InvocationRecord oldParent = parent;
         onStack.push(r);
         parent = r;
-        
+
         // We MUST make sure that steals don't overtake aborts.
         // Therefore, we must poll for messages here.
         handleDelayedMessages();
-        
+
         if (r.getOwner().equals(ident)) {
             // maybe r was stolen from this machine, but from another thread.
             if (satin.stampToThreadIdMap != null) {
-                if (satin.stampToThreadIdMap.containsKey(r.getStamp())) {               
+                if (satin.stampToThreadIdMap.containsKey(r.getStamp())) {
                     callSatinSharedFunction(r);
                 } else {
                     callSatinLocalFunction(r);
@@ -182,7 +181,7 @@ public class ClientThread extends Thread implements Config {
         parent = oldParent;
         onStack.pop();
     }
-    
+
     private void callSatinFunctionPreAsserts(InvocationRecord r) {
         if (r == null) {
             assertFailed("r == null in callSatinFunc", new Exception());
@@ -197,7 +196,7 @@ public class ClientThread extends Thread implements Config {
                     new Exception());
         }
     }
-    
+
     private void callSatinLocalFunction(InvocationRecord r) {
         stats.jobsExecuted++;
         try {
@@ -218,9 +217,9 @@ public class ClientThread extends Thread implements Config {
                 Satin.abortLogger.debug("Caught abort exception " + t, t);
             }
         }
-       
+
         r.decrSpawnCounter();
-        
+
 
         if (!Satin.FT_NAIVE) {
             r.jobFinished();
@@ -235,9 +234,9 @@ public class ClientThread extends Thread implements Config {
 
         stats.jobsExecuted++;
         ReturnRecord rr = null;
-        
+
         rr = r.runRemote();
-        
+
         rr.setEek(r.eek);
 
         if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {
@@ -250,7 +249,7 @@ public class ClientThread extends Thread implements Config {
         // send wrapper back to the owner thread, but on the same machine
         if (!r.aborted) {
             lb.handleSharedResult(r, rr);
-            
+
             if (Satin.stealLogger.isInfoEnabled()) {
                 Satin.stealLogger.info("SATIN '" + ident
                         + "': SHARED CODE SEND RESULT DONE!");
@@ -270,25 +269,26 @@ public class ClientThread extends Thread implements Config {
         }
         ReturnRecord rr = null;
         stats.jobsExecuted++;
-        
+
         rr = r.runRemote();
-        
+
         rr.setEek(r.eek);
 
-        if (r.eek != null){ //&& Satin.stealLogger.isInfoEnabled()) {
-            satin.log.log(Level.INFO, 
-                "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}", new Object[]{this.id, r.eek});
+        if (r.eek != null) { //&& Satin.stealLogger.isInfoEnabled()) {
+            satin.log.log(Level.INFO,
+                    "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}. Stamp: {2}",
+                    new Object[]{this.id, r.eek, r.getStamp()});
+            System.out.println("\t" + r);
             Satin.stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
-            Satin.stealLogger
-                .info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
+            Satin.stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
         }
 
         // send wrapper back to the owner
         if (!r.aborted) {
             lb.sendResult(r, rr);
-            
+
             if (Satin.stealLogger.isInfoEnabled()) {
                 Satin.stealLogger.info("SATIN '" + ident
                         + "': REMOTE CODE SEND RESULT DONE!");
@@ -300,9 +300,9 @@ public class ClientThread extends Thread implements Config {
             }
         }
     }
-    
+
     public void assertFailed(String reason, Throwable t) {
-        if(reason != null) {
+        if (reason != null) {
             Satin.mainLogger.error("SATIN '" + ident
                     + "': ASSERT FAILED: " + reason, t);
         } else {
@@ -312,7 +312,7 @@ public class ClientThread extends Thread implements Config {
 
         throw new Error(reason, t);
     }
-    
+
     private void createLoadBalancingAlgorithm() {
         String alg = SUPPLIED_ALG;
 
@@ -332,5 +332,4 @@ public class ClientThread extends Thread implements Config {
 
         commLogger.info("SATIN '" + "- " + "': using algorithm '" + alg);
     }
-    
 }

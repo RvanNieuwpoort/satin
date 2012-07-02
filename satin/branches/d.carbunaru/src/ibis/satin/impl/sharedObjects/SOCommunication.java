@@ -28,7 +28,7 @@ import java.util.*;
 final class SOCommunication implements Config, Protocol {
     private static final boolean ASYNC_SO_BCAST = false;
     
-    private Satin s;
+    private final Satin s;
 
     /** the current size of the accumulated so messages */
     private long soCurrTotalMessageSize = 0;
@@ -494,6 +494,7 @@ final class SOCommunication implements Config, Protocol {
                 requestsSent.add(objectId);
         
                 // haven't got it, demand it now.
+                System.out.println("Satin is sending a SORequest.");
                 sendSORequest(objectId, source, true);
             }
         }
@@ -535,6 +536,7 @@ final class SOCommunication implements Config, Protocol {
             }
             w.writeString(objectId);
             v.finish(w);
+            System.out.println("Satin sent a SORequest.");
         } catch (IOException e) {
             if (w != null) {
                 w.finish(e);

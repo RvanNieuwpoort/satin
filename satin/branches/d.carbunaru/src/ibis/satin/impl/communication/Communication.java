@@ -399,11 +399,12 @@ public final class Communication implements Config, Protocol {
 
         int size;
         synchronized (s) {
-            size = s.victims.size();
+            size = s.victims.size() - 1;
         }
 
         // wait until everybody has send an ACK
         synchronized (s) {
+            
             while (exitReplies != size && System.currentTimeMillis() < deadline) {
                 try {
                     s.handleDelayedMessages();
@@ -411,7 +412,7 @@ public final class Communication implements Config, Protocol {
                 } catch (Exception e) {
                     // Ignore.
                 }
-                size = s.victims.size();
+                size = s.victims.size() - 1;
             }
         }
     }
@@ -544,7 +545,7 @@ public final class Communication implements Config, Protocol {
     public void handleExitReply(ReadMessage m) {
 
         SendPortIdentifier ident = m.origin();
-
+        
         commLogger.debug("SATIN '" + s.ident + "': got exit ACK message from "
                 + ident.ibisIdentifier());
 
