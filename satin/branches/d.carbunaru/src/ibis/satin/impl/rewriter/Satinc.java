@@ -2044,8 +2044,10 @@ public final class Satinc extends IbiscComponent {
 
             out.println("public final class " + name
                 + " extends ibis.satin.impl.aborts.LocalRecord {");
+            /*
             out.println("    private static " + name + " cache;");
             out.println("    private " + name + " cacheNext;");
+            */
 
             String[] allLvs = MethodTable.getAllLocalDecls(m);
 
@@ -2098,7 +2100,9 @@ public final class Satinc extends IbiscComponent {
             }
             out.println(") {");
 
+            /*
             out.println("        if (cache == null) {");
+            */
             out.print("            return new " + name + "(");
             for (int i = 0; i < params.length; i++) {
                 String paramName = MethodTable.getParamName(m, i);
@@ -2109,6 +2113,7 @@ public final class Satinc extends IbiscComponent {
                 }
             }
             out.println(");");
+            /*
             out.println("        }");
 
             out.println("        " + name + " result = cache;");
@@ -2126,6 +2131,7 @@ public final class Satinc extends IbiscComponent {
 
             out.println("        result.cacheNext = null;");
             out.println("        return result;");
+            */
             out.println("    }\n");
 
             // delete
@@ -2141,8 +2147,10 @@ public final class Satinc extends IbiscComponent {
                 }
             }
 
+            /*
             out.println("        curr.cacheNext = cache;");
             out.println("        cache = curr;");
+            */
             out.println("    }\n");
 
             // generate a method that runs the clone in case of exceptions 
