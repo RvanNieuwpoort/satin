@@ -192,7 +192,7 @@ public final class Satin implements Config {
         masterThreadsExiting = true;
 
         synchronized (waitForThreads) {
-            while (threadsEnded != clientThreads.length) {
+            while (threadsEnded < clientThreads.length) {
                 try {
                     waitForThreads.wait();
                 } catch (InterruptedException ex) {
@@ -300,49 +300,46 @@ public final class Satin implements Config {
      */
     public void spawn(InvocationRecord r) {
         ClientThread t = getThread();
+        if (t == null) {
+            stats.spawns++;
 
-        synchronized (r) {
-            if (t == null) {
-                stats.spawns++;
-
-                // If my parent is aborted, so am I.
-                if (parent != null && parent.aborted) {
-                    return;
-                }
-
-                // Maybe this job is already in the global result table.
-                // If so, we don't have to do it again.
-                // Ouch, this cannot be the right place: there is no stamp allocated
-                // yet for the job! --Ceriel
-                // Fixed by first calling r.spawn.
-                r.spawn(ident, parent);
-                if (ft.checkForDuplicateWork(parent, r)) {
-                    return;
-                }
-
-                q.addToHead(r);
-                algorithm.jobAdded();
-            } else {
-                t.stats.spawns++;
-
-                // If my parent is aborted, so am I.
-                if (t.parent != null && t.parent.aborted) {
-                    return;
-                }
-
-                // Maybe this job is already in the global result table.
-                // If so, we don't have to do it again.
-                // Ouch, this cannot be the right place: there is no stamp allocated
-                // yet for the job! --Ceriel
-                // Fixed by first calling r.spawn.
-                r.spawn(ident, t.parent);
-                if (ft.checkForDuplicateWork(t.parent, r)) {
-                    return;
-                }
-
-                t.q.addToHead(r);
-                t.algorithm.jobAdded();
+            // If my parent is aborted, so am I.
+            if (parent != null && parent.aborted) {
+                return;
             }
+
+            // Maybe this job is already in the global result table.
+            // If so, we don't have to do it again.
+            // Ouch, this cannot be the right place: there is no stamp allocated
+            // yet for the job! --Ceriel
+            // Fixed by first calling r.spawn.
+            r.spawn(ident, parent);
+            if (ft.checkForDuplicateWork(parent, r)) {
+                return;
+            }
+
+            q.addToHead(r);
+            algorithm.jobAdded();
+        } else {
+            t.stats.spawns++;
+
+            // If my parent is aborted, so am I.
+            if (t.parent != null && t.parent.aborted) {
+                return;
+            }
+
+            // Maybe this job is already in the global result table.
+            // If so, we don't have to do it again.
+            // Ouch, this cannot be the right place: there is no stamp allocated
+            // yet for the job! --Ceriel
+            // Fixed by first calling r.spawn.
+            r.spawn(ident, t.parent);
+            if (ft.checkForDuplicateWork(t.parent, r)) {
+                return;
+            }
+
+            t.q.addToHead(r);
+            t.algorithm.jobAdded();
         }
 
     }
@@ -377,8 +374,8 @@ public final class Satin implements Config {
                     if (ir != null) {
                         callSatinFunction(ir);
                     } else {
-                        System.out.println("\t spawncounter = " + s.getValue() + " master");
-                        System.out.flush();
+                        //System.out.println("\t spawncounter = " + s.getValue() + " master");
+                        //System.out.flush();
                         Thread.yield();
                         noWorkInQueue();
                     }
@@ -393,8 +390,8 @@ public final class Satin implements Config {
                     if (r != null) {
                         thread.callSatinFunction(r);
                     } else {
-                        System.out.println("\t spawncounter = " + s.getValue() + " thread " + thread.id);
-                        System.out.flush();
+                        //System.out.println("\t spawncounter = " + s.getValue() + " thread " + thread.id);
+                        //System.out.flush();
                         Thread.yield();
                         thread.noWorkInQueue();
                     }
@@ -526,7 +523,7 @@ public final class Satin implements Config {
         return ir;
     }
 
-    public synchronized void handleDelayedMessages() {
+    public void handleDelayedMessages() {
         // Handle messages received in upcalls.
         aborts.handleDelayedMessages();
         lb.handleDelayedMessages();
@@ -573,8 +570,12 @@ public final class Satin implements Config {
 
             // now inform the other threads also...
             for (ClientThread ct : clientThreads) {
-                ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
-                ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                if (exceptionThrower != null) {
+                    ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
+                }
+                if (outstandingSpawns != null) {
+                    ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                }
             }
         } else {
             t.stats.abortsDone++;
@@ -591,14 +592,22 @@ public final class Satin implements Config {
 
             // now inform the other threads also.
             if (master) {
-                aborts.addToAbortList(exceptionThrower.getParentStamp());
-                aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                if (exceptionThrower != null) {
+                    aborts.addToAbortList(exceptionThrower.getParentStamp());
+                }
+                if (outstandingSpawns != null) {
+                    aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                }
             }
 
             for (ClientThread ct : clientThreads) {
                 if (ct.id != t.id) {
-                    ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
-                    ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                    if (exceptionThrower != null) {
+                        ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
+                    }
+                    if (outstandingSpawns != null) {
+                        ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                    }
                 }
             }
         }
@@ -744,16 +753,14 @@ public final class Satin implements Config {
     }
 
     private void callSatinFunction(InvocationRecord r) {
-        synchronized (r) {
-            if (ASSERTS) {
-                callSatinFunctionPreAsserts(r);
-            }
+        if (ASSERTS) {
+            callSatinFunctionPreAsserts(r);
+        }
 
-            if (r.getParent() != null && r.getParent().aborted) {
-                System.out.println("Thread -1 descreased for " + r.getStamp());
-                r.decrSpawnCounter();
-                return;
-            }
+        if (r.getParent() != null && r.getParent().aborted) {
+            System.out.println("Thread -1 descreased for " + r.getStamp());
+            r.decrSpawnCounter();
+            return;
         }
 
         if (ftLogger.isDebugEnabled()) {
@@ -772,12 +779,10 @@ public final class Satin implements Config {
         handleDelayedMessages();
 
         if (r.getOwner().equals(ident)) {
-            if (stampToThreadIdMap != null) {
-                if (stampToThreadIdMap.containsKey(r.getStamp())) {
-                    callSatinSharedFunction(r);
-                } else {
-                    callSatinLocalFunction(r);
-                }
+            // maybe r was stolen from this machine, but from another thread.
+            if (stampToThreadIdMap != null &&
+                    stampToThreadIdMap.containsKey(r.getStamp())) {
+                callSatinSharedFunction(r);
             } else {
                 callSatinLocalFunction(r);
             }
@@ -791,6 +796,7 @@ public final class Satin implements Config {
     }
 
     private void callSatinSharedFunction(InvocationRecord r) {
+        //System.out.println("T-1 -- Solving shared IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING SHARED CODE, STAMP = " + r.getStamp() + "!");
@@ -819,6 +825,7 @@ public final class Satin implements Config {
                         + "': SHARED CODE SEND RESULT DONE!");
             }
         } else {
+            r.decrSpawnCounter();
             if (Satin.stealLogger.isInfoEnabled()) {
                 Satin.stealLogger.info("SATIN '" + ident
                         + "': SHARED CODE WAS ABORTED! Exception = " + r.eek);
@@ -842,6 +849,7 @@ public final class Satin implements Config {
     }
 
     public void callSatinLocalFunction(InvocationRecord r) {
+        //System.out.println("T-1 -- Solving local IR: " + r.getStamp());
         stats.jobsExecuted++;
         try {
             r.runLocal();
@@ -857,7 +865,10 @@ public final class Satin implements Config {
             if (!(t instanceof AbortException)) {
                 //String threadName = Thread.currentThread().getName();
                 ClientThread ct = getThread();//(ClientThread) threadIdToThreadMap.get(threadName);
-
+if (r.eek.toString().contains("java.lang.NullPointerException")) {
+                System.out.println("\t" + r);
+                r.eek.printStackTrace();
+            }
                 if (ct == null) {
                     r.eek = t;
                     aborts.handleInlet(r);
@@ -878,6 +889,7 @@ public final class Satin implements Config {
     }
 
     public void callSatinRemoteFunction(InvocationRecord r) {
+        //System.out.println("T-1 -- Solving remote IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
@@ -891,7 +903,11 @@ public final class Satin implements Config {
         if (r.eek != null && stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
-            System.out.println("\t" + r);
+            log.log(Level.INFO,
+                    "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}. Stamp: {2}",
+                    new Object[]{-1, r.eek, r.getStamp()});
+            System.out.println(r);
+            
         } else {
             stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
         }

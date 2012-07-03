@@ -137,15 +137,14 @@ public class ClientThread extends Thread implements Config {
     }
 
     public void callSatinFunction(InvocationRecord r) {
-        synchronized (r) {
-            if (Satin.ASSERTS) {
-                callSatinFunctionPreAsserts(r);
-            }
-            if (r.getParent() != null && r.getParent().aborted) {
-                System.out.println("Thread " + id + " descreased for " + r.getStamp());
-                r.decrSpawnCounter();
-                return;
-            }
+        if (Satin.ASSERTS) {
+            callSatinFunctionPreAsserts(r);
+        }
+        
+        if (r.getParent() != null && r.getParent().aborted) {
+            System.out.println("Thread " + id + " descreased for " + r.getStamp());
+            r.decrSpawnCounter();
+            return;
         }
 
         if (ftLogger.isDebugEnabled()) {
@@ -164,12 +163,9 @@ public class ClientThread extends Thread implements Config {
 
         if (r.getOwner().equals(ident)) {
             // maybe r was stolen from this machine, but from another thread.
-            if (satin.stampToThreadIdMap != null) {
-                if (satin.stampToThreadIdMap.containsKey(r.getStamp())) {
-                    callSatinSharedFunction(r);
-                } else {
-                    callSatinLocalFunction(r);
-                }
+            if (satin.stampToThreadIdMap != null &&
+                    satin.stampToThreadIdMap.containsKey(r.getStamp())) {
+                callSatinSharedFunction(r);
             } else {
                 callSatinLocalFunction(r);
             }
@@ -198,6 +194,7 @@ public class ClientThread extends Thread implements Config {
     }
 
     private void callSatinLocalFunction(InvocationRecord r) {
+        //System.out.println("T" + id +" -- Solving local IR: " + r.getStamp());
         stats.jobsExecuted++;
         try {
             r.runLocal();
@@ -211,6 +208,10 @@ public class ClientThread extends Thread implements Config {
             // Note: this can now also happen on an abort. Check for
             // the AbortException!
             if (!(t instanceof AbortException)) {
+                if (r.eek.toString().contains("java.lang.NullPointerException")) {
+                System.out.println("\t" + r);
+                r.eek.printStackTrace();
+            }
                 r.eek = t;
                 aborts.handleInlet(r);
             } else if (Satin.abortLogger.isDebugEnabled()) {
@@ -227,6 +228,7 @@ public class ClientThread extends Thread implements Config {
     }
 
     private void callSatinSharedFunction(InvocationRecord r) {
+        //System.out.println("T" + id +" -- Solving shared IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING SHARED CODE, STAMP = " + r.getStamp() + "!");
@@ -236,6 +238,8 @@ public class ClientThread extends Thread implements Config {
         ReturnRecord rr = null;
 
         rr = r.runRemote();
+        
+        //System.out.println("Solved remote IR: " + r.getStamp());
 
         rr.setEek(r.eek);
 
@@ -255,6 +259,8 @@ public class ClientThread extends Thread implements Config {
                         + "': SHARED CODE SEND RESULT DONE!");
             }
         } else {
+            //System.out.println("Aborted remote IR: " + r.getStamp());
+            r.decrSpawnCounter();
             if (Satin.stealLogger.isInfoEnabled()) {
                 Satin.stealLogger.info("SATIN '" + ident
                         + "': SHARED CODE WAS ABORTED! Exception = " + r.eek);
@@ -263,6 +269,7 @@ public class ClientThread extends Thread implements Config {
     }
 
     private void callSatinRemoteFunction(InvocationRecord r) {
+        //System.out.println("T" + id +" -- Solving remote IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
@@ -278,9 +285,11 @@ public class ClientThread extends Thread implements Config {
             satin.log.log(Level.INFO,
                     "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}. Stamp: {2}",
                     new Object[]{this.id, r.eek, r.getStamp()});
-            System.out.println("\t" + r);
+            
             Satin.stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
+            System.out.println(r);
+            //r.eek.printStackTrace();
         } else {
             Satin.stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
         }
