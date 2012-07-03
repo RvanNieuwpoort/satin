@@ -436,6 +436,7 @@ public final class LoadBalancing implements Config {
             if (r != null) {
                 if (rr != null) {
                     rr.assignTo(r);
+                    System.out.println("Assigned shared result to " + r.getStamp());
                 } else {
                     r.eek = eek;
                 }
