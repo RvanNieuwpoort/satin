@@ -158,7 +158,11 @@ public final class DoubleEndedQueue implements Config {
 
                 curr.aborted = true;
                 curr.decrSpawnCounter();
-                //satin.stats.abortedJobs++;
+                if (clientThread == null) {
+                    satin.stats.abortedJobs++;
+                } else {
+                    clientThread.stats.abortedJobs++;
+                }
                 //curr.aborted = true;
 
                 // Curr is removed, but not put back in cache.
@@ -205,8 +209,14 @@ public final class DoubleEndedQueue implements Config {
 
                 curr.aborted = true;
 
-                //satin.stats.abortedJobs++;
-                //satin.stats.killedOrphans++;
+                if (clientThread == null) {
+                    satin.stats.abortedJobs++;
+                    satin.stats.killedOrphans++;
+
+                } else {
+                    clientThread.stats.abortedJobs++;
+                    clientThread.stats.killedOrphans++;
+                }
                 removeElement(curr);
             }
             
