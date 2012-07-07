@@ -128,12 +128,12 @@ public class ClientThread extends Thread implements Config {
 
     public void handleDelayedMessages() {
         // Handle messages received in upcalls.
-        stats.handlingDelayedMsgsTimer.start();
+        //stats.handlingDelayedMsgsTimer.start();
         aborts.handleDelayedMessages();
         lb.handleDelayedMessages();
         satin.ft.handleDelayedMessages();
         satin.so.handleDelayedMessages();
-        stats.handlingDelayedMsgsTimer.stop();
+        //stats.handlingDelayedMsgsTimer.stop();
     }
 
     public void callSatinFunction(InvocationRecord r) {
@@ -142,7 +142,6 @@ public class ClientThread extends Thread implements Config {
         }
         
         if (r.getParent() != null && r.getParent().aborted) {
-            System.out.println("Thread " + id + " descreased for " + r.getStamp());
             r.decrSpawnCounter();
             return;
         }
@@ -288,7 +287,6 @@ public class ClientThread extends Thread implements Config {
             
             Satin.stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
-            System.out.println(r);
             //r.eek.printStackTrace();
         } else {
             Satin.stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");

@@ -57,13 +57,7 @@ final class LBCommunication implements Config, Protocol {
                     + v.getIdent());
         }
 
-        if (ct != null) {
-            ct.stats.waitingForLockTimer.start();
-        }
         WriteMessage writeMessage = v.newMessage();
-        if (ct != null) {
-            ct.stats.waitingForLockTimer.stop();
-        }
         byte opcode = -1;
 
         if (synchronous) {
@@ -221,14 +215,7 @@ final class LBCommunication implements Config, Protocol {
 
         Victim v = null;
 
-        if (ct != null) {
-            ct.stats.waitingForLockTimer.start();
-        }
-
         synchronized (s) {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
 
             if (!FT_NAIVE && r.isOrphan()) {
                 IbisIdentifier owner = s.ft.lookupOwner(r);
@@ -272,13 +259,7 @@ final class LBCommunication implements Config, Protocol {
         }
         WriteMessage writeMessage = null;
         try {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.start();
-            }
             writeMessage = v.newMessage();
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
             if (r.eek == null) {
                 writeMessage.writeByte(Protocol.JOB_RESULT_NORMAL);
                 writeMessage.writeObject(rr);
@@ -333,7 +314,10 @@ final class LBCommunication implements Config, Protocol {
             handleStealTimer = Timer.createTimer();
             handleStealTimer.start();
         }
-        s.stats.stealRequests++;
+        
+        synchronized (s.stats) {
+            s.stats.stealRequests++;
+        }
 
         try {
 
@@ -489,13 +473,7 @@ final class LBCommunication implements Config, Protocol {
 
         WriteMessage m = null;
         try {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.start();
-            }
             m = v.newMessage();
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
             if (opcode == STEAL_REQUEST || opcode == BLOCKING_STEAL_REQUEST) {
                 m.writeByte(STEAL_REPLY_FAILED);
             } else if (opcode == ASYNC_STEAL_REQUEST) {
@@ -542,7 +520,9 @@ final class LBCommunication implements Config, Protocol {
                     + ": trying to send aborted job!");
         }
 
-        s.stats.stolenJobs++;
+        synchronized (s.stats) {
+            s.stats.stolenJobs++;
+        }
 
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + s.ident
@@ -552,13 +532,7 @@ final class LBCommunication implements Config, Protocol {
 
         WriteMessage m = null;
         try {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.start();
-            }
             m = v.newMessage();
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
             if (opcode == STEAL_REQUEST || opcode == BLOCKING_STEAL_REQUEST) {
                 m.writeByte(STEAL_REPLY_SUCCESS);
             } else if (opcode == ASYNC_STEAL_REQUEST) {

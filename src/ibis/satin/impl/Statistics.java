@@ -10,6 +10,7 @@ public final class Statistics implements java.io.Serializable, Config {
      * Generated
      */
     private static final long serialVersionUID = 7954856934035669311L;
+    public Timer addToHeadTimer = Timer.createTimer();
     public long spawns; //ok
     public long syncs; //ok
     public long abortsDone; //ok
@@ -133,8 +134,8 @@ public final class Statistics implements java.io.Serializable, Config {
     public Timer soInvocationDeserializationTimer = Timer.createTimer();
     public Timer soGuardTimer = Timer.createTimer();
     public Timer stealThrottleTimer = Timer.createTimer(); //ok
-    public Timer waitingForLockTimer = Timer.createTimer(); //ok
-    public Timer handlingDelayedMsgsTimer = Timer.createTimer();
+    //public Timer waitingForLockTimer = Timer.createTimer(); //ok
+    //public Timer handlingDelayedMsgsTimer = Timer.createTimer();
 
     public void add(Statistics s) {
         spawns += s.spawns;
@@ -813,12 +814,15 @@ public final class Statistics implements java.io.Serializable, Config {
     public void myThreadStatistics(int id) {
         System.out.println("\t Thread " + id + ":");
         System.out.println("Total thread time: " + totalTimer.totalTimeVal());
-        System.out.println("Steal Time: " + stealTimer.totalTimeVal());
-        System.out.println("Handle Steal Time: " + handleStealTimer.totalTimeVal());
-        System.out.println("Waiting Time: " + waitingForLockTimer.totalTimeVal());
-        System.out.println("Return rr Time: " + returnRecordWriteTimer.totalTimeVal());
-        System.out.println("Handle Delayed Messages Time: " + handlingDelayedMsgsTimer.totalTimeVal());
-        System.out.println("SO_GUARDS: " + soGuardTimer.nrTimes());
+        double x = addToHeadTimer.totalTimeVal()/addToHeadTimer.nrTimes();
+        System.out.println("Time to add an element: " + x + 
+                " maxTime = " + addToHeadTimer.maxTimeVal());
+//        System.out.println("Steal Time: " + stealTimer.totalTimeVal());
+//        System.out.println("Handle Steal Time: " + handleStealTimer.totalTimeVal());
+//        System.out.println("Waiting Time: " + waitingForLockTimer.totalTimeVal());
+//        System.out.println("Return rr Time: " + returnRecordWriteTimer.totalTimeVal());
+        //System.out.println("Handle Delayed Messages Time: " + handlingDelayedMsgsTimer.totalTimeVal());
+        //System.out.println("SO_GUARDS: " + soGuardTimer.nrTimes());
         System.out.println("Spawns: " + spawns);
         System.out.println("Local Steal Attempts: " + localStealAttempts);
         System.out.println("Local Steal Success: " + localStealSuccess);

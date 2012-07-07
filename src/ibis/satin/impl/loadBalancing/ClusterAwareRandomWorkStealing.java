@@ -68,43 +68,26 @@ public final class ClusterAwareRandomWorkStealing extends
         }
 
         // Else .. we are idle, try to steal a job.
-        if (clientThread == null) {
-            synchronized (satin) {
-                localVictim = satin.victims.getRandomLocalVictim();
-                if (localVictim != null) {
+        synchronized (satin) {
+            localVictim = satin.victims.getRandomLocalVictim();
+            if (localVictim != null) {
+                if (clientThread == null) {
                     satin.lb.setCurrentVictim(localVictim.getIdent());
-                }
-                if (!asyncStealInProgress) {
-                    remoteVictim = satin.victims.getRandomRemoteVictim();
-                    if (remoteVictim != null) {
-                        asyncCurrentVictim = remoteVictim.getIdent();
-                    }
-                }
-                // Until we download the table, only the cluster coordinator can
-                // issue wide-area steal requests 
-                // @@@ why? --Rob
-                if (satin.ft.getTable && !satin.clusterCoordinator) {
-                    canDoAsync = false;
-                }
-            }
-        } else {
-            synchronized (clientThread) {
-                localVictim = clientThread.victims.getRandomLocalVictim();
-                if (localVictim != null) {
+                } else {
                     clientThread.lb.setCurrentVictim(localVictim.getIdent());
                 }
-                if (!asyncStealInProgress) {
-                    remoteVictim = clientThread.victims.getRandomRemoteVictim();
-                    if (remoteVictim != null) {
-                        asyncCurrentVictim = remoteVictim.getIdent();
-                    }
+            }
+            if (!asyncStealInProgress) {
+                remoteVictim = satin.victims.getRandomRemoteVictim();
+                if (remoteVictim != null) {
+                    asyncCurrentVictim = remoteVictim.getIdent();
                 }
-                // Until we download the table, only the cluster coordinator can
-                // issue wide-area steal requests 
-                // @@@ why? --Rob
-                if (satin.ft.getTable && !satin.clusterCoordinator) {
-                    canDoAsync = false;
-                }
+            }
+            // Until we download the table, only the cluster coordinator can
+            // issue wide-area steal requests 
+            // @@@ why? --Rob
+            if (satin.ft.getTable && !satin.clusterCoordinator) {
+                canDoAsync = false;
             }
         }
 
@@ -217,6 +200,7 @@ public final class ClusterAwareRandomWorkStealing extends
         return null;
     }
 
+    @Override
     public void stealReplyHandler(InvocationRecord ir, IbisIdentifier sender,
             int opcode) {
         switch (opcode) {
