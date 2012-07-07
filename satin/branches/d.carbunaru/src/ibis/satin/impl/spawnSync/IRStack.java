@@ -95,10 +95,18 @@ public final class IRStack implements Config {
                 curr.aborted = true;
 
                 if (store) {
-                    s.stats.killedOrphans++;
+                    if (ct == null) {
+                        s.stats.killedOrphans++;
+                    } else {
+                        ct.stats.killedOrphans++;
+                    }
                     toStore.add(curr);
                 } else {
-                    s.stats.abortedJobs++;
+                    if (ct == null) {
+                        s.stats.abortedJobs++;
+                    } else {
+                        ct.stats.abortedJobs++;
+                    }
                 }
 
                 if (abortLogger.isDebugEnabled()) {
