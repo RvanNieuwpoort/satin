@@ -28,14 +28,7 @@ public final class RandomWorkStealing extends LoadBalancingAlgorithm {
     public InvocationRecord clientIteration() {
         Victim v;
 
-        if (clientThread != null) {
-            clientThread.stats.waitingForLockTimer.start();
-        }
-
         synchronized (satin) {
-            if (clientThread != null) {
-                clientThread.stats.waitingForLockTimer.stop();
-            }
             if (clientThread == null) {
                 v = satin.victims.getRandomVictim();
             } else {

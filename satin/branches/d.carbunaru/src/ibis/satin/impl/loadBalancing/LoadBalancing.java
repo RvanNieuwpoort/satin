@@ -134,45 +134,46 @@ public final class LoadBalancing implements Config {
         if (ct == null) {
             // we are in the Satin's loadbalancer
             // get a thread from the queue of waiting stealing threads and:
+            int threadId;
             synchronized (s) {
                 // there is always at least 1 thread id in the list in the map: <ibisident, list<threadid>>.
                 // because this is a steal response, and at the steal request
                 // there was an inserted threadId in the map.
 
-                int threadId = s.waitingStealMap.get(sender).remove(0);
+                threadId = s.waitingStealMap.get(sender).remove(0);
 
                 if (s.waitingStealMap.get(sender).isEmpty()) {
                     s.waitingStealMap.remove(sender);
                 }
+            }
 
-                if (threadId != -1) {
-                    s.clientThreads[threadId].lb.gotJobResult(ir, sender);
-                } else {
-                    if (!sender.equals(currentVictim)) {
-                        if (s.deadIbises.contains(sender)) {
-                            // A dead Ibis is alive after all. Ignore it.
-                            ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
-                                    + sender + " which is supposed to be dead");
-                            return;
-                        }
+            if (threadId != -1) {
+                s.clientThreads[threadId].lb.gotJobResult(ir, sender);
+            } else {
+                if (!sender.equals(currentVictim)) {
+                    if (s.deadIbises.contains(sender)) {
+                        // A dead Ibis is alive after all. Ignore it.
                         ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
-                                + sender + " who caused a timeout before. I am stealing from " + currentVictim);
-
-                        if (ir != null) {
-                            s.q.addToTail(ir);
-                        }
+                                + sender + " which is supposed to be dead");
                         return;
                     }
+                    ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
+                            + sender + " who caused a timeout before. I am stealing from " + currentVictim);
 
-                    if (stolenJob != null) {
-                        ftLogger.warn("SATIN '" + s.ident + "': EEK: setting stolenJob when it is non-null!");
+                    if (ir != null) {
+                        s.q.addToTail(ir);
                     }
-
-                    gotStealReply = true;
-                    stolenJob = ir;
-                    currentVictim = null;
-                    notifyAll();
+                    return;
                 }
+
+                if (stolenJob != null) {
+                    ftLogger.warn("SATIN '" + s.ident + "': EEK: setting stolenJob when it is non-null!");
+                }
+
+                gotStealReply = true;
+                stolenJob = ir;
+                currentVictim = null;
+                notifyAll();
             }
         } else {
             if (!sender.equals(currentVictim)) {
@@ -276,14 +277,7 @@ public final class LoadBalancing implements Config {
             return;
         }
 
-        if (ct != null) {
-            ct.stats.waitingForLockTimer.start();
-        }
-
         synchronized (s) {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
             while (true) {
                 InvocationRecord r = resultList.removeIndex(0);
                 if (r == null) {
@@ -436,7 +430,6 @@ public final class LoadBalancing implements Config {
             if (r != null) {
                 if (rr != null) {
                     rr.assignTo(r);
-                    System.out.println("Assigned shared result to " + r.getStamp());
                 } else {
                     r.eek = eek;
                 }
@@ -532,14 +525,7 @@ public final class LoadBalancing implements Config {
         Stamp stamp = r.getStamp();
         int threadId = s.stampToThreadIdMap.get(stamp);
 
-        if (ct != null) {
-            ct.stats.waitingForLockTimer.start();
-        }
-
         synchronized (s.stampToThreadIdMap) {
-            if (ct != null) {
-                ct.stats.waitingForLockTimer.stop();
-            }
             s.stampToThreadIdMap.remove(stamp);
         }
 

@@ -8,6 +8,7 @@ import ibis.ipl.IbisIdentifier;
 import ibis.ipl.PortType;
 import ibis.ipl.ReadMessage;
 import ibis.satin.SharedObject;
+import ibis.satin.impl.ClientThread;
 import ibis.satin.impl.Config;
 import ibis.satin.impl.Satin;
 import ibis.satin.impl.spawnSync.InvocationRecord;
@@ -71,8 +72,13 @@ public final class SharedObjects implements Config {
     
     /** Return a reference to a shared object */
     public SharedObject getSOReference(String objectId) {
+        ClientThread t = s.getThread();
         synchronized (s) {
-            s.stats.getSOReferencesTimer.start();
+            if (t == null) {
+                s.stats.getSOReferencesTimer.start();
+            } else {
+                t.stats.getSOReferencesTimer.start();
+            }
             try {
                 SharedObjectInfo i = sharedObjects.get(objectId);
                 if (i == null) {
@@ -82,7 +88,11 @@ public final class SharedObjects implements Config {
                 }
                 return i.sharedObject;
             } finally {
-                s.stats.getSOReferencesTimer.stop();
+                if(t == null) {
+                    s.stats.getSOReferencesTimer.stop();
+                } else {
+                    t.stats.getSOReferencesTimer.stop();
+                }
             }
         }
     }
@@ -120,7 +130,12 @@ public final class SharedObjects implements Config {
                 soir = soInvocationList.remove(0);
             }
 
-            s.stats.handleSOInvocationsTimer.start();
+            ClientThread t = s.getThread();
+            if (t == null) {
+                s.stats.handleSOInvocationsTimer.start();
+            } else {
+                t.stats.handleSOInvocationsTimer.start();
+            }
             try {
                 SharedObject so = getSOReference(soir.getObjectId());
 
@@ -135,7 +150,12 @@ public final class SharedObjects implements Config {
                 // reached
                 soir.invoke(so);
             } finally {
-                s.stats.handleSOInvocationsTimer.stop();
+                System.out.println("handled so Inv");
+                if (t == null) {
+                    s.stats.handleSOInvocationsTimer.stop();
+                } else {
+                    t.stats.handleSOInvocationsTimer.stop();
+                }
             }
         }
     }
@@ -146,13 +166,19 @@ public final class SharedObjects implements Config {
      */
     public void setSOReference(String objectId, IbisIdentifier source)
         throws SOReferenceSourceCrashedException {
-        s.handleDelayedMessages();
+        ClientThread t = s.getThread();
+        if (t == null) {
+            s.handleDelayedMessages();
+        } else {
+            t.handleDelayedMessages();
+        }
         SharedObject obj = getSOReference(objectId);
         if (obj == null) {
             if (source == null) {
                 throw new Error(
                     "internal error, source is null in setSOReference");
             }
+            System.out.println("Satin is fetching a null obj");
             soComm.fetchObject(objectId, source, null);
         }
     }
@@ -234,7 +260,12 @@ public final class SharedObjects implements Config {
         // A shared object update may have arrived
         // during one of the fetches.
         while (true) {
-            s.handleDelayedMessages();
+            ClientThread t = s.getThread();
+            if (t == null) {
+                s.handleDelayedMessages();
+            } else {
+                t.handleDelayedMessages();
+            }
             if (r.guard()) {
                 return;
             }
@@ -254,6 +285,7 @@ public final class SharedObjects implements Config {
 
     public void handleDelayedMessages() {
         if (gotSORequests) {
+            System.out.println("Handle so req");
             soComm.handleSORequests();
         }
 
@@ -313,29 +345,41 @@ public final class SharedObjects implements Config {
     boolean waitForObject(String objectId, IbisIdentifier source,
         InvocationRecord r, long timeout) {
         long start = System.currentTimeMillis();
+        timeout = 10000;
         while (true) {
             if (System.currentTimeMillis() - start > timeout) return false;
 
             synchronized (soInvocationList) {
                 try {
+                    System.out.println("Sleep...");
                     soInvocationList.wait(timeout);
+                    System.out.println("Awaken.");
                 } catch (InterruptedException e) {
                     // Ignore
                 }
             }
 
-            s.handleDelayedMessages();
+            ClientThread t = s.getThread();
+            
+            System.out.println("SO: hdnale delayed msgs");
+            if (t == null) {
+                s.handleDelayedMessages();
+            } else {
+                t.handleDelayedMessages();
+            }
 
             if (r == null) {
                 if (s.so.getSOInfo(objectId) != null) {
                     soLogger.debug("SATIN '" + s.ident
                         + "': received new object from a bcast");
+                    System.out.println("received a new obj from a bcast");
                     return true; // got it!
                 }
             } else {
                 if (r.guard()) {
                     soLogger.debug("SATIN '" + s.ident
                         + "': received object, guard satisfied");
+                    System.out.println("received obj, guard satisfied");
                     return true;
                 }
             }

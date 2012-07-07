@@ -345,7 +345,11 @@ public final class Aborts implements Config {
                     + ": handling abort message: stamp = " + stamp);
             }
 
-            //s.stats.abortsDone++;
+            if (ct == null) {
+                s.stats.abortsDone++;
+            } else {
+                ct.stats.abortsDone++;
+            }
             killChildrenOf(stamp);
 
             if (abortLogger.isDebugEnabled()) {

@@ -10,7 +10,7 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 
 public abstract class LoadBalancingAlgorithm implements Config {
 
-    protected Satin satin;
+    protected final Satin satin;
     
     protected ClientThread clientThread;
 

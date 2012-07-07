@@ -318,7 +318,9 @@ public final class Satin implements Config {
                 return;
             }
 
+            //stats.addToHeadTimer.start();
             q.addToHead(r);
+            //stats.addToHeadTimer.stop();
             algorithm.jobAdded();
         } else {
             t.stats.spawns++;
@@ -338,7 +340,9 @@ public final class Satin implements Config {
                 return;
             }
 
+            //t.stats.addToHeadTimer.start();
             t.q.addToHead(r);
+            //t.stats.addToHeadTimer.stop();
             t.algorithm.jobAdded();
         }
 
@@ -689,7 +693,7 @@ public final class Satin implements Config {
         return thisSatin.parent.getOwner().equals(thisSatin.ident);
     }
 
-    private ClientThread getThread() {
+    public ClientThread getThread() {
         String threadName = Thread.currentThread().getName();
         ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
 
@@ -758,7 +762,6 @@ public final class Satin implements Config {
         }
 
         if (r.getParent() != null && r.getParent().aborted) {
-            System.out.println("Thread -1 descreased for " + r.getStamp());
             r.decrSpawnCounter();
             return;
         }
@@ -865,10 +868,10 @@ public final class Satin implements Config {
             if (!(t instanceof AbortException)) {
                 //String threadName = Thread.currentThread().getName();
                 ClientThread ct = getThread();//(ClientThread) threadIdToThreadMap.get(threadName);
-if (r.eek.toString().contains("java.lang.NullPointerException")) {
-                System.out.println("\t" + r);
-                r.eek.printStackTrace();
-            }
+                if (r.eek.toString().contains("java.lang.NullPointerException")) {
+                    System.out.println("\t" + r);
+                    r.eek.printStackTrace();
+                }
                 if (ct == null) {
                     r.eek = t;
                     aborts.handleInlet(r);
@@ -906,8 +909,6 @@ if (r.eek.toString().contains("java.lang.NullPointerException")) {
             log.log(Level.INFO,
                     "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}. Stamp: {2}",
                     new Object[]{-1, r.eek, r.getStamp()});
-            System.out.println(r);
-            
         } else {
             stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
         }
