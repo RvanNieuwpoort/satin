@@ -120,8 +120,14 @@ public final class IRVector implements Config {
                     if (curr.getStealer() != null && !curr.getStealer().equals(satin.ident)) {
                         curr.decrSpawnCounter();
                     }
-                    satin.stats.abortedJobs++;
-                    satin.stats.abortMessages++;
+                    
+                    if (clientThread == null) {
+                        satin.stats.abortedJobs++;
+                        satin.stats.abortMessages++;
+                    } else {
+                        clientThread.stats.abortedJobs++;
+                        clientThread.stats.abortMessages++;
+                    }
                     // Curr is removed, but not put back in cache.
                     // this is OK. Moreover, it might have children,
                     // so we should keep it alive.
@@ -159,8 +165,13 @@ public final class IRVector implements Config {
                                 + ", it depends on " + targetStamp);
                     }
                     curr.decrSpawnCounter();
-                    satin.stats.abortedJobs++;
-                    satin.stats.abortMessages++;
+                    if (clientThread == null) {
+                        satin.stats.abortedJobs++;
+                        satin.stats.abortMessages++;
+                    } else {
+                        clientThread.stats.abortedJobs++;
+                        clientThread.stats.abortMessages++;
+                    }
                     // Curr is removed, but not put back in cache.
                     // this is OK. Moreover, it might have children,
                     // so we should keep it alive.
@@ -198,8 +209,13 @@ public final class IRVector implements Config {
                                 + ", it depends on " + targetOwner);
                     }
                     curr.decrSpawnCounter();
-                    satin.stats.abortedJobs++;
-                    satin.stats.abortMessages++;
+                    if (clientThread == null) {
+                        satin.stats.abortedJobs++;
+                        satin.stats.abortMessages++;
+                    } else {
+                        clientThread.stats.abortedJobs++;
+                        clientThread.stats.abortMessages++;
+                    }
                     removeIndex(i);
                     i--;
                     satin.ft.sendAbortAndStoreMessage(curr);
@@ -228,8 +244,13 @@ public final class IRVector implements Config {
                                 + ", it depends on " + targetOwner);
                     }
                     curr.decrSpawnCounter();
-                    satin.stats.abortedJobs++;
-                    satin.stats.abortMessages++;
+                    if (clientThread == null) {
+                        satin.stats.abortedJobs++;
+                        satin.stats.abortMessages++;
+                    } else {
+                        clientThread.stats.abortedJobs++;
+                        clientThread.stats.abortMessages++;
+                    }
                     removeIndex(i);
                     i--;
                     satin.ft.sendAbortMessage(curr);
