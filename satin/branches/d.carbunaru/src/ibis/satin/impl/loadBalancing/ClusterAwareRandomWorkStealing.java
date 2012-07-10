@@ -61,7 +61,12 @@ public final class ClusterAwareRandomWorkStealing extends
         InvocationRecord job = checkForAsyncReply();
         if (job != null) {
             if (stealLogger.isInfoEnabled()) {
-                stealLogger.info("Executing intercluster job " + job.getStamp());
+                if (ct == null) {
+                    stealLogger.info("Executing intercluster job " + job.getStamp());
+                } else {
+                    stealLogger.info("Thread " + ct.id
+                            + ": Executing intercluster job " + job.getStamp());
+                }
             }
 
             return job;
@@ -119,6 +124,7 @@ public final class ClusterAwareRandomWorkStealing extends
                         clientThread.lb.sendStealRequest(remoteVictim, false, false);
                     } catch (IOException e) {
                         commLogger.warn("SATIN '" + s.ident
+                                + ", Thread " + ct.id
                                 + "': Got exception during wa steal request: " + e);
                         // Ignore this?
                     }
@@ -226,9 +232,9 @@ public final class ClusterAwareRandomWorkStealing extends
     public void exit() {
         // wait for a pending async steal reply
         if (asyncStealInProgress) {
-            stealLogger.info("waiting for a pending async steal reply from "
-                    + asyncCurrentVictim);
             if (clientThread == null) {
+                stealLogger.info("waiting for a pending async steal reply from "
+                    + asyncCurrentVictim);
                 synchronized (satin) {
                     while (asyncStealInProgress && !gotAsyncStealReply) {
                         try {
@@ -240,7 +246,9 @@ public final class ClusterAwareRandomWorkStealing extends
                     }
                 }
             } else {
-                synchronized (clientThread) {
+                stealLogger.info("Thread " + clientThread.id +
+                        ": waiting for a pending async steal reply from " + asyncCurrentVictim);
+                synchronized (satin) {
                     while (asyncStealInProgress && !gotAsyncStealReply) {
                         try {
                             clientThread.handleDelayedMessages(); //TODO move outside lock --Rob
@@ -252,8 +260,13 @@ public final class ClusterAwareRandomWorkStealing extends
                 }
             }
             if (ASSERTS && asyncStolenJob != null) {
-                stealLogger.warn("Satin: CRS: EEK, stole async job "
-                        + "after exiting!");
+                if (clientThread == null) {
+                    stealLogger.warn("Satin: CRS: EEK, stole async job "
+                            + "after exiting!");
+                } else {
+                    stealLogger.warn("Satin - Thread " + clientThread.id
+                            + " - CRS: EEK, stole async job after exiting!");
+                }
             }
         }
     }
@@ -287,10 +300,6 @@ public final class ClusterAwareRandomWorkStealing extends
 
     // Daniela:
     private void asyncStealReply(InvocationRecord ir, IbisIdentifier sender) {
-        if (stealLogger.isInfoEnabled() && ir != null) {
-            stealLogger.info("Stole intercluster job " + ir.getStamp());
-        }
-
         synchronized (satin) {
             int threadId = s.waitingStealMap.get(sender).remove(0);
 
@@ -299,8 +308,15 @@ public final class ClusterAwareRandomWorkStealing extends
             }
 
             if (threadId != -1) {
+                if (stealLogger.isInfoEnabled() && ir != null) {
+                    stealLogger.info("Thread " + threadId + 
+                            ": Stole intercluster job " + ir.getStamp());
+                }
                 s.clientThreads[threadId].algorithm.asyncJobResultWorkerThread(ir, sender);
             } else {
+                if (stealLogger.isInfoEnabled() && ir != null) {
+                    stealLogger.info("Stole intercluster job " + ir.getStamp());
+                }
                 if (sender.equals(asyncCurrentVictim)) {
                     gotAsyncStealReply = true;
                     asyncStolenJob = ir;

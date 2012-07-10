@@ -52,7 +52,9 @@ final class LBCommunication implements Config, Protocol {
     protected void sendStealRequest(Victim v, boolean synchronous,
             boolean blockUntilWorkIsAvailable) throws IOException {
         if (stealLogger.isDebugEnabled()) {
-            stealLogger.debug("SATIN '" + s.ident + "': sending "
+            stealLogger.debug("SATIN '" + s.ident
+                    + (ct != null ? (" Thread " + ct.id) : " master")
+                    + "': sending "
                     + (synchronous ? "SYNC" : "ASYNC") + "steal message to "
                     + v.getIdent());
         }
@@ -207,7 +209,9 @@ final class LBCommunication implements Config, Protocol {
         }
 
         if (stealLogger.isInfoEnabled()) {
-            stealLogger.info("SATIN '" + s.ident + "': sending job result to "
+            stealLogger.info("SATIN '" + s.ident
+                    + (ct != null ? (" Thread " + ct.id) : " master")
+                    + "': sending job result to "
                     + r.getOwner() + ", exception = "
                     + (r.eek == null ? "null" : ("" + r.eek))
                     + ", stamp = " + r.getStamp());

@@ -72,7 +72,8 @@ public final class IRVector implements Config {
 
         // Sometimes (in case of crashes or aborts), we try to remove
         // non-existent elements. This is not a problem, just return null.
-        spawnLogger.debug("IRVector: removing non-existent elt: " + stamp);
+        spawnLogger.debug((clientThread == null ? ("Thread " + clientThread.id + ", ") : "Master, ")
+                + "IRVector: removing non-existent elt: " + stamp);
         return null;
     }
 
@@ -93,7 +94,8 @@ public final class IRVector implements Config {
 
         // Sometimes (in case of crashes or aborts), we try to remove
         // non-existent elements. This is not a problem, just return null.
-        spawnLogger.debug("IRVector: removing non-existent elt: "
+        spawnLogger.debug((clientThread == null ? ("Thread " + clientThread.id + ", ") : "Master, ")
+                + "IRVector: removing non-existent elt: "
                 + r.getStamp());
         return null;
     }

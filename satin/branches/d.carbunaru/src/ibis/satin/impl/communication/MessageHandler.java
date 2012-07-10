@@ -75,15 +75,12 @@ public final class MessageHandler implements MessageUpcall, Protocol, Config {
                 s.ft.handleResultPush(m);
                 break;
             case SO_REQUEST:
-                System.out.println("SO req");
                 s.so.handleSORequest(m, false);
                 break;
             case SO_DEMAND:
-                System.out.println("SO dem");
                 s.so.handleSORequest(m, true);
                 break;
             case SO_TRANSFER:
-                System.out.println("SO transfer");
                 s.so.handleSOTransfer(m);
                 break;
             case SO_NACK:
