@@ -74,7 +74,7 @@ public final class LoadBalancing implements Config {
         }
     }
     private LBCommunication lbComm;
-    private Satin s;
+    private final Satin s;
     //Daniela:
     private ClientThread ct;
     private volatile boolean receivedResults = false;
@@ -101,7 +101,7 @@ public final class LoadBalancing implements Config {
         } else {
             stealQueue = null;
         }
-
+        
         resultList = new IRVector(s);
         lbComm = new LBCommunication(s, this);
     }
@@ -115,13 +115,8 @@ public final class LoadBalancing implements Config {
         this.ct = ct;
         this.s = ct.satin;
 
-        if (QUEUE_STEALS) {
-            stealQueue = new ArrayList<StealRequest>();
-            new StealRequestHandler().start();
-        } else {
-            stealQueue = null;
-        }
-
+        stealQueue = null;
+        
         resultList = new IRVector(ct);
         lbComm = new LBCommunication(ct, this);
     }
@@ -179,11 +174,13 @@ public final class LoadBalancing implements Config {
             if (!sender.equals(currentVictim)) {
                 if (s.deadIbises.contains(sender)) {
                     // A dead Ibis is alive after all. Ignore it.
-                    ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
+                    ftLogger.warn("SATIN '" + s.ident + "', Thread " + ct.id
+                            + ": received a reply from "
                             + sender + " which is supposed to be dead");
                     return;
                 }
-                ftLogger.warn("SATIN '" + s.ident + "': received a reply from "
+                ftLogger.warn("SATIN '" + s.ident + "', Thread " + ct.id
+                        + ": received a reply from "
                         + sender + " who caused a timeout before. I am stealing from " + currentVictim);
 
                 // Daniela:
@@ -195,7 +192,8 @@ public final class LoadBalancing implements Config {
             }
 
             if (stolenJob != null) {
-                ftLogger.warn("SATIN '" + s.ident + "': EEK: setting stolenJob when it is non-null!");
+                ftLogger.warn("SATIN '" + s.ident + "', Thread " + ct.id
+                        + ": EEK: setting stolenJob when it is non-null!");
             }
 
             gotStealReply = true;
@@ -218,10 +216,19 @@ public final class LoadBalancing implements Config {
     public InvocationRecord stealJob(Victim v, boolean blockOnServer) {
         if (ASSERTS) {
             synchronized (this) {
-                if (stolenJob != null) {
-                    ftLogger.error("SATIN '" + s.ident + "': EEK: stealing while stolenJob is non-null!");
-                    throw new Error(
-                            "EEEK, trying to steal while an unhandled stolen job is available.");
+                if (ct == null) {
+                    if (stolenJob != null) {
+                        ftLogger.error("SATIN '" + s.ident + "': EEK: stealing while stolenJob is non-null!");
+                        throw new Error(
+                                "EEEK, trying to steal while an unhandled stolen job is available.");
+                    }
+                } else {
+                    if (stolenJob != null) {
+                        ftLogger.error("SATIN '" + s.ident + "', Thread " + ct.id
+                                + ": EEK: stealing while stolenJob is non-null!");
+                        throw new Error(
+                                "EEEK, trying to steal while an unhandled stolen job is available.");
+                    }
                 }
             }
         }
@@ -242,8 +249,13 @@ public final class LoadBalancing implements Config {
                         }
                     }
                     long end = System.currentTimeMillis();
-                    commLogger.info("SATIN '" + s.ident + "': paused for "
-                            + (end - start) + " ms");
+                    if (ct == null) {
+                        commLogger.info("SATIN '" + s.ident + "': paused for "
+                                + (end - start) + " ms");
+                    } else {
+                        commLogger.info("SATIN '" + s.ident + "', Thread " + ct.id
+                                + ": paused for " + (end - start) + " ms");
+                    }
                 }
             }
         }
@@ -260,8 +272,13 @@ public final class LoadBalancing implements Config {
             lbComm.sendStealRequest(v, true, blockOnServer);
             return waitForStealReply(v);
         } catch (IOException e) {
-            ftLogger.info("SATIN '" + s.ident
-                    + "': got exception during steal request", e);
+            if (ct == null) {
+                ftLogger.info("SATIN '" + s.ident
+                        + "': got exception during steal request", e);
+            } else {
+                ftLogger.info("SATIN '" + s.ident + "', Thread " + ct.id
+                        + ": got exception during steal request", e);
+            }
             return null;
         } finally {
             if (ct == null) {
@@ -295,7 +312,12 @@ public final class LoadBalancing implements Config {
                 r.decrSpawnCounter();
 
                 if (stealLogger.isInfoEnabled()) {
-                    stealLogger.info("Got result for job " + r.getStamp());
+                    if (ct == null) {
+                        stealLogger.info("Got result for job " + r.getStamp());
+                    } else {
+                        stealLogger.info("Thread " + ct.id + " got result for job "
+                                + r.getStamp());
+                    }
                 }
 
                 if (!FT_NAIVE) {
@@ -314,10 +336,15 @@ public final class LoadBalancing implements Config {
                 boolean gotTimeout = System.currentTimeMillis() - start >= STEAL_WAIT_TIMEOUT;
                 if (gotTimeout && !gotStealReply) {
                     if (!("MW".equals(SUPPLIED_ALG))) {
-                        ftLogger.warn("SATIN '"
-                                + s.ident
-                                + "': a timeout occurred while waiting for a steal reply from victim " + v.getIdent() + ", timeout = "
-                                + STEAL_WAIT_TIMEOUT / 1000 + " seconds.");
+                        if (ct == null) {
+                            ftLogger.warn("SATIN '" + s.ident
+                                    + ": a timeout occurred while waiting for a steal reply from victim " + v.getIdent() + ", timeout = "
+                                    + STEAL_WAIT_TIMEOUT / 1000 + " seconds.");
+                        } else {
+                            ftLogger.warn("SATIN '" + s.ident + "', Thread " + ct.id
+                                    + ": a timeout occurred while waiting for a steal reply from victim " + v.getIdent() + ", timeout = "
+                                    + STEAL_WAIT_TIMEOUT / 1000 + " seconds.");
+                        }
                     }
                 }
 
@@ -350,7 +377,7 @@ public final class LoadBalancing implements Config {
                 } else {
                     if (ct.currentVictimCrashed) {
                         ct.currentVictimCrashed = false;
-                        ftLogger.debug("SATIN '" + s.ident
+                        ftLogger.debug("SATIN '" + s.ident + "', Thread " + ct.id
                                 + "': current victim crashed");
                         return;
                     }

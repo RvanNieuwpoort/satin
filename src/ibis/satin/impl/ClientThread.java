@@ -26,30 +26,42 @@ import java.util.logging.Logger;
  */
 public class ClientThread extends Thread implements Config {
 
-    public Satin satin;
+    public final Satin satin;
+    
     public final int id;
+    
     public final Communication comm;
+    
     public final LoadBalancing lb;
+    
     public final Aborts aborts;
-    public final IbisIdentifier ident; // this ibis
+    
+    public final IbisIdentifier ident;
+    
     /**
      * My scheduling algorithm.
      */
     public LoadBalancingAlgorithm algorithm;
+    
     /**
      * The work queue. Contains jobs that were spawned, but not yet executed.
      */
     public final DoubleEndedQueue q;
+    
     /**
      * The jobs that are currently being executed, they are on the Java stack.
      */
     public final IRStack onStack;
+    
     public Statistics stats = new Statistics();
+    
     /**
      * The invocation record that is the parent of the current job.
      */
     public InvocationRecord parent;
+    
     public volatile boolean currentVictimCrashed;
+    
     /**
      * All victims, myself NOT included. The elements are Victims.
      */
@@ -69,8 +81,11 @@ public class ClientThread extends Thread implements Config {
         ident = satin.ident;
 
         aborts = new Aborts(this);
+        
         lb = new LoadBalancing(this);
+        
         victims = satin.victims;
+        
         createLoadBalancingAlgorithm();
 
     }
@@ -91,8 +106,6 @@ public class ClientThread extends Thread implements Config {
             }
         }
 
-        System.out.println("exiting");
-
         algorithm.exit();
 
         stats.totalTimer.stop();
@@ -103,10 +116,13 @@ public class ClientThread extends Thread implements Config {
 
         synchronized (satin.waitForThreads) {
             satin.threadsEnded++;
-            System.out.println("Thread " + id + ": threadsEnded = " + satin.threadsEnded);
             satin.waitForThreads.notifyAll();
         }
-
+        
+        if (commLogger.isDebugEnabled()) {
+            commLogger.debug("SATIN '" + ident + "' - THREAD " + id
+                    + ": exited");
+        }
     }
 
     public void noWorkInQueue() {
@@ -128,12 +144,10 @@ public class ClientThread extends Thread implements Config {
 
     public void handleDelayedMessages() {
         // Handle messages received in upcalls.
-        //stats.handlingDelayedMsgsTimer.start();
         aborts.handleDelayedMessages();
         lb.handleDelayedMessages();
         satin.ft.handleDelayedMessages();
         satin.so.handleDelayedMessages();
-        //stats.handlingDelayedMsgsTimer.stop();
     }
 
     public void callSatinFunction(InvocationRecord r) {
@@ -148,7 +162,7 @@ public class ClientThread extends Thread implements Config {
 
         if (ftLogger.isDebugEnabled()) {
             if (r.isReDone()) {
-                ftLogger.debug("Redoing job " + r.getStamp());
+                ftLogger.debug("Thread " + id + ": Redoing job " + r.getStamp());
             }
         }
 
@@ -193,7 +207,6 @@ public class ClientThread extends Thread implements Config {
     }
 
     private void callSatinLocalFunction(InvocationRecord r) {
-        //System.out.println("T" + id +" -- Solving local IR: " + r.getStamp());
         stats.jobsExecuted++;
         try {
             r.runLocal();
@@ -207,14 +220,10 @@ public class ClientThread extends Thread implements Config {
             // Note: this can now also happen on an abort. Check for
             // the AbortException!
             if (!(t instanceof AbortException)) {
-                if (r.eek.toString().contains("java.lang.NullPointerException")) {
-                System.out.println("\t" + r);
-                r.eek.printStackTrace();
-            }
                 r.eek = t;
                 aborts.handleInlet(r);
             } else if (Satin.abortLogger.isDebugEnabled()) {
-                Satin.abortLogger.debug("Caught abort exception " + t, t);
+                Satin.abortLogger.debug("Thread " + id + ": Caught abort exception " + t, t);
             }
         }
 
@@ -227,10 +236,9 @@ public class ClientThread extends Thread implements Config {
     }
 
     private void callSatinSharedFunction(InvocationRecord r) {
-        //System.out.println("T" + id +" -- Solving shared IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
-            stealLogger.info("SATIN '" + ident
-                    + "': RUNNING SHARED CODE, STAMP = " + r.getStamp() + "!");
+            stealLogger.info("SATIN '" + ident + "' - THREAD " + id
+                    + ": RUNNING SHARED CODE, STAMP = " + r.getStamp() + "!");
         }
 
         stats.jobsExecuted++;
@@ -238,15 +246,13 @@ public class ClientThread extends Thread implements Config {
 
         rr = r.runRemote();
         
-        //System.out.println("Solved remote IR: " + r.getStamp());
-
         rr.setEek(r.eek);
 
         if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {
-            Satin.stealLogger.info("SATIN '" + ident
-                    + "': RUNNING SHARED CODE GAVE EXCEPTION: " + r.eek, r.eek);
+            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
+                    + ": RUNNING SHARED CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
-            Satin.stealLogger.info("SATIN '" + ident + "': RUNNING SHARED CODE DONE!");
+            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id + ": RUNNING SHARED CODE DONE!");
         }
 
         // send wrapper back to the owner thread, but on the same machine
@@ -254,23 +260,21 @@ public class ClientThread extends Thread implements Config {
             lb.handleSharedResult(r, rr);
 
             if (Satin.stealLogger.isInfoEnabled()) {
-                Satin.stealLogger.info("SATIN '" + ident
-                        + "': SHARED CODE SEND RESULT DONE!");
+                Satin.stealLogger.info("SATIN '" + ident + "' - THREAD '" + id
+                        + ": SHARED CODE SEND RESULT DONE!");
             }
         } else {
-            //System.out.println("Aborted remote IR: " + r.getStamp());
             r.decrSpawnCounter();
             if (Satin.stealLogger.isInfoEnabled()) {
-                Satin.stealLogger.info("SATIN '" + ident
-                        + "': SHARED CODE WAS ABORTED! Exception = " + r.eek);
+                Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
+                        + ": SHARED CODE WAS ABORTED! Exception = " + r.eek);
             }
         }
     }
 
     private void callSatinRemoteFunction(InvocationRecord r) {
-        //System.out.println("T" + id +" -- Solving remote IR: " + r.getStamp());
         if (stealLogger.isInfoEnabled()) {
-            stealLogger.info("SATIN '" + ident
+            stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                     + "': RUNNING REMOTE CODE, STAMP = " + r.getStamp() + "!");
         }
         ReturnRecord rr = null;
@@ -280,16 +284,12 @@ public class ClientThread extends Thread implements Config {
 
         rr.setEek(r.eek);
 
-        if (r.eek != null) { //&& Satin.stealLogger.isInfoEnabled()) {
-            satin.log.log(Level.INFO,
-                    "Thread {0}: RUNNING REMOTE CODE GAVE EXCEPTION: {1}. Stamp: {2}",
-                    new Object[]{this.id, r.eek, r.getStamp()});
-            
-            Satin.stealLogger.info("SATIN '" + ident
+        if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {            
+            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
-            //r.eek.printStackTrace();
         } else {
-            Satin.stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
+            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
+                    + "': RUNNING REMOTE CODE DONE!");
         }
 
         // send wrapper back to the owner
@@ -297,12 +297,12 @@ public class ClientThread extends Thread implements Config {
             lb.sendResult(r, rr);
 
             if (Satin.stealLogger.isInfoEnabled()) {
-                Satin.stealLogger.info("SATIN '" + ident
+                Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                         + "': REMOTE CODE SEND RESULT DONE!");
             }
         } else {
             if (Satin.stealLogger.isInfoEnabled()) {
-                Satin.stealLogger.info("SATIN '" + ident
+                Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                         + "': REMOTE CODE WAS ABORTED! Exception = " + r.eek);
             }
         }
@@ -310,10 +310,10 @@ public class ClientThread extends Thread implements Config {
 
     public void assertFailed(String reason, Throwable t) {
         if (reason != null) {
-            Satin.mainLogger.error("SATIN '" + ident
+            Satin.mainLogger.error("SATIN '" + ident + "' - THREAD " + id
                     + "': ASSERT FAILED: " + reason, t);
         } else {
-            Satin.mainLogger.error("SATIN '" + ident
+            Satin.mainLogger.error("SATIN '" + ident + "' - THREAD " + id
                     + "': ASSERT FAILED: ", t);
         }
 
@@ -337,6 +337,7 @@ public class ClientThread extends Thread implements Config {
             assertFailed("satin_algorithm " + alg + "' unknown", new Exception());
         }
 
-        commLogger.info("SATIN '" + "- " + "': using algorithm '" + alg);
+        commLogger.info("SATIN '" + ident + "' - THREAD " + id
+                + "': using algorithm '" + alg);
     }
 }

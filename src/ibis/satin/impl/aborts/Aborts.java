@@ -74,7 +74,9 @@ public final class Aborts implements Config {
         exceptionList.add(r);
         gotExceptions = true;
         if (inletLogger.isDebugEnabled()) {
-            inletLogger.debug("SATIN '" + s.ident + ": got remote exception!");
+            inletLogger.debug("SATIN '" + s.ident
+                    + (ct == null ? (", Thread " + ct.id) : "Master")
+                    + "': got remote exception!");
         }
     }
 

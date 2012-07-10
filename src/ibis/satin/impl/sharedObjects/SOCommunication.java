@@ -183,7 +183,6 @@ final class SOCommunication implements Config, Protocol {
                 }
 
                 soMessageCombiner.sendAccumulatedMessages();
-                System.out.println("sent acumm soinvo");
             } catch (IOException e) {
                 System.err.println("SATIN '" + s.ident
                     + "': unable to broadcast shared object invocations " + e);
@@ -579,14 +578,11 @@ final class SOCommunication implements Config, Protocol {
                 requestsSent.add(objectId);
         
                 // haven't got it, demand it now.
-                System.out.println("Satin is sending a SORequest: " + objectId);
                 sendSORequest(objectId, source, true);
             } else {
-                System.out.println("Already send a req for " + objectId);
             }
         }
 
-        System.out.println("wait for so reply");
         boolean gotIt = waitForSOReply(objectId);
         if (gotIt) {
             soLogger.debug("SATIN '" + s.ident
@@ -624,7 +620,6 @@ final class SOCommunication implements Config, Protocol {
             }
             w.writeString(objectId);
             v.finish(w);
-            System.out.println("Satin sent a SORequest.");
         } catch (IOException e) {
             if (w != null) {
                 w.finish(e);
