@@ -150,7 +150,6 @@ public final class SharedObjects implements Config {
                 // reached
                 soir.invoke(so);
             } finally {
-                System.out.println("handled so Inv");
                 if (t == null) {
                     s.stats.handleSOInvocationsTimer.stop();
                 } else {
@@ -178,7 +177,6 @@ public final class SharedObjects implements Config {
                 throw new Error(
                     "internal error, source is null in setSOReference");
             }
-            System.out.println("Satin is fetching a null obj");
             soComm.fetchObject(objectId, source, null);
         }
     }
@@ -271,7 +269,6 @@ public final class SharedObjects implements Config {
             }
 
             String ref = objRefs.remove(0);
-            System.out.println("Satin is fetching a SO.");
             soComm.fetchObject(ref, r.getOwner(), r);
         }
     }
@@ -285,7 +282,6 @@ public final class SharedObjects implements Config {
 
     public void handleDelayedMessages() {
         if (gotSORequests) {
-            System.out.println("Handle so req");
             soComm.handleSORequests();
         }
 
@@ -351,9 +347,7 @@ public final class SharedObjects implements Config {
 
             synchronized (soInvocationList) {
                 try {
-                    System.out.println("Sleep...");
                     soInvocationList.wait(timeout);
-                    System.out.println("Awaken.");
                 } catch (InterruptedException e) {
                     // Ignore
                 }
@@ -361,7 +355,6 @@ public final class SharedObjects implements Config {
 
             ClientThread t = s.getThread();
             
-            System.out.println("SO: hdnale delayed msgs");
             if (t == null) {
                 s.handleDelayedMessages();
             } else {
@@ -372,14 +365,12 @@ public final class SharedObjects implements Config {
                 if (s.so.getSOInfo(objectId) != null) {
                     soLogger.debug("SATIN '" + s.ident
                         + "': received new object from a bcast");
-                    System.out.println("received a new obj from a bcast");
                     return true; // got it!
                 }
             } else {
                 if (r.guard()) {
                     soLogger.debug("SATIN '" + s.ident
                         + "': received object, guard satisfied");
-                    System.out.println("received obj, guard satisfied");
                     return true;
                 }
             }
