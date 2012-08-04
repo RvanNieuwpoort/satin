@@ -29,7 +29,7 @@ public final class Communication implements Config, Protocol {
 
     private static final long EXIT_TIMEOUT = 60000;
 
-    private Satin s;
+    private final Satin s;
 
     public PortType portType;
 
@@ -399,7 +399,7 @@ public final class Communication implements Config, Protocol {
 
         int size;
         synchronized (s) {
-            size = s.victims.size() - 1;
+            size = s.victims.size();
         }
 
         // wait until everybody has send an ACK

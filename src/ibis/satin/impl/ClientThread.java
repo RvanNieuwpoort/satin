@@ -122,7 +122,7 @@ public class ClientThread extends Thread implements Config {
         if (commLogger.isDebugEnabled()) {
             commLogger.debug("SATIN '" + ident + "' - THREAD " + id
                     + ": exited");
-        }
+        }        
     }
 
     public void noWorkInQueue() {

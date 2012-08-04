@@ -19,6 +19,8 @@ public interface Config {
             IbisProperties.getDefaultProperties());
 
     static final String PROPERTY_PREFIX = "satin.";
+    
+    static final String s_no_threads = PROPERTY_PREFIX + "no_threads";
 
     static final String s_asserts = PROPERTY_PREFIX + "asserts";
 
@@ -99,7 +101,7 @@ public interface Config {
     
     static final String s_cpt_quit = PROPERTY_PREFIX + "cpt.quit";
 
-    static final String[] sysprops = { s_stats, s_queue_steals,
+    static final String[] sysprops = { s_no_threads, s_stats, s_queue_steals,
             s_detailed_stats, s_client, s_closed, s_unreliable, s_asserts,
             s_ft_naive, s_ft_connectTimeout, s_masterhost, s_in_latency,
             s_delete_time, s_delete_cluster_time, s_kill_time, s_dump, s_so,
@@ -110,6 +112,10 @@ public interface Config {
             s_cpt, s_cpt_push, s_cpt_interval, s_cpt_first, s_cpt_file,
             s_cpt_maxFileSize, s_cpt_quit, s_cpt_cluster};
 
+    /** Set manual number of threads. */
+    static final int NO_THREADS = properties.getIntProperty(s_no_threads,
+            Runtime.getRuntime().availableProcessors());
+    
     /** Enable or disable asserts. */
     static final boolean ASSERTS = properties.getBooleanProperty(s_asserts,
             true);

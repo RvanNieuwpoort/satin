@@ -813,10 +813,10 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public void myThreadStatistics(int id) {
         System.out.println("\t Thread " + id + ":");
-        System.out.println("Total thread time: " + totalTimer.totalTimeVal());
-        double x = addToHeadTimer.totalTimeVal()/addToHeadTimer.nrTimes();
-        System.out.println("Time to add an element: " + x + 
-                " maxTime = " + addToHeadTimer.maxTimeVal());
+        //System.out.println("Total thread time: " + totalTimer.totalTimeVal());
+//        double x = addToHeadTimer.totalTimeVal()/addToHeadTimer.nrTimes();
+//        System.out.println("Time to add an element: " + x + 
+//                " maxTime = " + addToHeadTimer.maxTimeVal());
 //        System.out.println("Steal Time: " + stealTimer.totalTimeVal());
 //        System.out.println("Handle Steal Time: " + handleStealTimer.totalTimeVal());
 //        System.out.println("Waiting Time: " + waitingForLockTimer.totalTimeVal());
