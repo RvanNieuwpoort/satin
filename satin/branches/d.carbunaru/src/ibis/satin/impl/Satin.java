@@ -24,8 +24,6 @@ import java.util.logging.Logger;
 public final class Satin implements Config {
 
     //Daniela:
-    private static int NO_THREADS;
-    
     public ClientThread[] clientThreads;
     
     public final Map<Stamp, Integer> stampToThreadIdMap;
@@ -129,8 +127,6 @@ public final class Satin implements Config {
                     "multiple satin instances are currently not supported");
         }
         
-        NO_THREADS = Runtime.getRuntime().availableProcessors();
-
         thisSatin = this;
 
         q = new DoubleEndedQueue(this);
@@ -228,7 +224,7 @@ public final class Satin implements Config {
                 }
             }
         }
-
+        
         if (STATS && DETAILED_STATS) {
             stats.printDetailedStats(ident);
             try {
@@ -240,7 +236,7 @@ public final class Satin implements Config {
 
         // Do not accept new connections and joins.
         comm.disableUpcallsForExit();
-
+        
         if (master) {
             synchronized (this) {
                 exiting = true;
@@ -256,12 +252,12 @@ public final class Satin implements Config {
             comm.sendExitAck();
             comm.waitForExitStageTwo();
         }
-
+        
         // OK, we have got the ack from everybody, 
         // now we know that there will be no further communication between nodes.
 
         algorithm.exit(); // give the algorithm time to clean up
-
+        
         int size;
         synchronized (this) {
             size = victims.size() + 1;
@@ -274,7 +270,7 @@ public final class Satin implements Config {
 
             totalStats.printStats(size, stats.totalTimer.totalTimeVal());
         }
-
+        
         so.exit();
         comm.closeSendPorts();
         comm.closeReceivePort();
