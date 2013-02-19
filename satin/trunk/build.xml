@@ -15,7 +15,11 @@
 
     <target name="build"
             description="Build Satin"
-            depends="clean,copy,compile,javadoc" />
+            depends="clean,copy-included-ipl,compile,javadoc" />
+
+    <target name="build-external-ipl"
+	    description="Build with external IPL"
+	    depends="clean,copy-external-ipl,compile,javadoc" />
 
     <property name="src" location="src" />
     <property name="tmp" location="tmp" />
@@ -24,7 +28,7 @@
     <property name="sources" location="sources" />
 
     <!-- Copy dependancies to lib -->
-    <target name="copy">
+    <target name="copy-included-ipl">
         <mkdir dir="${lib}" />
         <copy todir="${lib}">
             <fileset dir="${ipl}" />
@@ -33,6 +37,21 @@
             <fileset dir="${javagat}" />
         </copy>
     </target>
+
+    <!-- copy external dependancies to lib, including IPL 
+	 specified by $IPL_HOME -->
+     <target name="copy-external-ipl">
+	 <mkdir dir="${lib}" />
+	 <!-- Import environment properties -->
+	 <property environment="env" />
+	 <property name="ibis" location="${env.IPL_HOME}" />
+	 <copy todir="${lib}">
+	     <fileset dir="${ibis}/lib" />
+	 </copy>
+        <copy todir="${lib}">
+            <fileset dir="${javagat}" />
+        </copy>
+     </target>
 
     <!-- Compile -->
     <target name="compile">
@@ -75,7 +94,7 @@
         <!-- Extract ibis.io.Serializable, so that applications don't
              need ibis-io-2.2.jar to compile.
         -->
-        <unjar src="external/ipl/ibis-io-2.3.jar" dest="${tmp}">
+	<unjar src="${lib}/ibis-io-2.3.jar" dest="${tmp}">
             <patternset>
                 <include name="**/Serializable.class"/>
             </patternset>
