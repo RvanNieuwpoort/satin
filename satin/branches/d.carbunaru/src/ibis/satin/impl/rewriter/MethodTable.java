@@ -2,8 +2,6 @@
 
 package ibis.satin.impl.rewriter;
 
-import ibis.compile.util.BT_Analyzer;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
