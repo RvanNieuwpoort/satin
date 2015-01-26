@@ -271,8 +271,18 @@ public final class SharedObjects implements Config {
                 return;
             }
 
-            String ref = objRefs.remove(0);
-            soComm.fetchObject(ref, r.getOwner(), r);
+            synchronized (objRefs) {
+                if (objRefs.size() > 0) {
+                    String ref = objRefs.remove(0);
+                    soComm.fetchObject(ref, r.getOwner(), r);
+                } else {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        // Nothing
+                    }
+                }
+            }
         }
     }
 
