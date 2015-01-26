@@ -15,7 +15,6 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Vector;
 
 class SharedObjectInfo {
@@ -38,8 +37,10 @@ public final class SharedObjects implements Config {
 
     private final Satin s;
 
-    /** A hash containing all shared objects: 
-     * (String objectID, SharedObject object) */
+    /**
+     * A hash containing all shared objects: (String objectID, SharedObject
+     * object)
+     */
     private HashMap<String, SharedObjectInfo> sharedObjects = new HashMap<String, SharedObjectInfo>();
 
     private SOCommunication soComm;
@@ -52,24 +53,25 @@ public final class SharedObjects implements Config {
 
     /** Add an object to the object table */
     public void addObject(SharedObject object) {
-        if (! SO_ENABLED) {
-            throw new Error("Shared objects not enabled! Did you set satin.so to false?");
+        if (!SO_ENABLED) {
+            throw new Error(
+                    "Shared objects not enabled! Did you set satin.so to false?");
         }
         SharedObjectInfo i = new SharedObjectInfo();
         i.sharedObject = object;
         synchronized (s) {
             sharedObjects.put(object.getObjectId(), i);
         }
-        
+
         // notify waiters (see waitForObject)
         synchronized (soInvocationList) {
             soInvocationList.notifyAll();
         }
 
         soLogger.debug("SATIN '" + s.ident + "': " + "object added, id = "
-            + object.getObjectId());
+                + object.getObjectId());
     }
-    
+
     /** Return a reference to a shared object */
     public SharedObject getSOReference(String objectId) {
         ClientThread t = s.getThread();
@@ -83,12 +85,12 @@ public final class SharedObjects implements Config {
                 SharedObjectInfo i = sharedObjects.get(objectId);
                 if (i == null) {
                     soLogger.debug("SATIN '" + s.ident + "': "
-                        + "object not found in getSOReference");
+                            + "object not found in getSOReference");
                     return null;
                 }
                 return i.sharedObject;
             } finally {
-                if(t == null) {
+                if (t == null) {
                     s.stats.getSOReferencesTimer.stop();
                 } else {
                     t.stats.getSOReferencesTimer.stop();
@@ -145,8 +147,8 @@ public final class SharedObjects implements Config {
 
                 // No need to hold the satin lock here.
                 // Object transfer requests cannot be handled
-                // in the middle of a method invocation, 
-                // as transfers are  delayed until a safe point is
+                // in the middle of a method invocation,
+                // as transfers are delayed until a safe point is
                 // reached
                 soir.invoke(so);
             } finally {
@@ -164,7 +166,7 @@ public final class SharedObjects implements Config {
      * source. This is called from the generated code.
      */
     public void setSOReference(String objectId, IbisIdentifier source)
-        throws SOReferenceSourceCrashedException {
+            throws SOReferenceSourceCrashedException {
         ClientThread t = s.getThread();
         if (t == null) {
             s.handleDelayedMessages();
@@ -175,7 +177,7 @@ public final class SharedObjects implements Config {
         if (obj == null) {
             if (source == null) {
                 throw new Error(
-                    "internal error, source is null in setSOReference");
+                        "internal error, source is null in setSOReference");
             }
             soComm.fetchObject(objectId, source, null);
         }
@@ -207,7 +209,7 @@ public final class SharedObjects implements Config {
         try {
             doExecuteGuard(r);
         } catch (SOReferenceSourceCrashedException e) {
-            //the source has crashed - abort the job
+            // the source has crashed - abort the job
             return false;
         } finally {
             if (threadId == -1) {
@@ -224,7 +226,7 @@ public final class SharedObjects implements Config {
      * necessary, ship objects if necessary
      */
     private void doExecuteGuard(InvocationRecord r)
-        throws SOReferenceSourceCrashedException {
+            throws SOReferenceSourceCrashedException {
         // restore shared object references
 
         if (!FT_NAIVE && r.isOrphan()) {
@@ -232,7 +234,7 @@ public final class SharedObjects implements Config {
             IbisIdentifier owner = s.ft.lookupOwner(r);
             if (ASSERTS && owner == null) {
                 grtLogger.error("SATIN '" + s.ident
-                    + "': orphan not locked in the table");
+                        + "': orphan not locked in the table");
                 System.exit(1); // Failed assertion
             }
             r.setOwner(owner);
@@ -240,18 +242,19 @@ public final class SharedObjects implements Config {
         }
         r.setSOReferences();
 
-        if (r.guard()) return;
+        if (r.guard())
+            return;
 
         soLogger.info("SATIN '" + s.ident + "': "
-            + "guard not satisfied, getting updates..");
+                + "guard not satisfied, getting updates..");
 
         // try to ship the object(s) from the owner of the job
         Vector<String> objRefs = r.getSOReferences();
         if (objRefs == null || objRefs.isEmpty()) {
             soLogger.error("SATIN '" + s.ident + "': "
-                + "a guard is not satisfied, but the spawn does not "
-                + "have shared objects.\n"
-                + "This is not a correct Satin program.");
+                    + "a guard is not satisfied, but the spawn does not "
+                    + "have shared objects.\n"
+                    + "This is not a correct Satin program.");
             System.exit(1);
         }
 
@@ -274,7 +277,7 @@ public final class SharedObjects implements Config {
     }
 
     public void addToSORequestList(IbisIdentifier requester, String objID,
-        boolean demand) {
+            boolean demand) {
         Satin.assertLocked(s);
         SORequestList.add(requester, objID, demand);
         gotSORequests = true;
@@ -320,7 +323,7 @@ public final class SharedObjects implements Config {
             // Write method invoked while object is not shared yet.
             // Don't broadcast: noone has the object yet.
             soLogger.debug("No broadcast from writeMethod: object "
-                + r.getObjectId() + " is not shared yet");
+                    + r.getObjectId() + " is not shared yet");
             return;
         }
         soComm.broadcastSOInvocation(r);
@@ -339,11 +342,12 @@ public final class SharedObjects implements Config {
     }
 
     boolean waitForObject(String objectId, IbisIdentifier source,
-        InvocationRecord r, long timeout) {
+            InvocationRecord r, long timeout) {
         long start = System.currentTimeMillis();
         timeout = 10000;
         while (true) {
-            if (System.currentTimeMillis() - start > timeout) return false;
+            if (System.currentTimeMillis() - start > timeout)
+                return false;
 
             synchronized (soInvocationList) {
                 try {
@@ -354,7 +358,7 @@ public final class SharedObjects implements Config {
             }
 
             ClientThread t = s.getThread();
-            
+
             if (t == null) {
                 s.handleDelayedMessages();
             } else {
@@ -364,19 +368,19 @@ public final class SharedObjects implements Config {
             if (r == null) {
                 if (s.so.getSOInfo(objectId) != null) {
                     soLogger.debug("SATIN '" + s.ident
-                        + "': received new object from a bcast");
+                            + "': received new object from a bcast");
                     return true; // got it!
                 }
             } else {
                 if (r.guard()) {
                     soLogger.debug("SATIN '" + s.ident
-                        + "': received object, guard satisfied");
+                            + "': received object, guard satisfied");
                     return true;
                 }
             }
         }
     }
-    
+
     public static PortType getSOPortType() throws IOException {
         return SOCommunication.getSOPortType();
     }
