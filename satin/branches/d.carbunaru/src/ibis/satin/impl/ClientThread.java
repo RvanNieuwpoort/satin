@@ -1,67 +1,62 @@
 package ibis.satin.impl;
 
-import ibis.io.DeepCopy;
 import ibis.ipl.IbisIdentifier;
 import ibis.satin.impl.aborts.AbortException;
 import ibis.satin.impl.aborts.Aborts;
 import ibis.satin.impl.communication.Communication;
-import ibis.satin.impl.communication.Protocol;
-import ibis.satin.impl.faultTolerance.FaultTolerance;
 import ibis.satin.impl.loadBalancing.ClusterAwareRandomWorkStealing;
 import ibis.satin.impl.loadBalancing.LoadBalancing;
 import ibis.satin.impl.loadBalancing.LoadBalancingAlgorithm;
 import ibis.satin.impl.loadBalancing.MasterWorker;
 import ibis.satin.impl.loadBalancing.RandomWorkStealing;
 import ibis.satin.impl.loadBalancing.VictimTable;
-import ibis.satin.impl.sharedObjects.SOInvocationRecord;
-import ibis.satin.impl.sharedObjects.SharedObjects;
-import ibis.satin.impl.spawnSync.*;
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import ibis.satin.impl.spawnSync.DoubleEndedQueue;
+import ibis.satin.impl.spawnSync.IRStack;
+import ibis.satin.impl.spawnSync.InvocationRecord;
+import ibis.satin.impl.spawnSync.ReturnRecord;
 
 /**
- *
+ * 
  * @author daniela
  */
 public class ClientThread extends Thread implements Config {
 
     public final Satin satin;
-    
+
     public final int id;
-    
+
     public final Communication comm;
-    
+
     public final LoadBalancing lb;
-    
+
     public final Aborts aborts;
-    
+
     public final IbisIdentifier ident;
-    
+
     /**
      * My scheduling algorithm.
      */
     public LoadBalancingAlgorithm algorithm;
-    
+
     /**
      * The work queue. Contains jobs that were spawned, but not yet executed.
      */
     public final DoubleEndedQueue q;
-    
+
     /**
      * The jobs that are currently being executed, they are on the Java stack.
      */
     public final IRStack onStack;
-    
+
     public Statistics stats = new Statistics();
-    
+
     /**
      * The invocation record that is the parent of the current job.
      */
     public InvocationRecord parent;
-    
+
     public volatile boolean currentVictimCrashed;
-    
+
     /**
      * All victims, myself NOT included. The elements are Victims.
      */
@@ -81,11 +76,11 @@ public class ClientThread extends Thread implements Config {
         ident = satin.ident;
 
         aborts = new Aborts(this);
-        
+
         lb = new LoadBalancing(this);
-        
+
         victims = satin.victims;
-        
+
         createLoadBalancingAlgorithm();
 
     }
@@ -112,17 +107,20 @@ public class ClientThread extends Thread implements Config {
 
         stats.handleStealTimer = satin.stats.handleStealTimer;
 
-        stats.myThreadStatistics(id);
+        stats.fillInStats();
+        // stats.myThreadStatistics(id);
+
+        satin.totalStats.add(stats);
 
         synchronized (satin.waitForThreads) {
             satin.threadsEnded++;
             satin.waitForThreads.notifyAll();
         }
-        
+
         if (commLogger.isDebugEnabled()) {
             commLogger.debug("SATIN '" + ident + "' - THREAD " + id
                     + ": exited");
-        }        
+        }
     }
 
     public void noWorkInQueue() {
@@ -154,7 +152,7 @@ public class ClientThread extends Thread implements Config {
         if (Satin.ASSERTS) {
             callSatinFunctionPreAsserts(r);
         }
-        
+
         if (r.getParent() != null && r.getParent().aborted) {
             r.decrSpawnCounter();
             return;
@@ -176,8 +174,8 @@ public class ClientThread extends Thread implements Config {
 
         if (r.getOwner().equals(ident)) {
             // maybe r was stolen from this machine, but from another thread.
-            if (satin.stampToThreadIdMap != null &&
-                    satin.stampToThreadIdMap.containsKey(r.getStamp())) {
+            if (satin.stampToThreadIdMap != null
+                    && satin.stampToThreadIdMap.containsKey(r.getStamp())) {
                 callSatinSharedFunction(r);
             } else {
                 callSatinLocalFunction(r);
@@ -223,12 +221,12 @@ public class ClientThread extends Thread implements Config {
                 r.eek = t;
                 aborts.handleInlet(r);
             } else if (Satin.abortLogger.isDebugEnabled()) {
-                Satin.abortLogger.debug("Thread " + id + ": Caught abort exception " + t, t);
+                Satin.abortLogger.debug("Thread " + id
+                        + ": Caught abort exception " + t, t);
             }
         }
 
         r.decrSpawnCounter();
-
 
         if (!Satin.FT_NAIVE) {
             r.jobFinished();
@@ -245,14 +243,15 @@ public class ClientThread extends Thread implements Config {
         ReturnRecord rr = null;
 
         rr = r.runRemote();
-        
+
         rr.setEek(r.eek);
 
         if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {
             Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                     + ": RUNNING SHARED CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
-            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id + ": RUNNING SHARED CODE DONE!");
+            Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
+                    + ": RUNNING SHARED CODE DONE!");
         }
 
         // send wrapper back to the owner thread, but on the same machine
@@ -284,7 +283,7 @@ public class ClientThread extends Thread implements Config {
 
         rr.setEek(r.eek);
 
-        if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {            
+        if (r.eek != null && Satin.stealLogger.isInfoEnabled()) {
             Satin.stealLogger.info("SATIN '" + ident + "' - THREAD " + id
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
@@ -334,7 +333,8 @@ public class ClientThread extends Thread implements Config {
         } else if (alg.equals("MW")) {
             algorithm = new MasterWorker(this);
         } else {
-            assertFailed("satin_algorithm " + alg + "' unknown", new Exception());
+            assertFailed("satin_algorithm " + alg + "' unknown",
+                    new Exception());
         }
 
         commLogger.info("SATIN '" + ident + "' - THREAD " + id

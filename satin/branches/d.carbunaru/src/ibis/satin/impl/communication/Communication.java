@@ -57,9 +57,9 @@ public final class Communication implements Config, Protocol {
         portType = createSatinPortType();
 
         try {
-            ibis = IbisFactory.createIbis(ibisProperties, null, true, s.ft
-                    .getRegistryEventHandler(), portType, SharedObjects
-                    .getSOPortType());
+            ibis = IbisFactory.createIbis(ibisProperties, null, true,
+                    s.ft.getRegistryEventHandler(), portType,
+                    SharedObjects.getSOPortType());
         } catch (Exception e) {
             s.assertFailed("Could not start ibis: ", e);
         }
@@ -173,7 +173,8 @@ public final class Communication implements Config, Protocol {
         } else if (UNRELIABLE) {
             // NOTE: using this breaks both lrmc and the master election.
             return new IbisCapabilities(IbisCapabilities.MEMBERSHIP_UNRELIABLE,
-                    IbisCapabilities.ELECTIONS_UNRELIABLE, IbisCapabilities.SIGNALS);
+                    IbisCapabilities.ELECTIONS_UNRELIABLE,
+                    IbisCapabilities.SIGNALS);
         } else {
             return new IbisCapabilities(
                     IbisCapabilities.MEMBERSHIP_TOTALLY_ORDERED,
@@ -194,7 +195,6 @@ public final class Communication implements Config, Protocol {
             victims = s.victims.victims();
         }
 
-
         for (int i = 0; i < victims.length; i++) {
             WriteMessage writeMessage = null;
             Victim v = victims[i];
@@ -211,9 +211,10 @@ public final class Communication implements Config, Protocol {
                     writeMessage.finish(e);
                 }
                 synchronized (s) {
-                    ftLogger.info("SATIN '" + s.ident
-                            + "': could not send bcast message to "
-                            + v.getIdent(), e);
+                    ftLogger.info(
+                            "SATIN '" + s.ident
+                                    + "': could not send bcast message to "
+                                    + v.getIdent(), e);
                     try {
                         ibis.registry().maybeDead(v.getIdent());
                     } catch (IOException e2) {
@@ -224,18 +225,18 @@ public final class Communication implements Config, Protocol {
             }
         }
 
-	if (UNRELIABLE && opcode == EXIT) {
-	    IbisIdentifier[] ibises;
-	  
-	   synchronized(s) { 
-	    ibises = s.victims.getIbises();
-	   }
-	   try {
-	    ibis.registry().signal("EXIT", ibises);
-	     } catch (IOException e) {
-		 System.err.println("error while signalling" + e);
-	     }
-	}
+        if (UNRELIABLE && opcode == EXIT) {
+            IbisIdentifier[] ibises;
+
+            synchronized (s) {
+                ibises = s.victims.getIbises();
+            }
+            try {
+                ibis.registry().signal("EXIT", ibises);
+            } catch (IOException e) {
+                System.err.println("error while signalling" + e);
+            }
+        }
 
     }
 
@@ -404,7 +405,7 @@ public final class Communication implements Config, Protocol {
 
         // wait until everybody has send an ACK
         synchronized (s) {
-            
+
             while (exitReplies != size && System.currentTimeMillis() < deadline) {
                 try {
                     s.handleDelayedMessages();
@@ -435,8 +436,9 @@ public final class Communication implements Config, Protocol {
             writeMessage = v.newMessage();
             writeMessage.writeByte(Protocol.EXIT_REPLY);
             if (STATS) {
-                //s.stats.fillInStats();
-                //writeMessage.writeObject(s.stats);
+                // s.stats.fillInStats();
+                // writeMessage.writeObject(s.stats);
+                writeMessage.writeObject(s.totalStats);
             }
             v.finish(writeMessage);
         } catch (IOException e) {
@@ -545,19 +547,19 @@ public final class Communication implements Config, Protocol {
     public void handleExitReply(ReadMessage m) {
 
         SendPortIdentifier ident = m.origin();
-        
+
         commLogger.debug("SATIN '" + s.ident + "': got exit ACK message from "
                 + ident.ibisIdentifier());
 
-//        if (STATS) {
-//            try {
-//                Statistics stats = (Statistics) m.readObject();
-//                //s.totalStats.add(stats);
-//            } catch (Exception e) {
-//                commLogger.warn("SATIN '" + s.ident
-//                        + "': Got Exception while reading stats: " + e, e);
-//            }
-//        }
+        if (STATS) {
+            try {
+                Statistics stats = (Statistics) m.readObject();
+                s.totalStats.add(stats);
+            } catch (Exception e) {
+                commLogger.warn("SATIN '" + s.ident
+                        + "': Got Exception while reading stats: " + e, e);
+            }
+        }
 
         try {
             m.finish();

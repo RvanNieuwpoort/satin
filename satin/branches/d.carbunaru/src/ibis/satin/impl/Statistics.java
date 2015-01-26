@@ -11,25 +11,25 @@ public final class Statistics implements java.io.Serializable, Config {
      */
     private static final long serialVersionUID = 7954856934035669311L;
     public Timer addToHeadTimer = Timer.createTimer();
-    public long spawns; //ok
-    public long syncs; //ok
-    public long abortsDone; //ok
-    public long jobsExecuted; //ok
+    public long spawns; // ok
+    public long syncs; // ok
+    public long abortsDone; // ok
+    public long jobsExecuted; // ok
     public long abortedJobs;
     public long abortMessages;
-    public long localStealAttempts; //ok
-    public long localStealSuccess; //ok
-    public long stealAttempts; //ok
-    public long stealSuccess; //ok
-    public long asyncStealAttempts; //ok
-    public long asyncStealSuccess; //ok
-    public long stolenJobs; //ok 1 per machine
-    public long stealRequests; //ok 1 per machine
+    public long localStealAttempts; // ok
+    public long localStealSuccess; // ok
+    public long stealAttempts; // ok
+    public long stealSuccess; // ok
+    public long asyncStealAttempts; // ok
+    public long asyncStealSuccess; // ok
+    public long stolenJobs; // ok 1 per machine
+    public long stealRequests; // ok 1 per machine
     public long stealThrottles;
-    public long interClusterMessages; //ok 1 per machine
-    public long intraClusterMessages; //ok 1 per machine
-    public long interClusterBytes; //ok 1 per machine
-    public long intraClusterBytes; //ok 1 per machine
+    public long interClusterMessages; // ok 1 per machine
+    public long intraClusterMessages; // ok 1 per machine
+    public long interClusterBytes; // ok 1 per machine
+    public long intraClusterBytes; // ok 1 per machine
     public double stealTime;
     public double throttleStealTime;
     public double handleStealTime;
@@ -46,7 +46,7 @@ public final class Statistics implements java.io.Serializable, Config {
     public double returnRecordReadTime;
     public long returnRecordReadCount;
     public long returnRecordBytes;
-    //fault tolerance
+    // fault tolerance
     public long tableResultUpdates;
     public long tableLockUpdates;
     public long tableUpdateMessages;
@@ -74,7 +74,7 @@ public final class Statistics implements java.io.Serializable, Config {
     public double totalCheckpointTime;
     public double createCoordinatorTime;
     public int numCheckpointsTaken;
-    //shared objects
+    // shared objects
     public long soInvocations;
     public long soInvocationsBytes;
     public long soTransfers;
@@ -96,16 +96,19 @@ public final class Statistics implements java.io.Serializable, Config {
     public long soBcastBytes;
     public long handleSOInvocations;
     public long getSOReferences;
-    public Timer totalTimer = Timer.createTimer(); //ok 1 per machine
-    public Timer stealTimer = Timer.createTimer(); //ok
-    public Timer handleStealTimer = Timer.createTimer(); //ok 1 per machine
-    public Timer abortTimer = Timer.createTimer(); //ok
+    public Timer totalTimer = Timer.createTimer(); // ok 1 per machine
+    public Timer stealTimer = Timer.createTimer(); // ok
+    public Timer handleStealTimer = Timer.createTimer(); // ok 1 per machine
+    public Timer abortTimer = Timer.createTimer(); // ok
     public Timer idleTimer = Timer.createTimer();
     public Timer pollTimer = Timer.createTimer();
-    public Timer invocationRecordWriteTimer = Timer.createTimer(); // ok 1 per machine
-    public Timer returnRecordWriteTimer = Timer.createTimer(); //ok
-    public Timer invocationRecordReadTimer = Timer.createTimer(); // ok 1 per machine
-    public Timer returnRecordReadTimer = Timer.createTimer(); // ok 1 per machine
+    public Timer invocationRecordWriteTimer = Timer.createTimer(); // ok 1 per
+                                                                   // machine
+    public Timer returnRecordWriteTimer = Timer.createTimer(); // ok
+    public Timer invocationRecordReadTimer = Timer.createTimer(); // ok 1 per
+                                                                  // machine
+    public Timer returnRecordReadTimer = Timer.createTimer(); // ok 1 per
+                                                              // machine
     public Timer lookupTimer = Timer.createTimer();
     public Timer updateTimer = Timer.createTimer();
     public Timer handleUpdateTimer = Timer.createTimer();
@@ -133,11 +136,12 @@ public final class Statistics implements java.io.Serializable, Config {
     public Timer soBroadcastTransferTimer = Timer.createTimer();
     public Timer soInvocationDeserializationTimer = Timer.createTimer();
     public Timer soGuardTimer = Timer.createTimer();
-    public Timer stealThrottleTimer = Timer.createTimer(); //ok
-    //public Timer waitingForLockTimer = Timer.createTimer(); //ok
-    //public Timer handlingDelayedMsgsTimer = Timer.createTimer();
+    public Timer stealThrottleTimer = Timer.createTimer(); // ok
 
-    public void add(Statistics s) {
+    // public Timer waitingForLockTimer = Timer.createTimer(); //ok
+    // public Timer handlingDelayedMsgsTimer = Timer.createTimer();
+
+    public synchronized void add(Statistics s) {
         spawns += s.spawns;
         jobsExecuted += s.jobsExecuted;
         syncs += s.syncs;
@@ -177,7 +181,7 @@ public final class Statistics implements java.io.Serializable, Config {
         returnRecordReadCount += s.returnRecordReadCount;
         returnRecordBytes += s.returnRecordBytes;
 
-        //fault tolerance
+        // fault tolerance
         tableResultUpdates += s.tableResultUpdates;
         tableLockUpdates += s.tableLockUpdates;
         tableUpdateMessages += s.tableUpdateMessages;
@@ -205,10 +209,12 @@ public final class Statistics implements java.io.Serializable, Config {
         writeCheckpointTime += s.writeCheckpointTime;
         useCheckpointTime += s.useCheckpointTime;
         createCoordinatorTime += s.createCoordinatorTime;
-        totalCheckpointTime += (s.requestCheckpointTime + s.makeCheckpointTime + s.writeCheckpointTime + s.useCheckpointTime + s.receiveCheckpointTime + s.createCoordinatorTime);
+        totalCheckpointTime += (s.requestCheckpointTime + s.makeCheckpointTime
+                + s.writeCheckpointTime + s.useCheckpointTime
+                + s.receiveCheckpointTime + s.createCoordinatorTime);
         numCheckpointsTaken += s.numCheckpointsTaken;
 
-        //shared objects
+        // shared objects
         soInvocations += s.soInvocations;
         soInvocationsBytes += s.soInvocationsBytes;
         soTransfers += s.soTransfers;
@@ -272,21 +278,22 @@ public final class Statistics implements java.io.Serializable, Config {
             numCheckpointsTaken = makeCheckpointTimer.nrTimes();
         }
 
-
         handleSOInvocations = handleSOInvocationsTimer.nrTimes();
 
         handleSOInvocationsTime = handleSOInvocationsTimer.totalTimeVal();
         getSOReferences = getSOReferencesTimer.nrTimes();
 
         getSOReferencesTime = getSOReferencesTimer.totalTimeVal();
-        soInvocationDeserializationTime = soInvocationDeserializationTimer.totalTimeVal();
+        soInvocationDeserializationTime = soInvocationDeserializationTimer
+                .totalTimeVal();
         broadcastSOInvocationsTime = broadcastSOInvocationsTimer.totalTimeVal();
         soTransferTime = soTransferTimer.totalTimeVal();
         soSerializationTime = soSerializationTimer.totalTimeVal();
         soDeserializationTime = soDeserializationTimer.totalTimeVal();
         soBcastTime = soBroadcastTransferTimer.totalTimeVal();
         soBcastSerializationTime = soBroadcastSerializationTimer.totalTimeVal();
-        soBcastDeserializationTime = soBroadcastDeserializationTimer.totalTimeVal();
+        soBcastDeserializationTime = soBroadcastDeserializationTimer
+                .totalTimeVal();
         soGuardTime = soGuardTimer.totalTimeVal();
         soGuards = soGuardTimer.nrTimes();
     }
@@ -302,7 +309,8 @@ public final class Statistics implements java.io.Serializable, Config {
         pf.setGroupingUsed(false);
 
         boolean haveAborts = abortsDone > 0 || abortedJobs > 0;
-        boolean haveSteals = stealAttempts > 0 || asyncStealAttempts > 0;
+        boolean haveSteals = stealAttempts > 0 || asyncStealAttempts > 0
+                || localStealAttempts > 0;
         boolean haveCrashes = tableResultUpdates > 0 || tableLookups > 0
                 || restartedJobs > 0;
         boolean haveSO = soInvocations > 0 || soTransfers > 0 || soBcasts > 0;
@@ -318,15 +326,25 @@ public final class Statistics implements java.io.Serializable, Config {
                     + nf.format(abortedJobs) + " aborted jobs");
         }
         if (haveSteals) {
-            out.println("SATIN: STEAL:       " + nf.format(stealAttempts)
-                    + " attempts, " + nf.format(stealSuccess) + " successes ("
-                    + pf.format(perStats(stealSuccess, stealAttempts) * 100.0)
-                    + " %)");
+            if (localStealAttempts > 0) {
+                out.println("SATIN: LOCAL STEAL:       "
+                        + nf.format(localStealAttempts)
+                        + " attempts, "
+                        + nf.format(localStealSuccess)
+                        + " successes ("
+                        + pf.format(perStats(localStealSuccess,
+                                localStealAttempts) * 100.0) + " %)");
+            }
 
-            out.println("SATIN: LOCAL STEAL:       " + nf.format(localStealAttempts)
-                    + " attempts, " + nf.format(localStealSuccess) + " successes ("
-                    + pf.format(perStats(localStealSuccess, localStealAttempts) * 100.0)
-                    + " %)");
+            if (stealAttempts > 0) {
+                out.println("SATIN: STEAL:       "
+                        + nf.format(stealAttempts)
+                        + " attempts, "
+                        + nf.format(stealSuccess)
+                        + " successes ("
+                        + pf.format(perStats(stealSuccess, stealAttempts) * 100.0)
+                        + " %)");
+            }
 
             if (asyncStealAttempts != 0) {
                 out.println("SATIN: ASYNCSTEAL:   "
@@ -335,7 +353,7 @@ public final class Statistics implements java.io.Serializable, Config {
                         + nf.format(asyncStealSuccess)
                         + " successes ("
                         + pf.format(perStats(asyncStealSuccess,
-                        asyncStealAttempts) * 100.0) + " %)");
+                                asyncStealAttempts) * 100.0) + " %)");
             }
 
             out.println("SATIN: MESSAGES:    intra "
@@ -361,8 +379,8 @@ public final class Statistics implements java.io.Serializable, Config {
 
         if (haveSO) {
             out.println("SATIN: SO_CALLS:    " + nf.format(soInvocations)
-                    + " invocations, " + nf.format(soInvocationsBytes) + " bytes, "
-                    + nf.format(soRealMessageCount) + " messages");
+                    + " invocations, " + nf.format(soInvocationsBytes)
+                    + " bytes, " + nf.format(soRealMessageCount) + " messages");
             out.println("SATIN: SO_TRANSFER: " + nf.format(soTransfers)
                     + " transfers, " + nf.format(soTransfersBytes) + " bytes ");
             out.println("SATIN: SO_BCAST:    " + nf.format(soBcasts)
@@ -377,35 +395,53 @@ public final class Statistics implements java.io.Serializable, Config {
         }
 
         if (haveSteals) {
-            out.println("SATIN: STEAL_TIME:                 total "
-                    + Timer.format(stealTime) + " time/req    "
-                    + Timer.format(perStats(stealTime, stealAttempts)));
-            out.println("SATIN: HANDLE_STEAL_TIME:          total "
-                    + Timer.format(handleStealTime) + " time/handle "
-                    + Timer.format(perStats(handleStealTime, stealAttempts)));
+            if (stealAttempts > 0) {
+                out.println("SATIN: STEAL_TIME:                 total "
+                        + Timer.format(stealTime) + " time/req    "
+                        + Timer.format(perStats(stealTime, stealAttempts)));
 
-            out.println("SATIN: THROTTLE_STEAL_TIME:        total "
-                    + Timer.format(throttleStealTime) + " time/req    "
-                    + Timer.format(perStats(throttleStealTime, stealThrottles)));
+                out.println("SATIN: HANDLE_STEAL_TIME:          total "
+                        + Timer.format(handleStealTime)
+                        + " time/handle "
+                        + Timer.format(perStats(handleStealTime, stealAttempts)));
+            }
 
-            out.println("SATIN: INV SERIALIZATION_TIME:     total "
-                    + Timer.format(invocationRecordWriteTime)
-                    + " time/write  "
-                    + Timer.format(perStats(invocationRecordWriteTime, stealSuccess)));
-            out.println("SATIN: INV DESERIALIZATION_TIME:   total "
-                    + Timer.format(invocationRecordReadTime)
-                    + " time/read   "
-                    + Timer.format(perStats(invocationRecordReadTime, stealSuccess)));
-            out.println("SATIN: RET SERIALIZATION_TIME:     total "
-                    + Timer.format(returnRecordWriteTime)
-                    + " time/write  "
-                    + Timer.format(perStats(returnRecordWriteTime,
-                    returnRecordWriteCount)));
-            out.println("SATIN: RET DESERIALIZATION_TIME:   total "
-                    + Timer.format(returnRecordReadTime)
-                    + " time/read   "
-                    + Timer.format(perStats(returnRecordReadTime,
-                    returnRecordReadCount)));
+            if (stealThrottles > 0) {
+                out.println("SATIN: THROTTLE_STEAL_TIME:        total "
+                        + Timer.format(throttleStealTime)
+                        + " time/req    "
+                        + Timer.format(perStats(throttleStealTime,
+                                stealThrottles)));
+            }
+
+            if (stealSuccess > 0) {
+                out.println("SATIN: INV SERIALIZATION_TIME:     total "
+                        + Timer.format(invocationRecordWriteTime)
+                        + " time/write  "
+                        + Timer.format(perStats(invocationRecordWriteTime,
+                                stealSuccess)));
+                out.println("SATIN: INV DESERIALIZATION_TIME:   total "
+                        + Timer.format(invocationRecordReadTime)
+                        + " time/read   "
+                        + Timer.format(perStats(invocationRecordReadTime,
+                                stealSuccess)));
+            }
+
+            if (returnRecordWriteCount > 0) {
+                out.println("SATIN: RET SERIALIZATION_TIME:     total "
+                        + Timer.format(returnRecordWriteTime)
+                        + " time/write  "
+                        + Timer.format(perStats(returnRecordWriteTime,
+                                returnRecordWriteCount)));
+            }
+
+            if (returnRecordReadCount > 0) {
+                out.println("SATIN: RET DESERIALIZATION_TIME:   total "
+                        + Timer.format(returnRecordReadTime)
+                        + " time/read   "
+                        + Timer.format(perStats(returnRecordReadTime,
+                                returnRecordReadCount)));
+            }
         }
 
         if (haveAborts) {
@@ -419,7 +455,7 @@ public final class Statistics implements java.io.Serializable, Config {
                     + Timer.format(tableUpdateTime)
                     + " time/update "
                     + Timer.format(perStats(tableUpdateTime,
-                    (tableResultUpdates + tableLockUpdates))));
+                            (tableResultUpdates + tableLockUpdates))));
             out.println("SATIN: GRT_LOOKUP_TIME:            total "
                     + Timer.format(tableLookupTime) + " time/lookup "
                     + Timer.format(perStats(tableLookupTime, tableLookups)));
@@ -427,12 +463,12 @@ public final class Statistics implements java.io.Serializable, Config {
                     + Timer.format(tableHandleUpdateTime)
                     + " time/handle "
                     + Timer.format(perStats(tableHandleUpdateTime,
-                    tableResultUpdates * (size - 1))));
+                            tableResultUpdates * (size - 1))));
             out.println("SATIN: GRT_HANDLE_LOOKUP_TIME:     total "
                     + Timer.format(tableHandleLookupTime)
                     + " time/handle "
                     + Timer.format(perStats(tableHandleLookupTime,
-                    tableRemoteLookups)));
+                            tableRemoteLookups)));
             out.println("SATIN: GRT_SERIALIZATION_TIME:     total "
                     + Timer.format(tableSerializationTime));
             out.println("SATIN: GRT_DESERIALIZATION_TIME:   total "
@@ -450,22 +486,22 @@ public final class Statistics implements java.io.Serializable, Config {
                     + Timer.format(requestCheckpointTime)
                     + " time/checkpoint "
                     + Timer.format(perStats(requestCheckpointTime,
-                    numCheckpointsTaken)));
+                            numCheckpointsTaken)));
             out.println("SATIN: MAKE_CHECKPOINT_TIME:       total "
                     + Timer.format(makeCheckpointTime)
                     + " time/checkpoint "
                     + Timer.format(perStats(makeCheckpointTime,
-                    numCheckpointsTaken)));
+                            numCheckpointsTaken)));
             out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    total "
                     + Timer.format(receiveCheckpointTime)
                     + " time/checkpoint "
                     + Timer.format(perStats(receiveCheckpointTime,
-                    numCheckpointsTaken)));
+                            numCheckpointsTaken)));
             out.println("SATIN: WRITE_CHECKPOINT_TIME:      total "
                     + Timer.format(writeCheckpointTime)
                     + " time/checkpoint "
                     + Timer.format(perStats(writeCheckpointTime,
-                    numCheckpointsTaken)));
+                            numCheckpointsTaken)));
             out.println("SATIN: USE_CHECKPOINT_TIME:        total "
                     + Timer.format(useCheckpointTime));
             out.println("SATIN: CREATE_COORDINATOR_TIME:    total "
@@ -476,28 +512,27 @@ public final class Statistics implements java.io.Serializable, Config {
                     + nf.format(numCheckpointsTaken));
         }
 
-
         if (haveSO) {
             out.println("SATIN: BROADCAST_SO_INVOCATIONS:   total "
                     + Timer.format(broadcastSOInvocationsTime)
                     + " time/inv    "
                     + Timer.format(perStats(broadcastSOInvocationsTime,
-                    soInvocations)));
+                            soInvocations)));
             out.println("SATIN: DESERIALIZE_SO_INVOCATIONS: total "
                     + Timer.format(soInvocationDeserializationTime)
                     + " time/inv    "
                     + Timer.format(perStats(soInvocationDeserializationTime,
-                    handleSOInvocations)));
+                            handleSOInvocations)));
             out.println("SATIN: HANDLE_SO_INVOCATIONS:      total "
                     + Timer.format(handleSOInvocationsTime)
                     + " time/inv    "
                     + Timer.format(perStats(handleSOInvocationsTime,
-                    handleSOInvocations)));
+                            handleSOInvocations)));
             out.println("SATIN: GET_SO_REFERENCES:          total "
                     + Timer.format(getSOReferencesTime)
                     + " time/inv    "
                     + Timer.format(perStats(getSOReferencesTime,
-                    getSOReferences)));
+                            getSOReferences)));
             out.println("SATIN: SO_TRANSFERS:               total "
                     + Timer.format(soTransferTime) + " time/transf "
                     + Timer.format(perStats(soTransferTime, soTransfers)));
@@ -505,17 +540,21 @@ public final class Statistics implements java.io.Serializable, Config {
                     + Timer.format(soSerializationTime) + " time/transf "
                     + Timer.format(perStats(soSerializationTime, soTransfers)));
             out.println("SATIN: SO_DESERIALIZATION:         total "
-                    + Timer.format(soDeserializationTime) + " time/transf "
+                    + Timer.format(soDeserializationTime)
+                    + " time/transf "
                     + Timer.format(perStats(soDeserializationTime, soTransfers)));
             out.println("SATIN: SO_BCASTS:                  total "
                     + Timer.format(soBcastTime) + " time/bcast  "
                     + Timer.format(perStats(soBcastTime, soBcasts)));
             out.println("SATIN: SO_BCAST_SERIALIZATION:     total "
-                    + Timer.format(soBcastSerializationTime) + " time/bcast  "
+                    + Timer.format(soBcastSerializationTime)
+                    + " time/bcast  "
                     + Timer.format(perStats(soBcastSerializationTime, soBcasts)));
             out.println("SATIN: SO_BCAST_DESERIALIZATION:   total "
-                    + Timer.format(soBcastDeserializationTime) + " time/bcast  "
-                    + Timer.format(perStats(soBcastDeserializationTime, soBcasts)));
+                    + Timer.format(soBcastDeserializationTime)
+                    + " time/bcast  "
+                    + Timer.format(perStats(soBcastDeserializationTime,
+                            soBcasts)));
             out.println("SATIN: SO_GUARDS:                  total "
                     + Timer.format(soGuardTime) + " time/guard  "
                     + Timer.format(perStats(soGuardTime, soGuards)));
@@ -526,20 +565,20 @@ public final class Statistics implements java.io.Serializable, Config {
         out.println("SATIN: TOTAL_RUN_TIME:                              "
                 + Timer.format(totalTime));
 
-
-        double lbTime = (stealTime + throttleStealTime - invocationRecordReadTime
-                - invocationRecordWriteTime - returnRecordReadTime - returnRecordWriteTime)
+        double lbTime = (stealTime + throttleStealTime
+                - invocationRecordReadTime - invocationRecordWriteTime
+                - returnRecordReadTime - returnRecordWriteTime)
                 / size;
         if (lbTime < 0.0) {
             lbTime = 0.0;
         }
         double lbPerc = lbTime / totalTime * 100.0;
-        double stealTimeAvg = stealTime / size;
-        double throttleTimeAvg = throttleStealTime / size;
+        double stealTimeAvg = stealTime / (size * NO_THREADS);
+        double throttleTimeAvg = throttleStealTime / (size * NO_THREADS);
         double throttlePerc = throttleTimeAvg / totalTime * 100.0;
         double serTimeAvg = (invocationRecordWriteTime
                 + invocationRecordReadTime + returnRecordWriteTime + returnRecordReadTime)
-                / size;
+                / (size * NO_THREADS);
 
         double serPerc = serTimeAvg / totalTime * 100.0;
         double abortTimeAvg = abortTime / size;
@@ -566,17 +605,20 @@ public final class Statistics implements java.io.Serializable, Config {
 
         // Checkpointing.
         double requestCheckpointTimeAvg = requestCheckpointTime / size;
-        double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime * 100.0;
+        double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime
+                * 100.0;
         double makeCheckpointTimeAvg = makeCheckpointTime / size;
         double makeCheckpointPerc = makeCheckpointTimeAvg / totalTime * 100.0;
         double receiveCheckpointTimeAvg = receiveCheckpointTime / size;
-        double receiveCheckpointPerc = receiveCheckpointTimeAvg / totalTime * 100.0;
+        double receiveCheckpointPerc = receiveCheckpointTimeAvg / totalTime
+                * 100.0;
         double writeCheckpointTimeAvg = writeCheckpointTime / size;
         double writeCheckpointPerc = writeCheckpointTimeAvg / totalTime * 100.0;
         double useCheckpointTimeAvg = useCheckpointTime / size;
         double useCheckpointPerc = useCheckpointTimeAvg / totalTime * 100.0;
         double createCoordinatorTimeAvg = createCoordinatorTime / size;
-        double createCoordinatorPerc = createCoordinatorTimeAvg / totalTime * 100.0;
+        double createCoordinatorPerc = createCoordinatorTimeAvg / totalTime
+                * 100.0;
         double totalCheckpointTimeAvg = totalCheckpointTime / size;
         double totalCheckpointPerc = totalCheckpointTimeAvg / totalTime * 100.0;
 
@@ -615,7 +657,8 @@ public final class Statistics implements java.io.Serializable, Config {
                 + tableLookupTimeAvg + tableHandleUpdateTimeAvg
                 + tableHandleLookupTimeAvg + handleSOInvocationsTimeAvg
                 + broadcastSOInvocationsTimeAvg + soTransferTimeAvg
-                + soBcastTimeAvg + soBcastDeserializationTimeAvg + stealTimeAvg + throttleTimeAvg + soGuardTimeAvg;
+                + soBcastTimeAvg + soBcastDeserializationTimeAvg + stealTimeAvg
+                + throttleTimeAvg + soGuardTimeAvg;
         double totalPerc = totalOverheadAvg / totalTime * 100.0;
         double appTime = totalTime - totalOverheadAvg;
         if (appTime < 0.0) {
@@ -625,11 +668,12 @@ public final class Statistics implements java.io.Serializable, Config {
 
         if (haveSteals) {
             out.println("SATIN: STEAL_THROTTLE_TIME:        agv. per machine "
-                    + Timer.format(throttleTimeAvg) + " (" + (throttlePerc < 10 ? " " : "")
-                    + pf.format(throttlePerc) + " %)");
+                    + Timer.format(throttleTimeAvg) + " ("
+                    + (throttlePerc < 10 ? " " : "") + pf.format(throttlePerc)
+                    + " %)");
             out.println("SATIN: (DE)SERIALIZATION_TIME:     agv. per machine "
-                    + Timer.format(serTimeAvg) + " (" + (serPerc < 10 ? " " : "")
-                    + pf.format(serPerc) + " %)");
+                    + Timer.format(serTimeAvg) + " ("
+                    + (serPerc < 10 ? " " : "") + pf.format(serPerc) + " %)");
             out.println("SATIN: LOAD_BALANCING_TIME:        agv. per machine "
                     + Timer.format(lbTime) + " (" + (lbPerc < 10 ? " " : "")
                     + pf.format(lbPerc) + " %)");
@@ -638,7 +682,8 @@ public final class Statistics implements java.io.Serializable, Config {
         if (haveAborts) {
             out.println("SATIN: ABORT_TIME:                 agv. per machine "
                     + Timer.format(abortTimeAvg) + " ("
-                    + (abortPerc < 10 ? " " : "") + pf.format(abortPerc) + " %)");
+                    + (abortPerc < 10 ? " " : "") + pf.format(abortPerc)
+                    + " %)");
         }
 
         if (haveCrashes) {
@@ -709,8 +754,8 @@ public final class Statistics implements java.io.Serializable, Config {
                     + Timer.format(soDeserializationTimeAvg) + " ("
                     + pf.format(soDeserializationPerc) + " %)");
             out.println("SATIN: SO_BCASTS:                  agv. per machine "
-                    + Timer.format(soBcastTimeAvg) + " (" + pf.format(soBcastPerc)
-                    + " %)");
+                    + Timer.format(soBcastTimeAvg) + " ("
+                    + pf.format(soBcastPerc) + " %)");
             out.println("SATIN: SO_BCAST_SERIALIZATION:     agv. per machine "
                     + Timer.format(soBcastSerializationTimeAvg) + " ("
                     + pf.format(soBcastSerializationPerc) + " %)");
@@ -736,31 +781,36 @@ public final class Statistics implements java.io.Serializable, Config {
         java.io.PrintStream out = System.out;
 
         out.println("SATIN '" + ident + "': SPAWN_STATS: spawns = " + spawns
-                + " executed = " + jobsExecuted + " syncs = " + syncs + " aborts = "
-                + abortsDone + " abort msgs = " + abortMessages
-                + " aborted jobs = " + abortedJobs + " total time = " + abortTimer.totalTime());
+                + " executed = " + jobsExecuted + " syncs = " + syncs
+                + " aborts = " + abortsDone + " abort msgs = " + abortMessages
+                + " aborted jobs = " + abortedJobs + " total time = "
+                + abortTimer.totalTime());
 
         out.println("SATIN '" + ident + "': MSG_STATS: intra = "
                 + intraClusterMessages + ", bytes = "
-                + nf.format(intraClusterBytes)
-                + " inter = "
+                + nf.format(intraClusterBytes) + " inter = "
                 + interClusterMessages + ", bytes = "
                 + nf.format(interClusterBytes));
+
+        out.println("SATIN '" + ident + "': LOCALSTEAL_STATS: attempts = "
+                + localStealAttempts + " success = " + localStealSuccess + " ("
+                + (perStats(localStealSuccess, localStealAttempts) * 100.0)
+                + " %)");
 
         out.println("SATIN '" + ident + "': STEAL_STATS: attempts = "
                 + stealAttempts + " success = " + stealSuccess + " ("
                 + (perStats(stealSuccess, stealAttempts) * 100.0) + " %)"
-                + " time = " + stealTimer.totalTime()
-                + " requests = " + stealRequests + " jobs stolen = " + stolenJobs
-                + " time = "
+                + " time = " + stealTimer.totalTime() + " requests = "
+                + stealRequests + " jobs stolen = " + stolenJobs + " time = "
                 + handleStealTimer.totalTime());
         out.println("SATIN '" + ident + "': ASYNCSTEAL_STATS: attempts = "
                 + asyncStealAttempts + " success = " + asyncStealSuccess + " ("
-                + (perStats(asyncStealSuccess, asyncStealAttempts) * 100.0) + " %)");
+                + (perStats(asyncStealSuccess, asyncStealAttempts) * 100.0)
+                + " %)");
 
         out.println("SATIN '" + ident + "': STEAL_THROTTLE_STATS: throttles = "
-                + stealThrottleTimer.nrTimes()
-                + " time = " + stealThrottleTimer.totalTime());
+                + stealThrottleTimer.nrTimes() + " time = "
+                + stealThrottleTimer.totalTime());
 
         out.println("SATIN '" + ident
                 + "': SERIALIZATION_STATS: invocationRecordWrites = "
@@ -769,21 +819,17 @@ public final class Statistics implements java.io.Serializable, Config {
                 + " invocationRecordReads = "
                 + invocationRecordReadTimer.nrTimes() + " total time = "
                 + invocationRecordReadTimer.totalTime()
-                + " returnRecordWrites = "
-                + returnRecordWriteTimer.nrTimes() + " total time = "
-                + returnRecordWriteTimer.totalTime()
-                + " returnRecordReads = "
-                + returnRecordReadTimer.nrTimes() + " total time = "
-                + returnRecordReadTimer.totalTime());
+                + " returnRecordWrites = " + returnRecordWriteTimer.nrTimes()
+                + " total time = " + returnRecordWriteTimer.totalTime()
+                + " returnRecordReads = " + returnRecordReadTimer.nrTimes()
+                + " total time = " + returnRecordReadTimer.totalTime());
 
-        out.println("SATIN '" + ident
-                + "': GRT_STATS: updates = " + tableResultUpdates
-                + " lock updates = " + tableLockUpdates
+        out.println("SATIN '" + ident + "': GRT_STATS: updates = "
+                + tableResultUpdates + " lock updates = " + tableLockUpdates
                 + " update time = " + updateTimer.totalTime()
                 + " handle update time = " + handleUpdateTimer.totalTime()
-                + " msgs = " + tableUpdateMessages
-                + " lookups = " + tableLookups
-                + " lookup time = " + lookupTimer.totalTime()
+                + " msgs = " + tableUpdateMessages + " lookups = "
+                + tableLookups + " lookup time = " + lookupTimer.totalTime()
                 + " handle lookup time = " + lookupTimer.totalTime()
                 + " remote lookups = " + tableRemoteLookups
                 + " successful lookups = " + tableSuccessfulLookups
@@ -792,16 +838,14 @@ public final class Statistics implements java.io.Serializable, Config {
         out.println("SATIN '" + ident + "': FT_STATS:"
                 + " handle crash time = " + crashTimer.totalTime()
                 + " redo time = " + redoTimer.totalTime()
-                + " orphans killed = " + killedOrphans
-                + " jobs restarted = " + restartedJobs);
+                + " orphans killed = " + killedOrphans + " jobs restarted = "
+                + restartedJobs);
 
-        out.println("SATIN '" + ident + "': SO_STATS: "
-                + " invocations = " + soInvocations
-                + " size = " + soInvocationsBytes
-                + " time = " + broadcastSOInvocationsTimer.totalTime()
-                + " transfers = " + soTransfers
-                + " size = " + soTransfersBytes
-                + " time = " + soTransferTimer.totalTime());
+        out.println("SATIN '" + ident + "': SO_STATS: " + " invocations = "
+                + soInvocations + " size = " + soInvocationsBytes + " time = "
+                + broadcastSOInvocationsTimer.totalTime() + " transfers = "
+                + soTransfers + " size = " + soTransfersBytes + " time = "
+                + soTransferTimer.totalTime());
     }
 
     private double perStats(double tm, long cnt) {
@@ -813,16 +857,21 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public void myThreadStatistics(int id) {
         System.out.println("\t Thread " + id + ":");
-        //System.out.println("Total thread time: " + totalTimer.totalTimeVal());
-//        double x = addToHeadTimer.totalTimeVal()/addToHeadTimer.nrTimes();
-//        System.out.println("Time to add an element: " + x + 
-//                " maxTime = " + addToHeadTimer.maxTimeVal());
-//        System.out.println("Steal Time: " + stealTimer.totalTimeVal());
-//        System.out.println("Handle Steal Time: " + handleStealTimer.totalTimeVal());
-//        System.out.println("Waiting Time: " + waitingForLockTimer.totalTimeVal());
-//        System.out.println("Return rr Time: " + returnRecordWriteTimer.totalTimeVal());
-        //System.out.println("Handle Delayed Messages Time: " + handlingDelayedMsgsTimer.totalTimeVal());
-        //System.out.println("SO_GUARDS: " + soGuardTimer.nrTimes());
+        // System.out.println("Total thread time: " +
+        // totalTimer.totalTimeVal());
+        // double x = addToHeadTimer.totalTimeVal()/addToHeadTimer.nrTimes();
+        // System.out.println("Time to add an element: " + x +
+        // " maxTime = " + addToHeadTimer.maxTimeVal());
+        // System.out.println("Steal Time: " + stealTimer.totalTimeVal());
+        // System.out.println("Handle Steal Time: " +
+        // handleStealTimer.totalTimeVal());
+        // System.out.println("Waiting Time: " +
+        // waitingForLockTimer.totalTimeVal());
+        // System.out.println("Return rr Time: " +
+        // returnRecordWriteTimer.totalTimeVal());
+        // System.out.println("Handle Delayed Messages Time: " +
+        // handlingDelayedMsgsTimer.totalTimeVal());
+        // System.out.println("SO_GUARDS: " + soGuardTimer.nrTimes());
         System.out.println("Spawns: " + spawns);
         System.out.println("Local Steal Attempts: " + localStealAttempts);
         System.out.println("Local Steal Success: " + localStealSuccess);

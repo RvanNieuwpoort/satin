@@ -16,45 +16,55 @@ import ibis.satin.impl.loadBalancing.RandomWorkStealing;
 import ibis.satin.impl.loadBalancing.VictimTable;
 import ibis.satin.impl.sharedObjects.SOInvocationRecord;
 import ibis.satin.impl.sharedObjects.SharedObjects;
-import ibis.satin.impl.spawnSync.*;
-import java.util.*;
+import ibis.satin.impl.spawnSync.DoubleEndedQueue;
+import ibis.satin.impl.spawnSync.IRStack;
+import ibis.satin.impl.spawnSync.IRVector;
+import ibis.satin.impl.spawnSync.InvocationRecord;
+import ibis.satin.impl.spawnSync.ReturnRecord;
+import ibis.satin.impl.spawnSync.SpawnCounter;
+import ibis.satin.impl.spawnSync.Stamp;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class Satin implements Config {
 
-    //Daniela:
+    // Daniela:
     public ClientThread[] clientThreads;
-    
+
     public final Map<Stamp, Integer> stampToThreadIdMap;
-    
+
     public final Map<IbisIdentifier, List<Integer>> waitingStealMap;
-    
+
     public final Map<String, ClientThread> threadIdToThreadMap;
-    
+
     public final Object waitForThreads = new Object();
-    
+
     public volatile int threadsEnded = 0;
-    
+
     public volatile boolean masterThreadsExiting = false;
     // end
-    
+
     private static final int SUGGESTED_QUEUE_SIZE = 1000;
-    
+
     public static final boolean GLOBAL_PAUSE_RESUME = false;
-    
+
     public static Satin thisSatin;
-    
+
     public final Communication comm;
-    
+
     public final LoadBalancing lb;
-    
+
     public final FaultTolerance ft;
-    
+
     public final SharedObjects so;
-    
+
     public final Aborts aborts;
-    
+
     public final IbisIdentifier ident; // this ibis
     /**
      * Am I the root (the one running main)?
@@ -89,21 +99,21 @@ public final class Satin implements Config {
      * The jobs that are currently being executed, they are on the Java stack.
      */
     public final IRStack onStack;
-    
+
     public Statistics totalStats;
-    
+
     public Statistics stats = new Statistics();
     /**
      * The invocation record that is the parent of the current job.
      */
     public InvocationRecord parent;
-    
+
     public volatile boolean currentVictimCrashed;
     /**
      * All victims, myself NOT included. The elements are Victims.
      */
     public final VictimTable victims;
-    
+
     /**
      * Used for fault tolerance. All ibises that once took part in the
      * computation, but then crashed. Assumption: ibis identifiers are unique in
@@ -126,7 +136,7 @@ public final class Satin implements Config {
             throw new Error(
                     "multiple satin instances are currently not supported");
         }
-        
+
         thisSatin = this;
 
         q = new DoubleEndedQueue(this);
@@ -134,7 +144,8 @@ public final class Satin implements Config {
         outstandingJobs = new IRVector(this);
         onStack = new IRStack(this);
 
-        ft = new FaultTolerance(this); // this must be first, it handles registry upcalls 
+        ft = new FaultTolerance(this); // this must be first, it handles
+                                       // registry upcalls
         comm = new Communication(this); // creates ibis
         ident = comm.ibis.identifier();
         ft.electClusterCoordinator(); // need ibis for this
@@ -160,16 +171,17 @@ public final class Satin implements Config {
         // we need the master to be set before this call
         ft.init();
 
-        //Daniela:
-        //Maps r.getStamp -> threadId: from which thread was the job stolen
+        // Daniela:
+        // Maps r.getStamp -> threadId: from which thread was the job stolen
         stampToThreadIdMap = new HashMap<Stamp, Integer>();
-        
-        //Maps ibisIdent -> List<threadId>: when a thread does a steal,
-        //it first registers in this map. This way the Satin's load balancer will know to
-        //which thread to give the STEAL_REPLY received
+
+        // Maps ibisIdent -> List<threadId>: when a thread does a steal,
+        // it first registers in this map. This way the Satin's load balancer
+        // will know to
+        // which thread to give the STEAL_REPLY received
         waitingStealMap = new HashMap<IbisIdentifier, List<Integer>>();
-        
-        //Maps a threadId to a ClientThread reference
+
+        // Maps a threadId to a ClientThread reference
         threadIdToThreadMap = new HashMap<String, ClientThread>();
 
         // Initialize the ClientThreads
@@ -178,19 +190,22 @@ public final class Satin implements Config {
             for (int i = 0; i < NO_THREADS - 1; i++) {
                 clientThreads[i] = new ClientThread(thisSatin, i);
                 clientThreads[i].setName("thread" + i);
-                threadIdToThreadMap.put(clientThreads[i].getName(), clientThreads[i]);
+                threadIdToThreadMap.put(clientThreads[i].getName(),
+                        clientThreads[i]);
             }
         } else {
             clientThreads = new ClientThread[NO_THREADS];
             for (int i = 0; i < NO_THREADS; i++) {
                 clientThreads[i] = new ClientThread(thisSatin, i);
                 clientThreads[i].setName("thread" + i);
-                threadIdToThreadMap.put(clientThreads[i].getName(), clientThreads[i]);
+                threadIdToThreadMap.put(clientThreads[i].getName(),
+                        clientThreads[i]);
             }
         }
 
         // Only the master starts its ClientThreads at the end of the Satin
-        // constructor. The clients will start their threads in the client() method.
+        // constructor. The clients will start their threads in the client()
+        // method.
         if (master) {
             for (Thread clientThread : clientThreads) {
                 clientThread.start();
@@ -220,11 +235,12 @@ public final class Satin implements Config {
                 try {
                     waitForThreads.wait();
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(Satin.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Satin.class.getName()).log(Level.SEVERE,
+                            null, ex);
                 }
             }
         }
-        
+
         if (STATS && DETAILED_STATS) {
             stats.printDetailedStats(ident);
             try {
@@ -236,7 +252,7 @@ public final class Satin implements Config {
 
         // Do not accept new connections and joins.
         comm.disableUpcallsForExit();
-        
+
         if (master) {
             synchronized (this) {
                 exiting = true;
@@ -245,19 +261,21 @@ public final class Satin implements Config {
             comm.bcastMessage(Protocol.EXIT);
             comm.waitForExitReplies();
 
-            // OK, we have got the ack from everybody, now we know that there will be no 
+            // OK, we have got the ack from everybody, now we know that there
+            // will be no
             // further communication between nodes. Broadcast this again.
             comm.bcastMessage(Protocol.EXIT_STAGE2);
         } else {
             comm.sendExitAck();
             comm.waitForExitStageTwo();
         }
-        
-        // OK, we have got the ack from everybody, 
-        // now we know that there will be no further communication between nodes.
+
+        // OK, we have got the ack from everybody,
+        // now we know that there will be no further communication between
+        // nodes.
 
         algorithm.exit(); // give the algorithm time to clean up
-        
+
         int size;
         synchronized (this) {
             size = victims.size() + 1;
@@ -270,7 +288,7 @@ public final class Satin implements Config {
 
             totalStats.printStats(size, stats.totalTimer.totalTimeVal());
         }
-        
+
         so.exit();
         comm.closeSendPorts();
         comm.closeReceivePort();
@@ -308,8 +326,9 @@ public final class Satin implements Config {
      * Spawns the method invocation as described by the specified invocation
      * record. The invocation record is added to the job queue maintained by
      * this Satin.
-     *
-     * @param r the invocation record specifying the spawned invocation.
+     * 
+     * @param r
+     *            the invocation record specifying the spawned invocation.
      */
     public void spawn(InvocationRecord r) {
         ClientThread t = getThread();
@@ -331,9 +350,9 @@ public final class Satin implements Config {
                 return;
             }
 
-            //stats.addToHeadTimer.start();
+            // stats.addToHeadTimer.start();
             q.addToHead(r);
-            //stats.addToHeadTimer.stop();
+            // stats.addToHeadTimer.stop();
             algorithm.jobAdded();
         } else {
             t.stats.spawns++;
@@ -353,9 +372,9 @@ public final class Satin implements Config {
                 return;
             }
 
-            //t.stats.addToHeadTimer.start();
+            // t.stats.addToHeadTimer.start();
             t.q.addToHead(r);
-            //t.stats.addToHeadTimer.stop();
+            // t.stats.addToHeadTimer.stop();
             t.algorithm.jobAdded();
         }
 
@@ -365,8 +384,9 @@ public final class Satin implements Config {
      * Waits for the jobs as specified by the spawncounter given, but meanwhile
      * execute jobs from the end of the jobqueue (or rather, the head of the job
      * queue, where new jobs are added).
-     *
-     * @param s the spawncounter.
+     * 
+     * @param s
+     *            the spawncounter.
      */
     public void sync(SpawnCounter s) {
         ClientThread thread = getThread();
@@ -386,7 +406,8 @@ public final class Satin implements Config {
         } else {
             while (s.getValue() > 0) {
                 if (thread == null) {
-                    InvocationRecord ir = q.getFromHead(); // Try the local queue  
+                    InvocationRecord ir = q.getFromHead(); // Try the local
+                                                           // queue
 
                     if (ir != null) {
                         callSatinFunction(ir);
@@ -395,8 +416,10 @@ public final class Satin implements Config {
                         noWorkInQueue();
                     }
 
-                    // Wait for abort sender. Otherwise, if the current job starts
-                    // spawning again, jobs may be aborted that are spawned after
+                    // Wait for abort sender. Otherwise, if the current job
+                    // starts
+                    // spawning again, jobs may be aborted that are spawned
+                    // after
                     // this sync!
                     aborts.waitForAborts();
                 } else {
@@ -409,8 +432,10 @@ public final class Satin implements Config {
                         thread.noWorkInQueue();
                     }
 
-                    // Wait for abort sender. Otherwise, if the current job starts
-                    // spawning again, jobs may be aborted that are spawned after
+                    // Wait for abort sender. Otherwise, if the current job
+                    // starts
+                    // spawning again, jobs may be aborted that are spawned
+                    // after
                     // this sync!
                     thread.aborts.waitForAborts();
                 }
@@ -446,12 +471,10 @@ public final class Satin implements Config {
         for (Thread clientThread : clientThreads) {
             clientThread.start();
         }
-
     }
 
     /**
-     * Daniela:
-     * goes through each q until finds a non-null job.
+     * Daniela: goes through each q until finds a non-null job.
      */
     public InvocationRecord returnJob() {
         InvocationRecord ir = null;
@@ -488,9 +511,8 @@ public final class Satin implements Config {
     }
 
     /**
-     * Daniela: steal from the same machine.
-     * Thread-safe.
-     *
+     * Daniela: steal from the same machine. Thread-safe.
+     * 
      * @param t
      * @return
      */
@@ -546,9 +568,11 @@ public final class Satin implements Config {
      * Aborts the spawns that are the result of the specified invocation record.
      * The invocation record of the invocation actually throwing the exception
      * is also specified, but it is valid only for clones with inlets.
-     *
-     * @param outstandingSpawns parent of spawns that need to be aborted.
-     * @param exceptionThrower invocation throwing the exception.
+     * 
+     * @param outstandingSpawns
+     *            parent of spawns that need to be aborted.
+     * @param exceptionThrower
+     *            invocation throwing the exception.
      */
     public synchronized void abort(InvocationRecord outstandingSpawns,
             InvocationRecord exceptionThrower) {
@@ -559,8 +583,8 @@ public final class Satin implements Config {
 
         if (abortLogger.isDebugEnabled()) {
             abortLogger.debug("ABORT called: outstandingSpanws = "
-                    + outstandingSpawns
-                    + ", exceptionThrower = " + exceptionThrower);
+                    + outstandingSpawns + ", exceptionThrower = "
+                    + exceptionThrower);
         }
 
         ClientThread t = getThread();
@@ -568,7 +592,8 @@ public final class Satin implements Config {
         if (t == null) {
             stats.abortsDone++;
 
-            if (exceptionThrower != null) { // can be null if root does an abort.
+            if (exceptionThrower != null) { // can be null if root does an
+                                            // abort.
                 // kill all children of the parent of the thrower.
                 aborts.killChildrenOf(exceptionThrower.getParentStamp());
             }
@@ -584,13 +609,15 @@ public final class Satin implements Config {
                     ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
                 }
                 if (outstandingSpawns != null) {
-                    ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                    ct.aborts
+                            .addToAbortList(outstandingSpawns.getParentStamp());
                 }
             }
         } else {
             t.stats.abortsDone++;
 
-            if (exceptionThrower != null) { // can be null if root does an abort.
+            if (exceptionThrower != null) { // can be null if root does an
+                                            // abort.
                 // kill all children of the parent of the thrower.
                 t.aborts.killChildrenOf(exceptionThrower.getParentStamp());
             }
@@ -613,10 +640,12 @@ public final class Satin implements Config {
             for (ClientThread ct : clientThreads) {
                 if (ct.id != t.id) {
                     if (exceptionThrower != null) {
-                        ct.aborts.addToAbortList(exceptionThrower.getParentStamp());
+                        ct.aborts.addToAbortList(exceptionThrower
+                                .getParentStamp());
                     }
                     if (outstandingSpawns != null) {
-                        ct.aborts.addToAbortList(outstandingSpawns.getParentStamp());
+                        ct.aborts.addToAbortList(outstandingSpawns
+                                .getParentStamp());
                     }
                 }
             }
@@ -701,16 +730,15 @@ public final class Satin implements Config {
 
     public ClientThread getThread() {
         String threadName = Thread.currentThread().getName();
-        ClientThread t = (ClientThread) threadIdToThreadMap.get(threadName);
+        ClientThread t = threadIdToThreadMap.get(threadName);
 
         return t;
     }
 
     /**
      * Returns true if this is the instance that is running main().
-     *
-     * @return
-     * <code>true</code> if this is the instance running main().
+     * 
+     * @return <code>true</code> if this is the instance running main().
      */
     public boolean isMaster() {
         if (ASSERTS && masterIdent == null) {
@@ -719,23 +747,21 @@ public final class Satin implements Config {
         return master;
     }
 
-    public void setMaster(IbisIdentifier newMaster) {
+    public synchronized void setMaster(IbisIdentifier newMaster) {
         masterIdent = newMaster;
 
         if (masterIdent.equals(ident)) {
             /*
              * I am the master.
              */
-            commLogger.info(
-                    "SATIN '" + ident
-                    + "': init ibis: I am the master");
+            commLogger
+                    .info("SATIN '" + ident + "': init ibis: I am the master");
             master = true;
         } else {
-            commLogger.info("SATIN '" + ident
-                    + "': init ibis I am slave");
+            commLogger.info("SATIN '" + ident + "': init ibis I am slave");
         }
 
-        if (STATS && master) {
+        if (STATS && totalStats == null) {
             totalStats = new Statistics();
         }
     }
@@ -789,8 +815,8 @@ public final class Satin implements Config {
 
         if (r.getOwner().equals(ident)) {
             // maybe r was stolen from this machine, but from another thread.
-            if (stampToThreadIdMap != null &&
-                    stampToThreadIdMap.containsKey(r.getStamp())) {
+            if (stampToThreadIdMap != null
+                    && stampToThreadIdMap.containsKey(r.getStamp())) {
                 callSatinSharedFunction(r);
             } else {
                 callSatinLocalFunction(r);
@@ -821,7 +847,8 @@ public final class Satin implements Config {
             Satin.stealLogger.info("SATIN '" + ident
                     + "': RUNNING SHARED CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
-            Satin.stealLogger.info("SATIN '" + ident + "': RUNNING SHARED CODE DONE!");
+            Satin.stealLogger.info("SATIN '" + ident
+                    + "': RUNNING SHARED CODE DONE!");
         }
 
         // assign the result to the owner on the same machine
@@ -899,7 +926,8 @@ public final class Satin implements Config {
             stealLogger.info("SATIN '" + ident
                     + "': RUNNING REMOTE CODE GAVE EXCEPTION: " + r.eek, r.eek);
         } else {
-            stealLogger.info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
+            stealLogger
+                    .info("SATIN '" + ident + "': RUNNING REMOTE CODE DONE!");
         }
 
         // send wrapper back to the owner
@@ -931,7 +959,8 @@ public final class Satin implements Config {
         } else if (alg.equals("MW")) {
             algorithm = new MasterWorker(this);
         } else {
-            assertFailed("satin_algorithm " + alg + "' unknown", new Exception());
+            assertFailed("satin_algorithm " + alg + "' unknown",
+                    new Exception());
         }
 
         commLogger.info("SATIN '" + "- " + "': using algorithm '" + alg);
@@ -959,11 +988,10 @@ public final class Satin implements Config {
 
     public void assertFailed(String reason, Throwable t) {
         if (reason != null) {
-            mainLogger.error("SATIN '" + ident
-                    + "': ASSERT FAILED: " + reason, t);
+            mainLogger.error("SATIN '" + ident + "': ASSERT FAILED: " + reason,
+                    t);
         } else {
-            mainLogger.error("SATIN '" + ident
-                    + "': ASSERT FAILED: ", t);
+            mainLogger.error("SATIN '" + ident + "': ASSERT FAILED: ", t);
         }
 
         throw new Error(reason, t);

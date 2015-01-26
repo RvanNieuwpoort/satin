@@ -24,7 +24,6 @@ import java.io.NotSerializableException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 
 final class LBCommunication implements Config, Protocol {
 
@@ -39,7 +38,7 @@ final class LBCommunication implements Config, Protocol {
 
     /**
      * Daniela:
-     *
+     * 
      * @param ct
      * @param lb
      */
@@ -54,9 +53,8 @@ final class LBCommunication implements Config, Protocol {
         if (stealLogger.isDebugEnabled()) {
             stealLogger.debug("SATIN '" + s.ident
                     + (ct != null ? (" Thread " + ct.id) : " master")
-                    + "': sending "
-                    + (synchronous ? "SYNC" : "ASYNC") + "steal message to "
-                    + v.getIdent());
+                    + "': sending " + (synchronous ? "SYNC" : "ASYNC")
+                    + "steal message to " + v.getIdent());
         }
 
         WriteMessage writeMessage = v.newMessage();
@@ -122,7 +120,6 @@ final class LBCommunication implements Config, Protocol {
             }
         }
 
-
         try {
             writeMessage.writeByte(opcode);
             v.finish(writeMessage);
@@ -182,11 +179,12 @@ final class LBCommunication implements Config, Protocol {
                         + "': handleJobResult: exception result: " + eek
                         + ", stamp = " + stamp, eek);
             } else {
-                stealLogger.info("SATIN '" + s.ident
-                        + "': handleJobResult: normal result, stamp = " + stamp);
+                stealLogger
+                        .info("SATIN '" + s.ident
+                                + "': handleJobResult: normal result, stamp = "
+                                + stamp);
             }
         }
-
 
         // Daniela
         int threadId = s.stampToThreadIdMap.get(stamp);
@@ -203,18 +201,18 @@ final class LBCommunication implements Config, Protocol {
 
     protected void sendResult(InvocationRecord r, ReturnRecord rr) {
         if (/*
-                 * exiting ||
-                 */r.alreadySentExceptionResult()) {
+             * exiting ||
+             */r.alreadySentExceptionResult()) {
             return;
         }
 
         if (stealLogger.isInfoEnabled()) {
             stealLogger.info("SATIN '" + s.ident
                     + (ct != null ? (" Thread " + ct.id) : " master")
-                    + "': sending job result to "
-                    + r.getOwner() + ", exception = "
-                    + (r.eek == null ? "null" : ("" + r.eek))
-                    + ", stamp = " + r.getStamp());
+                    + "': sending job result to " + r.getOwner()
+                    + ", exception = "
+                    + (r.eek == null ? "null" : ("" + r.eek)) + ", stamp = "
+                    + r.getStamp());
         }
 
         Victim v = null;
@@ -230,8 +228,8 @@ final class LBCommunication implements Config, Protocol {
                 }
                 r.setOwner(owner);
                 if (grtLogger.isInfoEnabled()) {
-                    grtLogger.info("SATIN '" + s.ident
-                            + "': storing an orphan");
+                    grtLogger
+                            .info("SATIN '" + s.ident + "': storing an orphan");
                 }
                 s.ft.storeResult(r);
             }
@@ -243,7 +241,7 @@ final class LBCommunication implements Config, Protocol {
         }
 
         if (v == null) {
-            //probably crashed..
+            // probably crashed..
             if (!FT_NAIVE && !r.isOrphan()) {
                 synchronized (s) {
                     s.ft.storeResult(r);
@@ -287,12 +285,19 @@ final class LBCommunication implements Config, Protocol {
             if (writeMessage != null) {
                 writeMessage.finish(e);
             }
-            if (e instanceof NotSerializableException || e instanceof InvalidClassException) {
-                ftLogger.warn("SATIN '" + s.ident
-                        + "': Got exception while sending result of stolen job", e);
+            if (e instanceof NotSerializableException
+                    || e instanceof InvalidClassException) {
+                ftLogger.warn(
+                        "SATIN '"
+                                + s.ident
+                                + "': Got exception while sending result of stolen job",
+                        e);
             } else if (ftLogger.isInfoEnabled()) {
-                ftLogger.info("SATIN '" + s.ident
-                        + "': Got exception while sending result of stolen job", e);
+                ftLogger.info(
+                        "SATIN '"
+                                + s.ident
+                                + "': Got exception while sending result of stolen job",
+                        e);
             }
         } finally {
             if (ct == null) {
@@ -318,7 +323,7 @@ final class LBCommunication implements Config, Protocol {
             handleStealTimer = Timer.createTimer();
             handleStealTimer.start();
         }
-        
+
         synchronized (s.stats) {
             s.stats.stealRequests++;
         }
@@ -326,7 +331,8 @@ final class LBCommunication implements Config, Protocol {
         try {
 
             if (stealLogger.isDebugEnabled()) {
-                stealLogger.debug("SATIN '" + s.ident + "': dealing with steal request from "
+                stealLogger.debug("SATIN '" + s.ident
+                        + "': dealing with steal request from "
                         + ident.ibisIdentifier() + " opcode = "
                         + Communication.opcodeToString(opcode));
             }
@@ -338,7 +344,7 @@ final class LBCommunication implements Config, Protocol {
             synchronized (s) {
                 v = s.victims.getVictim(ident.ibisIdentifier());
                 if (v == null || s.deadIbises.contains(ident.ibisIdentifier())) {
-                    //this message arrived after the crash of its sender was
+                    // this message arrived after the crash of its sender was
                     // detected. Is this actually possible?
                     stealLogger.warn("SATIN '" + s.ident
                             + "': EEK!! got steal request from a dead ibis: "
@@ -389,64 +395,68 @@ final class LBCommunication implements Config, Protocol {
 
         if (stealLogger.isDebugEnabled()) {
             stealLogger.debug("SATIN '" + s.ident
-                    + "': got steal reply message from " + ident.ibisIdentifier()
-                    + ": " + Communication.opcodeToString(opcode));
+                    + "': got steal reply message from "
+                    + ident.ibisIdentifier() + ": "
+                    + Communication.opcodeToString(opcode));
         }
 
         switch (opcode) {
-            case STEAL_REPLY_SUCCESS_TABLE:
-            case ASYNC_STEAL_REPLY_SUCCESS_TABLE:
-                readAndAddTable(ident, m, opcode);
+        case STEAL_REPLY_SUCCESS_TABLE:
+        case ASYNC_STEAL_REPLY_SUCCESS_TABLE:
+            readAndAddTable(ident, m, opcode);
             // fall through
-            case STEAL_REPLY_SUCCESS:
-            case ASYNC_STEAL_REPLY_SUCCESS:
-                try {
-                    s.stats.invocationRecordReadTimer.start();
-                    tmp = (InvocationRecord) m.readObject();
+        case STEAL_REPLY_SUCCESS:
+        case ASYNC_STEAL_REPLY_SUCCESS:
+            try {
+                s.stats.invocationRecordReadTimer.start();
+                tmp = (InvocationRecord) m.readObject();
 
-                    if (ASSERTS && tmp.aborted) {
-                        stealLogger.warn("SATIN '" + s.ident
-                                + ": stole aborted job!");
-                    }
-                } catch (Exception e) {
+                if (ASSERTS && tmp.aborted) {
+                    stealLogger.warn("SATIN '" + s.ident
+                            + ": stole aborted job!");
+                }
+            } catch (Exception e) {
+                stealLogger.error("SATIN '" + s.ident
+                        + "': Got Exception while reading steal "
+                        + "reply from " + ident + ", opcode:" + opcode
+                        + ", exception: " + e, e);
+            } finally {
+                s.stats.invocationRecordReadTimer.stop();
+            }
+
+            synchronized (s) {
+                if (s.deadIbises.contains(ident)) {
+                    // this message arrived after the crash of its sender
+                    // was detected. Is this actually possible?
                     stealLogger.error("SATIN '" + s.ident
-                            + "': Got Exception while reading steal " + "reply from "
-                            + ident + ", opcode:" + opcode + ", exception: " + e, e);
-                } finally {
-                    s.stats.invocationRecordReadTimer.stop();
+                            + "': got reply from dead ibis??? Ignored");
+                    break;
                 }
+            }
 
-                synchronized (s) {
-                    if (s.deadIbises.contains(ident)) {
-                        // this message arrived after the crash of its sender
-                        // was detected. Is this actually possible?
-                        stealLogger.error("SATIN '" + s.ident
-                                + "': got reply from dead ibis??? Ignored");
-                        break;
-                    }
-                }
+            s.algorithm.stealReplyHandler(tmp, ident.ibisIdentifier(), opcode);
+            break;
 
-                s.algorithm.stealReplyHandler(tmp, ident.ibisIdentifier(), opcode);
-                break;
-
-            case STEAL_REPLY_FAILED_TABLE:
-            case ASYNC_STEAL_REPLY_FAILED_TABLE:
-                readAndAddTable(ident, m, opcode);
-            //fall through
-            case STEAL_REPLY_FAILED:
-            case ASYNC_STEAL_REPLY_FAILED:
-                s.algorithm.stealReplyHandler(null, ident.ibisIdentifier(), opcode);
-                break;
-            default:
-                stealLogger.error("INTERNAL ERROR, opcode = " + opcode);
-                break;
+        case STEAL_REPLY_FAILED_TABLE:
+        case ASYNC_STEAL_REPLY_FAILED_TABLE:
+            readAndAddTable(ident, m, opcode);
+            // fall through
+        case STEAL_REPLY_FAILED:
+        case ASYNC_STEAL_REPLY_FAILED:
+            s.algorithm.stealReplyHandler(null, ident.ibisIdentifier(), opcode);
+            break;
+        default:
+            stealLogger.error("INTERNAL ERROR, opcode = " + opcode);
+            break;
         }
     }
 
-    private void readAndAddTable(SendPortIdentifier ident, ReadMessage m, int opcode) {
+    private void readAndAddTable(SendPortIdentifier ident, ReadMessage m,
+            int opcode) {
         try {
             @SuppressWarnings("unchecked")
-            Map<Stamp, GlobalResultTableValue> table = (Map<Stamp, GlobalResultTableValue>) m.readObject();
+            Map<Stamp, GlobalResultTableValue> table = (Map<Stamp, GlobalResultTableValue>) m
+                    .readObject();
             if (table != null) {
                 synchronized (s) {
                     s.ft.getTable = false;
@@ -465,8 +475,10 @@ final class LBCommunication implements Config, Protocol {
 
         if (stealLogger.isDebugEnabled()) {
             if (opcode == ASYNC_STEAL_REQUEST) {
-                stealLogger.debug("SATIN '" + s.ident
-                        + "': sending FAILED back to " + ident.ibisIdentifier());
+                stealLogger
+                        .debug("SATIN '" + s.ident
+                                + "': sending FAILED back to "
+                                + ident.ibisIdentifier());
             }
             if (opcode == ASYNC_STEAL_AND_TABLE_REQUEST) {
                 stealLogger.debug("SATIN '" + s.ident
@@ -512,13 +524,17 @@ final class LBCommunication implements Config, Protocol {
             if (m != null) {
                 m.finish(e);
             }
-            stealLogger.warn("SATIN '" + s.ident
-                    + "': trying to send FAILURE back, but got exception: " + e, e);
+            stealLogger
+                    .warn("SATIN '"
+                            + s.ident
+                            + "': trying to send FAILURE back, but got exception: "
+                            + e, e);
         }
     }
 
     private void sendStolenJobMessage(SendPortIdentifier ident, int opcode,
-            Victim v, InvocationRecord result, Map<Stamp, GlobalResultTableValue> table) {
+            Victim v, InvocationRecord result,
+            Map<Stamp, GlobalResultTableValue> table) {
         if (ASSERTS && result.aborted) {
             stealLogger.warn("SATIN '" + s.ident
                     + ": trying to send aborted job!");
@@ -574,7 +590,8 @@ final class LBCommunication implements Config, Protocol {
                 m.finish(e); // TODO always use victim.finish
             }
             stealLogger.warn("SATIN '" + s.ident
-                    + "': trying to send a job back, but got exception: " + e, e);
+                    + "': trying to send a job back, but got exception: " + e,
+                    e);
         }
 
         /*
@@ -584,7 +601,7 @@ final class LBCommunication implements Config, Protocol {
         // No, this cannot be right: it must be possible to put the job back
         // onto the work queue, so the parameters cannot be cleared. --Ceriel
         // if (FT_NAIVE) {
-        //    result.clearParams();
+        // result.clearParams();
         // }
     }
 }
