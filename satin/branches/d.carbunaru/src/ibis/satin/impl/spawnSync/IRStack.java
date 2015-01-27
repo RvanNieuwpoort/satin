@@ -21,179 +21,182 @@ public final class IRStack implements Config {
     private ClientThread ct;
 
     public IRStack(Satin s) {
-        this.s = s;
-    }
-
-    /** DAniela:
-     * 
-     * @param ct 
-     */
-    public IRStack(ClientThread ct) {
-        this.ct = ct;
-        this.s = ct.satin;
-    }
-
-    public int size() {
-        return count;
-    }
-
-    public boolean contains(InvocationRecord r) {
-        InvocationRecord curr;
-
-        for (int i = 0; i < count; i++) {
-            curr = l[i];
-            if (curr.equals(r)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void push(InvocationRecord r) {
-        if (count >= l.length) {
-            InvocationRecord[] nl = new InvocationRecord[l.length * 2];
-            System.arraycopy(l, 0, nl, 0, l.length);
-            l = nl;
-        }
-
-        l[count] = r;
-        count++;
-    }
-
-    public void pop() {
-        if (ASSERTS && count <= 0) {
-            System.err.println("popping from empty IR stack!");
-            new Exception().printStackTrace();
-            System.exit(1); // Failed assertion
-        }
-
-        count--;
-        l[count] = null;
+	this.s = s;
     }
 
     /**
-     * If store is true (used for fault tolerance), a list of jobs to store
-     * is returned. Otherwise, null is returned
+     * DAniela:
+     * 
+     * @param ct
      */
-    public ArrayList<InvocationRecord> killChildrenOf(Stamp targetStamp, boolean store) {
-        Satin.assertLocked(s);
-        ArrayList<InvocationRecord> toStore = null;
-        if (store) {
-            toStore = new ArrayList<InvocationRecord>();
-        }
+    public IRStack(ClientThread ct) {
+	this.ct = ct;
+	this.s = ct.satin;
+    }
 
-        for (int i = 0; i < count; i++) {
-            InvocationRecord curr = l[i];
-            synchronized (curr) {
-            if (curr.aborted) {
-                continue; // already handled.
-            }
+    public int size() {
+	return count;
+    }
 
-            if ((curr.getParent() != null && curr.getParent().aborted)
-                || curr.isDescendentOf(targetStamp)) {
-                curr.aborted = true;
+    public boolean contains(InvocationRecord r) {
+	InvocationRecord curr;
 
-                if (store) {
-                    if (ct == null) {
-                        s.stats.killedOrphans++;
-                    } else {
-                        ct.stats.killedOrphans++;
-                    }
-                    toStore.add(curr);
-                } else {
-                    if (ct == null) {
-                        s.stats.abortedJobs++;
-                    } else {
-                        ct.stats.abortedJobs++;
-                    }
-                }
+	for (int i = 0; i < count; i++) {
+	    curr = l[i];
+	    if (curr.equals(r)) {
+		return true;
+	    }
+	}
 
-                if (abortLogger.isDebugEnabled()) {
-                    abortLogger.debug("found child on the stack: "
-                        + curr.getStamp() + ", it depends on " + targetStamp);
-                }
-            }
-            
-        }
-        }
+	return false;
+    }
 
-        return toStore;
+    public void push(InvocationRecord r) {
+	if (count >= l.length) {
+	    InvocationRecord[] nl = new InvocationRecord[l.length * 2];
+	    System.arraycopy(l, 0, nl, 0, l.length);
+	    l = nl;
+	}
+
+	l[count] = r;
+	count++;
+    }
+
+    public void pop() {
+	if (ASSERTS && count <= 0) {
+	    System.err.println("popping from empty IR stack!");
+	    new Exception().printStackTrace();
+	    System.exit(1); // Failed assertion
+	}
+
+	count--;
+	l[count] = null;
+    }
+
+    /**
+     * If store is true (used for fault tolerance), a list of jobs to store is
+     * returned. Otherwise, null is returned
+     */
+    public ArrayList<InvocationRecord> killChildrenOf(Stamp targetStamp,
+	    boolean store) {
+	Satin.assertLocked(s);
+	ArrayList<InvocationRecord> toStore = null;
+	if (store) {
+	    toStore = new ArrayList<InvocationRecord>();
+	}
+
+	for (int i = 0; i < count; i++) {
+	    InvocationRecord curr = l[i];
+	    synchronized (curr) {
+		if (curr.aborted) {
+		    continue; // already handled.
+		}
+
+		if ((curr.getParent() != null && curr.getParent().aborted)
+			|| curr.isDescendentOf(targetStamp)) {
+		    curr.aborted = true;
+
+		    if (store) {
+			if (ct == null) {
+			    s.stats.killedOrphans++;
+			} else {
+			    ct.stats.killedOrphans++;
+			}
+			toStore.add(curr);
+		    } else {
+			if (ct == null) {
+			    s.stats.abortedJobs++;
+			} else {
+			    ct.stats.abortedJobs++;
+			}
+		    }
+
+		    if (abortLogger.isDebugEnabled()) {
+			abortLogger.debug("found child on the stack: "
+				+ curr.getStamp() + ", it depends on "
+				+ targetStamp);
+		    }
+		}
+
+	    }
+	}
+
+	return toStore;
     }
 
     /**
      * Used for fault tolerance. Kill every job that was spawned on targetOwner
-     * or is a child of a job spawned on targetOwner. Store all finished children
-     * of the aborted jobs in the global result table.
+     * or is a child of a job spawned on targetOwner. Store all finished
+     * children of the aborted jobs in the global result table.
      */
     public ArrayList<InvocationRecord> killSubtreesOf(IbisIdentifier targetOwner) {
-        Satin.assertLocked(s);
-        ArrayList<InvocationRecord> toStore = new ArrayList<InvocationRecord>();
-        for (int i = 0; i < count; i++) {
-            InvocationRecord curr = l[i];
+	Satin.assertLocked(s);
+	ArrayList<InvocationRecord> toStore = new ArrayList<InvocationRecord>();
+	for (int i = 0; i < count; i++) {
+	    InvocationRecord curr = l[i];
 
-            synchronized (curr) {
-            if (curr.aborted) continue; // already handled
+	    synchronized (curr) {
+		if (curr.aborted)
+		    continue; // already handled
 
-            if ((curr.getParent() != null && curr.getParent().aborted)
-                || curr.isDescendentOf(targetOwner)
-                || curr.getOwner().equals(targetOwner)) {
+		if ((curr.getParent() != null && curr.getParent().aborted)
+			|| curr.isDescendentOf(targetOwner)
+			|| curr.getOwner().equals(targetOwner)) {
 
-                curr.aborted = true;
-                //s.stats.killedOrphans++;
-                toStore.add(curr);
-            }
-            
-        }
-    }
-        return toStore;
+		    curr.aborted = true;
+		    // s.stats.killedOrphans++;
+		    toStore.add(curr);
+		}
+
+	    }
+	}
+	return toStore;
     }
 
     public ArrayList<InvocationRecord> getAllFinishedChildren(Victim victim) {
-        Satin.assertLocked(s);
-        InvocationRecord curr, child;
-        ArrayList<InvocationRecord> toPush = new ArrayList<InvocationRecord>();
+	Satin.assertLocked(s);
+	InvocationRecord curr, child;
+	ArrayList<InvocationRecord> toPush = new ArrayList<InvocationRecord>();
 
-        for (int i = 0; i < count; i++) {
-            curr = l[i];
-            child = curr.getFinishedChild();
-            while (child != null) {
-                toPush.add(child);
-                child = child.getFinishedSibling();
-            }
-        }
-        return toPush;
+	for (int i = 0; i < count; i++) {
+	    curr = l[i];
+	    child = curr.getFinishedChild();
+	    while (child != null) {
+		toPush.add(child);
+		child = child.getFinishedSibling();
+	    }
+	}
+	return toPush;
     }
 
-    public ArrayList<ReturnRecord> peekFinishedJobs(){
-        
-        ArrayList<ReturnRecord> result = new ArrayList<ReturnRecord>();
-        InvocationRecord curr, child;
+    public ArrayList<ReturnRecord> peekFinishedJobs() {
 
-        for (int i = 0; i < count; i++){
-            curr = l[i];
-            child = curr.getFinishedChild();
-            while (child != null){
-                if (!child.checkpointed){
-                    ReturnRecord r = child.getReturnRecord();
-                    if (r != null) {
-                        result.add(r);
-                        child.checkpointed = true;
-                    }
-                }
-                child = child.getFinishedSibling();
-            }
-        }
-        return result;
+	ArrayList<ReturnRecord> result = new ArrayList<ReturnRecord>();
+	InvocationRecord curr, child;
+
+	for (int i = 0; i < count; i++) {
+	    curr = l[i];
+	    child = curr.getFinishedChild();
+	    while (child != null) {
+		if (!child.checkpointed) {
+		    ReturnRecord r = child.getReturnRecord();
+		    if (r != null) {
+			result.add(r);
+			child.checkpointed = true;
+		    }
+		}
+		child = child.getFinishedSibling();
+	    }
+	}
+	return result;
     }
-
 
     public void print(java.io.PrintStream out) {
-        out.println("=IRStack " + s.ident + ":=============");
-        for (int i = 0; i < count; i++) {
+	out.println("=IRStack " + s.ident + ":=============");
+	for (int i = 0; i < count; i++) {
 
-            out.println("stack [" + i + "] = " + l[i]);
-        }
-        out.println("=========end of IRStack:===========");
+	    out.println("stack [" + i + "] = " + l[i]);
+	}
+	out.println("=========end of IRStack:===========");
     }
 }

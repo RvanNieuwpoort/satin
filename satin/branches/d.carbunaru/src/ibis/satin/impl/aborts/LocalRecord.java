@@ -23,5 +23,5 @@ abstract public class LocalRecord {
      *            the invocation record describing this invocation.
      */
     abstract public void handleException(int spawnId, Throwable t,
-        InvocationRecord parent) throws Throwable;
+	    InvocationRecord parent) throws Throwable;
 }

@@ -11,20 +11,21 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 public abstract class LoadBalancingAlgorithm implements Config {
 
     protected final Satin satin;
-    
+
     protected ClientThread clientThread;
 
     protected LoadBalancingAlgorithm(Satin s) {
-        satin = s;
+	satin = s;
     }
-    
-    /**Daniela:
+
+    /**
+     * Daniela:
      * 
-     * @param ct 
+     * @param ct
      */
     protected LoadBalancingAlgorithm(ClientThread ct) {
-        clientThread = ct;
-        satin = ct.satin;
+	clientThread = ct;
+	satin = ct.satin;
     }
 
     /**
@@ -32,7 +33,7 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * implementation does nothing.
      */
     public void jobAdded() {
-        // do nothing
+	// do nothing
     }
 
     /**
@@ -48,8 +49,8 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * communication)
      */
     public void stealReplyHandler(InvocationRecord ir, IbisIdentifier sender,
-            int opcode) {
-        satin.lb.gotJobResult(ir, sender);
+	    int opcode) {
+	satin.lb.gotJobResult(ir, sender);
     }
 
     /**
@@ -58,59 +59,60 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * nothing.
      */
     public void exit() {
-        synchronized (satin) {
-            satin.notifyAll();
-        }
+	synchronized (satin) {
+	    satin.notifyAll();
+	}
     }
 
     public void handleCrash(IbisIdentifier ident) {
-        // by default, do nothing
+	// by default, do nothing
     }
 
     protected void throttle(long count) {
-        if (!THROTTLE_STEALS) {
-            return;
-        }
+	if (!THROTTLE_STEALS) {
+	    return;
+	}
 
-        int participants;
-        synchronized (satin) {
-            participants = satin.victims.size();
-        }
+	int participants;
+	synchronized (satin) {
+	    participants = satin.victims.size();
+	}
 
-        long time = 1;
-        long throttleSteps = count / participants;
-        
-        for (long i = 0; i < throttleSteps; i++) {
-            time *= 2;
-            if (time >= MAX_STEAL_THROTTLE) {
-                time = MAX_STEAL_THROTTLE;
-                break;
-            }
-        }
+	long time = 1;
+	long throttleSteps = count / participants;
 
-        if (time > 0) {
-            if (clientThread == null) {
-                satin.stats.stealThrottleTimer.start();
-            } else {
-                clientThread.stats.stealThrottleTimer.start();
-            }
+	for (long i = 0; i < throttleSteps; i++) {
+	    time *= 2;
+	    if (time >= MAX_STEAL_THROTTLE) {
+		time = MAX_STEAL_THROTTLE;
+		break;
+	    }
+	}
 
-            try {
-                Thread.sleep(time);
-            } catch (InterruptedException e) {
-                // ignore
-            } finally {
-                if (clientThread == null) {
-                    satin.stats.stealThrottleTimer.stop();
-                } else {
-                    clientThread.stats.stealThrottleTimer.stop();
-                }
-            }
-        }
+	if (time > 0) {
+	    if (clientThread == null) {
+		satin.stats.stealThrottleTimer.start();
+	    } else {
+		clientThread.stats.stealThrottleTimer.start();
+	    }
+
+	    try {
+		Thread.sleep(time);
+	    } catch (InterruptedException e) {
+		// ignore
+	    } finally {
+		if (clientThread == null) {
+		    satin.stats.stealThrottleTimer.stop();
+		} else {
+		    clientThread.stats.stealThrottleTimer.stop();
+		}
+	    }
+	}
     }
-    
-    //Daniela:
-    public void asyncJobResultWorkerThread(InvocationRecord ir, IbisIdentifier sender) {
-        //by default, do nothing
+
+    // Daniela:
+    public void asyncJobResultWorkerThread(InvocationRecord ir,
+	    IbisIdentifier sender) {
+	// by default, do nothing
     }
 }

@@ -23,7 +23,7 @@ public abstract class ReturnRecord implements java.io.Serializable {
     private int updatesSent;
 
     protected ReturnRecord(Throwable eek) {
-        this.eek = eek;
+	this.eek = eek;
     }
 
     /**
@@ -36,26 +36,26 @@ public abstract class ReturnRecord implements java.io.Serializable {
     public abstract void assignTo(InvocationRecord r);
 
     public void setStamp(Stamp stamp) {
-        this.stamp = stamp;
+	this.stamp = stamp;
     }
 
     public Stamp getStamp() {
-        return stamp;
+	return stamp;
     }
 
     public void setEek(Throwable eek) {
-        this.eek = eek;
+	this.eek = eek;
     }
 
     public Throwable getEek() {
-        return eek;
+	return eek;
     }
 
     protected void setUpdatesSent(int updatesSent) {
-        this.updatesSent = updatesSent;
+	this.updatesSent = updatesSent;
     }
 
     protected int getUpdatesSent() {
-        return updatesSent;
+	return updatesSent;
     }
 }
