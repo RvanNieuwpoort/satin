@@ -10,16 +10,15 @@ import java.util.ArrayList;
 
 import org.apache.bcel.generic.InstructionHandle;
 
-
 public class Naive implements Analyzer {
 
-
-    public InstructionHandle[] proposeSyncInsertion(SpawningMethod spawnableMethod, Debug d)
-	throws SyncInsertionProposalFailure {
-	ArrayList<SpawnableCall> spawnableCalls = 
-	    spawnableMethod.getSpawnableCalls();
-	InstructionHandle[] instructionHandles = 
-	    new InstructionHandle[spawnableCalls.size()];
+    public InstructionHandle[] proposeSyncInsertion(
+	    SpawningMethod spawnableMethod, Debug d)
+	    throws SyncInsertionProposalFailure {
+	ArrayList<SpawnableCall> spawnableCalls = spawnableMethod
+		.getSpawnableCalls();
+	InstructionHandle[] instructionHandles = new InstructionHandle[spawnableCalls
+		.size()];
 
 	for (int i = 0; i < spawnableCalls.size(); i++) {
 	    SpawnableCall call = spawnableCalls.get(i);
