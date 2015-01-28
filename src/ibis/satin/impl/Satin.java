@@ -241,6 +241,12 @@ public final class Satin implements Config {
 	    }
 	}
 
+	if (STATS) {
+	    // add my own stats
+	    stats.fillInStats();
+	    totalStats.add(stats);
+	}
+
 	if (STATS && DETAILED_STATS) {
 	    totalStats.printDetailedStats(ident);
 	    try {
@@ -281,15 +287,8 @@ public final class Satin implements Config {
 	    size = victims.size() + 1;
 	}
 
-	if (STATS) {
-	    // add my own stats
-	    stats.fillInStats();
-	    System.out.println("Adding master statistics");
-	    totalStats.add(stats);
-
-	    if (master) {
-		totalStats.printStats(size, stats.totalTimer.totalTimeVal());
-	    }
+	if (STATS && master) {
+	    totalStats.printStats(size, stats.totalTimer.totalTimeVal());
 	}
 
 	so.exit();
@@ -516,8 +515,9 @@ public final class Satin implements Config {
     /**
      * Daniela: steal from the same machine. Thread-safe.
      * 
-     * @param t
-     * @return
+     * @param stealingThreadId
+     *            id of a stealing thread.
+     * @return stolen invocation record, or null.
      */
     public InvocationRecord returnSharedMemoryJob(int stealingThreadId) {
 	InvocationRecord ir = null;

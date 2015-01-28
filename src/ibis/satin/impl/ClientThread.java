@@ -109,9 +109,6 @@ public class ClientThread extends Thread implements Config {
 
 	stats.fillInStats();
 	// stats.myThreadStatistics(id);
-
-	System.out
-		.println("Client thread " + id + ": run(): adding statistics");
 	satin.totalStats.add(stats);
 
 	synchronized (satin.waitForThreads) {

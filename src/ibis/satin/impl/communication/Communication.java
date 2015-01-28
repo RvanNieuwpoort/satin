@@ -401,11 +401,8 @@ public final class Communication implements Config, Protocol {
 	int size;
 	synchronized (s) {
 	    size = s.victims.size();
-	}
 
-	// wait until everybody has send an ACK
-	synchronized (s) {
-
+	    // wait until everybody has send an ACK
 	    while (exitReplies != size && System.currentTimeMillis() < deadline) {
 		try {
 		    s.handleDelayedMessages();
@@ -413,7 +410,7 @@ public final class Communication implements Config, Protocol {
 		} catch (Exception e) {
 		    // Ignore.
 		}
-		size = s.victims.size() - 1;
+		size = s.victims.size(); // In case nodes die.
 	    }
 	}
     }
@@ -438,7 +435,6 @@ public final class Communication implements Config, Protocol {
 	    if (STATS) {
 		// s.stats.fillInStats();
 		// writeMessage.writeObject(s.stats);
-		System.out.println("Sending statistics to master");
 		writeMessage.writeObject(s.totalStats);
 	    }
 	    v.finish(writeMessage);
@@ -555,8 +551,6 @@ public final class Communication implements Config, Protocol {
 	if (STATS) {
 	    try {
 		Statistics stats = (Statistics) m.readObject();
-		System.out.println("Adding statistics from "
-			+ ident.ibisIdentifier());
 		s.totalStats.add(stats);
 	    } catch (Exception e) {
 		commLogger.warn("SATIN '" + s.ident
