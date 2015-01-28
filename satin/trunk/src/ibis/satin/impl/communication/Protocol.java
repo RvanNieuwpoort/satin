@@ -62,27 +62,26 @@ public interface Protocol {
     static final byte EXIT_STAGE2 = 31;
 
     static final byte BARRIER_REQUEST = 32;
-    
+
     static final byte GRT_UPDATE = 33;
-    
+
     static final byte PAUSE = 34;
 
     static final byte RESUME = 35;
-    
+
     // Checkpointing.
     static final byte CHECKPOINT_REQUEST = 36;
-    
-    static final byte CHECKPOINT = 37;
-    
-    static final byte CHECKPOINT_INFO = 38;
-    
-    static final byte FILE_WRITE_TIME = 39;
-    
-    static final byte COORDINATOR_INFO = 40;
-    
-    static final byte FILE_WRITE_TIME_REQ = 41;
-    
-    //static final byte COORDINATOR_INFO_REQ = 42;
 
-    
+    static final byte CHECKPOINT = 37;
+
+    static final byte CHECKPOINT_INFO = 38;
+
+    static final byte FILE_WRITE_TIME = 39;
+
+    static final byte COORDINATOR_INFO = 40;
+
+    static final byte FILE_WRITE_TIME_REQ = 41;
+
+    // static final byte COORDINATOR_INFO_REQ = 42;
+
 }

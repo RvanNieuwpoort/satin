@@ -5,7 +5,7 @@
     doen de operatie daarna van de tijdelijke kopie naar de originele file, 
     zodat de checkpointFile ongewijzigd blijft
   - init zorgt dat uiteindelijk de originele checkpointfile gebruikt wordt
-*/
+ */
 package ibis.satin.impl.checkPointing;
 
 import ibis.ipl.IbisIdentifier;
@@ -37,23 +37,23 @@ public class CheckpointFile {
     private long maxFileSize = 0;
     private boolean stopWriting = true;
 
-    public CheckpointFile(String filename){
+    public CheckpointFile(String filename) {
 	this(filename, 0);
     }
 
-    public CheckpointFile(String filename, long maxFileSize){
+    public CheckpointFile(String filename, long maxFileSize) {
 	this.filename = filename;
 	this.maxFileSize = maxFileSize;
     }
 
     // when a global result table is passed, this function will insert
     // the results into the grt, and return the number of read checkpoints
-    public int init(GlobalResultTable grt){
+    public int init(GlobalResultTable grt) {
 	GATContext context = new GATContext();
 	try {
 	    File f = GAT.createFile(context, new URI(filename));
-	    if (f.exists()){
-		if (maxFileSize > 0 && f.length() > maxFileSize){
+	    if (f.exists()) {
+		if (maxFileSize > 0 && f.length() > maxFileSize) {
 		    restore(filename, filename + "_TMP", grt);
 		    compress(filename + "_TMP", filename);
 		    delete(filename + "_TMP");
@@ -65,7 +65,7 @@ public class CheckpointFile {
 	    } else {
 		open(filename);
 	    }
-	} catch (Exception e){
+	} catch (Exception e) {
 	    System.out.println("init calling fatal");
 	    fatal(e);
 	    return checkpoints.size();
@@ -75,45 +75,44 @@ public class CheckpointFile {
     }
 
     /**
-     *  Writes newCheckpoints to the checkpointFile and checks the filesize
-     *  of the checkpointfile for compression afterwards. Every exception
-     *  is fatal and results in no write-possibilities in the future 
-     *  whatsoever
+     * Writes newCheckpoints to the checkpointFile and checks the filesize of
+     * the checkpointfile for compression afterwards. Every exception is fatal
+     * and results in no write-possibilities in the future whatsoever
      **/
-    public void write(ArrayList<Checkpoint> newCheckpoints){
-	if (stopWriting){
+    public void write(ArrayList<Checkpoint> newCheckpoints) {
+	if (stopWriting) {
 	    return;
 	}
-	if (fileStream == null || fileWriter == null){
+	if (fileStream == null || fileWriter == null) {
 	    return;
 	}
 
 	try {
-	    while(newCheckpoints.size() > 0){	
+	    while (newCheckpoints.size() > 0) {
 		Checkpoint cp = newCheckpoints.remove(0);
 		fileWriter.writeObject(cp);
-                if (cp == null) {
-                    System.out.println("OOPS2: cp = null");
-                } else if (cp.rr == null) {
-                    System.out.println("OOPS3: cp.rr = null");
-                }
+		if (cp == null) {
+		    System.out.println("OOPS2: cp = null");
+		} else if (cp.rr == null) {
+		    System.out.println("OOPS3: cp.rr = null");
+		}
 		checkpoints.add(cp.rr.getStamp());
 	    }
-	} catch (IOException e){
+	} catch (IOException e) {
 	    System.out.println("iox while writing checkpoints: " + e);
-	} 
+	}
 	try {
 	    GATContext context = new GATContext();
-	    if (maxFileSize > 0 && GAT.createFile(context, 
-		new URI(filename)).length() > maxFileSize){
+	    if (maxFileSize > 0
+		    && GAT.createFile(context, new URI(filename)).length() > maxFileSize) {
 		compress();
-		if (GAT.createFile(context, new URI(filename)).length() > 
-		    maxFileSize){
-		    System.out.println("compression resulted in too big file. Checkpointing aborted");
+		if (GAT.createFile(context, new URI(filename)).length() > maxFileSize) {
+		    System.out
+			    .println("compression resulted in too big file. Checkpointing aborted");
 		    stopWriting = true;
 		}
 	    }
-	} catch (Exception e){
+	} catch (Exception e) {
 	    System.out.println("write calling fatal");
 	    fatal(e);
 	}
@@ -121,48 +120,48 @@ public class CheckpointFile {
 
     /**
      * Retrieves all the checkpoints which belonged to 'id' from the
-     * checkpoint-file and stores them in 'grt'.
-     * if id == null, all checkpoints belonging to any node will be stored
-     * in 'grt.'
-     */    
+     * checkpoint-file and stores them in 'grt'. if id == null, all checkpoints
+     * belonging to any node will be stored in 'grt.'
+     */
     public int read(Set<IbisIdentifier> id, GlobalResultTable grt) {
-        int result = 0;
+	int result = 0;
 	FileInputStream tempInputFile = null;
 	ObjectInputStream tempReader = null;
-        try {
-            GATContext context = new GATContext();
-            tempInputFile = GAT.createFileInputStream(context,
-			    new URI(filename));     
+	try {
+	    GATContext context = new GATContext();
+	    tempInputFile = GAT.createFileInputStream(context,
+		    new URI(filename));
 	    tempReader = new ObjectInputStream(tempInputFile);
 
-            while (tempInputFile.available() > 0){
-                Checkpoint cp = (Checkpoint) tempReader.readObject();
-                if (id == null || id.contains(cp.sender)) {
-                    ReturnRecord record = cp.rr;
-                    synchronized(grt.s) {
-                        grt.storeResult(record);
-                    }
-                    result++;
-                }
-            }
-        } catch (Exception e){
-            System.out.println("[CheckpointFile|read] exception: " + e);
-        }
+	    while (tempInputFile.available() > 0) {
+		Checkpoint cp = (Checkpoint) tempReader.readObject();
+		if (id == null || id.contains(cp.sender)) {
+		    ReturnRecord record = cp.rr;
+		    synchronized (grt.s) {
+			grt.storeResult(record);
+		    }
+		    result++;
+		}
+	    }
+	} catch (Exception e) {
+	    System.out.println("[CheckpointFile|read] exception: " + e);
+	}
 
 	try {
-            tempInputFile.close();
-            tempReader.close();
-	} catch (Exception e){}
-	
+	    tempInputFile.close();
+	    tempReader.close();
+	} catch (Exception e) {
+	}
+
 	return result;
     }
 
     /**
-     * Tries to compress the checkpointfile. Every exception is fatal 
-     * and results in no write-possibilities in the future whatsoever
+     * Tries to compress the checkpointfile. Every exception is fatal and
+     * results in no write-possibilities in the future whatsoever
      **/
-    public void compress(){
-	if (fileStream == null || fileWriter == null){
+    public void compress() {
+	if (fileStream == null || fileWriter == null) {
 	    return;
 	}
 
@@ -171,18 +170,18 @@ public class CheckpointFile {
 	    move(filename, filename + "_TMP");
 	    compress(filename + "_TMP", filename);
 	    delete(filename + "_TMP");
-	} catch (Exception e){
+	} catch (Exception e) {
 	    System.out.println("compress calling fatal");
 	    fatal(e);
 	}
     }
 
     /**
-     * Tries to restore the old checkpointFile. Every Exception is fatal
-     * and leads to no write-possibiliets in the future whatsoever
+     * Tries to restore the old checkpointFile. Every Exception is fatal and
+     * leads to no write-possibiliets in the future whatsoever
      **/
-    public void restore(GlobalResultTable grt){
-	if (fileStream == null || fileWriter == null){
+    public void restore(GlobalResultTable grt) {
+	if (fileStream == null || fileWriter == null) {
 	    return;
 	}
 	try {
@@ -190,33 +189,33 @@ public class CheckpointFile {
 	    move(filename, filename + "_TMP");
 	    restore(filename + "_TMP", filename, grt);
 	    delete(filename + "_TMP");
-	} catch (Exception e){
+	} catch (Exception e) {
 	    System.out.println("restore calling fatal");
 	    fatal(e);
 	}
     }
 
     /**
-     * First finds all the checkpoints which don't have any parents which
-     * are also available, and copies only these checkpoints to dest.
+     * First finds all the checkpoints which don't have any parents which are
+     * also available, and copies only these checkpoints to dest.
      **/
-    private void compress(String source, String dest) throws Exception{
-	// find out  which checkpoints are needed
+    private void compress(String source, String dest) throws Exception {
+	// find out which checkpoints are needed
 
 	int i = 0;
 	while (i < checkpoints.size()) {
 	    int j = i + 1;
 	    Stamp stamp1 = checkpoints.get(i);
 	    if (stamp1 == null) {
-	        checkpoints.remove(i);
-	        continue;
+		checkpoints.remove(i);
+		continue;
 	    }
 	    while (j < checkpoints.size()) {
 		Stamp stamp2 = checkpoints.get(j);
 		// stamp2 can be removed if it is null, equal to stamp1,
 		// or a descendent of stamp1.
 		if (stamp2 == null || stamp2.equals(stamp1)
-		        || stamp2.isDescendentOf(stamp1)) {
+			|| stamp2.isDescendentOf(stamp1)) {
 		    checkpoints.remove(j);
 		    continue;
 		}
@@ -231,21 +230,21 @@ public class CheckpointFile {
 	    i++;
 	}
 	// write these checkpoints to the file 'dest'
-	FileOutputStream tempOutputFile = null;;
+	FileOutputStream tempOutputFile = null;
+	;
 	ObjectOutputStream tempWriter = null;
 	FileInputStream tempInputFile = null;
 	ObjectInputStream tempReader = null;
 
 	GATContext context = new GATContext();
-	tempOutputFile = GAT.createFileOutputStream(context, 
-						    new URI(dest), false);
+	tempOutputFile = GAT.createFileOutputStream(context, new URI(dest),
+		false);
 	tempWriter = new ObjectOutputStream(tempOutputFile);
-	tempInputFile = GAT.createFileInputStream(context, 
-						  new URI(source));
+	tempInputFile = GAT.createFileInputStream(context, new URI(source));
 	tempReader = new ObjectInputStream(tempInputFile);
-	
+
 	i = 0;
-	while (tempInputFile.available() > 0){
+	while (tempInputFile.available() > 0) {
 	    Checkpoint cp = (Checkpoint) tempReader.readObject();
 	    if (cp.rr.getStamp().stampEquals(checkpoints.get(i))) {
 		tempWriter.writeObject(cp);
@@ -258,7 +257,8 @@ public class CheckpointFile {
 	    fileWriter.close();
 	    tempInputFile.close();
 	    tempReader.close();
-	} catch (Exception e){}
+	} catch (Exception e) {
+	}
 
 	// make 'dest' the checkpointFile
 	fileStream = tempOutputFile;
@@ -266,64 +266,64 @@ public class CheckpointFile {
     }
 
     /**
-     * Copies all the objects from the old checkpointfile to the new copy
-     * until a StreamCorruptedException occurs. Everything that was
-     * written after this points is lost.
+     * Copies all the objects from the old checkpointfile to the new copy until
+     * a StreamCorruptedException occurs. Everything that was written after this
+     * points is lost.
      **/
-    private void restore(String source, String dest, GlobalResultTable grt) 
-	throws Exception{
+    private void restore(String source, String dest, GlobalResultTable grt)
+	    throws Exception {
 	FileOutputStream tempOutputFile = null;
 	ObjectOutputStream tempWriter = null;
 	FileInputStream tempInputFile = null;
 	ObjectInputStream tempReader = null;
 	try {
 	    GATContext context = new GATContext();
-            tempOutputFile = GAT.createFileOutputStream(context, 
-							new URI(dest), false);
-            tempWriter = new ObjectOutputStream(tempOutputFile);
-            tempInputFile = GAT.createFileInputStream(context,
-						      new URI(source));
-            tempReader = new ObjectInputStream(tempInputFile);
+	    tempOutputFile = GAT.createFileOutputStream(context, new URI(dest),
+		    false);
+	    tempWriter = new ObjectOutputStream(tempOutputFile);
+	    tempInputFile = GAT.createFileInputStream(context, new URI(source));
+	    tempReader = new ObjectInputStream(tempInputFile);
 
-            checkpoints = new ArrayList<Stamp>();
+	    checkpoints = new ArrayList<Stamp>();
 
 	    while (tempInputFile.available() > 0) {
 
 		Checkpoint cp = (Checkpoint) tempReader.readObject();
 		tempWriter.writeObject(cp);
 		tempWriter.flush();
-		if (grt != null){
-                    synchronized(grt.s) {
-                        grt.storeResult(cp.rr);
-                    }
+		if (grt != null) {
+		    synchronized (grt.s) {
+			grt.storeResult(cp.rr);
+		    }
 		    // propagate updates after every 1000 updates
 		    try {
-			if (checkpoints.size() % 1000 == 999){
+			if (checkpoints.size() % 1000 == 999) {
 			    long begin = System.currentTimeMillis();
 			    grt.sendUpdates();
 			    long end = System.currentTimeMillis();
-			    System.out.println("update took " + (end - begin) +
-					       " ms");
+			    System.out.println("update took " + (end - begin)
+				    + " ms");
 			}
-		    } catch (Exception e){
+		    } catch (Exception e) {
 			// nullpointerException if !GRT_MESSAGE_COMBINING
 		    }
 		}
 		checkpoints.add(cp.rr.getStamp());
 	    }
-	} catch (StreamCorruptedException e){
-	    System.out.println("restored " + checkpoints.size() + 
-			       " from a corrupted checkpoint file");
-	} catch (EOFException e){
-	    System.out.println("restored " + checkpoints.size() + 
-			       " from a corrupted checkpoint file");
+	} catch (StreamCorruptedException e) {
+	    System.out.println("restored " + checkpoints.size()
+		    + " from a corrupted checkpoint file");
+	} catch (EOFException e) {
+	    System.out.println("restored " + checkpoints.size()
+		    + " from a corrupted checkpoint file");
 	}
 	try {
 	    fileStream.close();
 	    fileWriter.close();
 	    tempInputFile.close();
 	    tempReader.close();
-	} catch (Exception e){}
+	} catch (Exception e) {
+	}
 
 	fileStream = tempOutputFile;
 	fileWriter = tempWriter;
@@ -332,17 +332,18 @@ public class CheckpointFile {
     /**
      * Tries to delete the file filename
      **/
-    private void delete(String filename){
+    private void delete(String filename) {
 	try {
 	    GATContext context = new GATContext();
 	    GAT.createFile(context, new URI(filename)).delete();
-	} catch (Exception e){}
+	} catch (Exception e) {
+	}
     }
 
     /**
      * Moves the file source to dest
      **/
-    private void move(String source, String dest) throws Exception{
+    private void move(String source, String dest) throws Exception {
 	GATContext context = new GATContext();
 	GAT.createFile(context, new URI(source)).move(new URI(dest));
     }
@@ -351,22 +352,22 @@ public class CheckpointFile {
      * Tries to open filename, so that it will be used for future
      * write-operations
      **/
-    private void open(String filename) throws Exception{
+    private void open(String filename) throws Exception {
 	GATContext context = new GATContext();
-	fileStream = GAT.createFileOutputStream(context, new URI(filename), 
-						false);
+	fileStream = GAT.createFileOutputStream(context, new URI(filename),
+		false);
 	fileWriter = new ObjectOutputStream(fileStream);
     }
 
     /**
-     * Prints Exception e, closes all streams and deletes all temporary
-     * files. Cosequently, all future write-operations will fail.
-     * The read-operations might still succeed if fatal wasn't called
-     * on a moment the original file (i.e. filename) didn't exist
+     * Prints Exception e, closes all streams and deletes all temporary files.
+     * Cosequently, all future write-operations will fail. The read-operations
+     * might still succeed if fatal wasn't called on a moment the original file
+     * (i.e. filename) didn't exist
      **/
-    private void fatal(Exception e){
+    private void fatal(Exception e) {
 	System.out.println("CheckpointFile: Fatal Exception: " + e);
-        e.printStackTrace(System.out);
+	e.printStackTrace(System.out);
 	close();
 	delete(filename + "_TMP");
 	fileStream = null;
@@ -374,10 +375,11 @@ public class CheckpointFile {
 	stopWriting = true;
     }
 
-    public void close(){
+    public void close() {
 	try {
 	    fileWriter.close();
 	    fileStream.close();
-	} catch (Exception e){}
+	} catch (Exception e) {
+	}
     }
 }

@@ -7,14 +7,14 @@ class DumpThread extends Thread {
     private Satin satin;
 
     DumpThread(Satin satin) {
-        super("Satin dump thread");
-        this.satin = satin;
+	super("Satin dump thread");
+	this.satin = satin;
     }
 
     public void run() {
-        satin.q.print(System.err);
-        satin.onStack.print(System.err);
-        satin.outstandingJobs.print(System.err);
-        satin.ft.print(System.err);
+	satin.q.print(System.err);
+	satin.onStack.print(System.err);
+	satin.outstandingJobs.print(System.err);
+	satin.ft.print(System.err);
     }
 }
