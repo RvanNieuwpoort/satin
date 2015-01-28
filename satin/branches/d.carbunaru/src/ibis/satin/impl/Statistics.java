@@ -568,7 +568,7 @@ public final class Statistics implements java.io.Serializable, Config {
 	double lbTime = (stealTime + throttleStealTime
 		- invocationRecordReadTime - invocationRecordWriteTime
 		- returnRecordReadTime - returnRecordWriteTime)
-		/ size;
+		/ (size * NO_THREADS);
 	if (lbTime < 0.0) {
 	    lbTime = 0.0;
 	}
@@ -626,7 +626,8 @@ public final class Statistics implements java.io.Serializable, Config {
 		/ size;
 	double broadcastSOInvocationsPerc = broadcastSOInvocationsTimeAvg
 		/ totalTime * 100;
-	double handleSOInvocationsTimeAvg = handleSOInvocationsTime / size;
+	double handleSOInvocationsTimeAvg = handleSOInvocationsTime
+		/ (size * NO_THREADS);
 	double handleSOInvocationsPerc = handleSOInvocationsTimeAvg / totalTime
 		* 100;
 	double soInvocationDeserializationTimeAvg = soInvocationDeserializationTime
@@ -650,7 +651,7 @@ public final class Statistics implements java.io.Serializable, Config {
 		/ size;
 	double soBcastDeserializationPerc = soBcastDeserializationTimeAvg
 		/ totalTime * 100;
-	double soGuardTimeAvg = soGuardTime / size;
+	double soGuardTimeAvg = soGuardTime / (size * NO_THREADS);
 	double soGuardPerc = soGuardTimeAvg / totalTime * 100;
 
 	double totalOverheadAvg = abortTimeAvg + tableUpdateTimeAvg
