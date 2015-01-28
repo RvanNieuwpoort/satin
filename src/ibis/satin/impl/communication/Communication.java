@@ -401,10 +401,8 @@ public final class Communication implements Config, Protocol {
 	int size;
 	synchronized (s) {
 	    size = s.victims.size();
-	}
 
-	// wait until everybody has send an ACK
-	synchronized (s) {
+	    // wait until everybody has send an ACK
 	    while (exitReplies != size && System.currentTimeMillis() < deadline) {
 		try {
 		    s.handleDelayedMessages();
@@ -412,7 +410,7 @@ public final class Communication implements Config, Protocol {
 		} catch (Exception e) {
 		    // Ignore.
 		}
-		// size = s.victims.size(); ?????
+		size = s.victims.size(); // In case nodes die.
 	    }
 	}
     }
