@@ -555,8 +555,13 @@ public final class Satinc extends IbiscComponent {
         return returnRecordName(m, clnam, null);
     }
 
+    int getMaxLocals(MethodGen m) {
+        // BCEL problem in case the last local is a long/double? --Ceriel
+        return m.getMaxLocals() + 1;
+    }
+
     void insertAllDeleteLocalRecords(MethodGen m) {
-        int maxLocals = m.getMaxLocals();
+        int maxLocals = getMaxLocals(m);
         InstructionList il = m.getInstructionList();
 
         for (InstructionHandle i = il.getStart(); i != null; i = i.getNext()) {
@@ -1163,7 +1168,7 @@ public final class Satinc extends IbiscComponent {
             if (in instanceof LocalVariableInstruction) {
                 LocalVariableInstruction curr = (LocalVariableInstruction) in;
                 if (mtab.getLocal(m, curr, ins[i].getPosition()) != null
-                    && curr.getIndex() < m.getMaxLocals() - 5
+                    && curr.getIndex() < getMaxLocals(m) - 5
                     && !mtab.isLocalUsedInInlet(mOrig, curr.getIndex())) {
                     if (curr instanceof IINC) {
                         ins[i].setInstruction(new NOP());
@@ -1312,7 +1317,7 @@ public final class Satinc extends IbiscComponent {
         clearIdTable();
 
         InstructionList il = m.getInstructionList();
-        int maxLocals = m.getMaxLocals();
+        int maxLocals = getMaxLocals(m);
         InstructionHandle insertAllocPos = null;
         InstructionHandle[] ih = il.getInstructionHandles();
 
@@ -1613,7 +1618,7 @@ public final class Satinc extends IbiscComponent {
         startLocalPos = startLocalPos.getNext();
 
         // Save record
-        startLocalPos.setInstruction(new ASTORE(m.getMaxLocals() - 5
+        startLocalPos.setInstruction(new ASTORE(getMaxLocals(m) - 5
             + localsShift));
         startLocalPos = startLocalPos.getNext();
 
@@ -1681,7 +1686,7 @@ public final class Satinc extends IbiscComponent {
         String localClassName = localRecordName(m);
         Type local_record_type = new ObjectType(localClassName);
         InstructionList il = m.getInstructionList();
-        int maxLocals = m.getMaxLocals();
+        int maxLocals = getMaxLocals(m);
 
         if (verbose) {
             System.out.println("maxLocals = " + maxLocals);
@@ -1832,7 +1837,7 @@ public final class Satinc extends IbiscComponent {
                 continue;
             }
 
-            int maxLocals = mg.getMaxLocals();
+            int maxLocals = getMaxLocals(mg);
 
             for (InstructionHandle i = il.getStart(); i != null; i = i
                 .getNext()) {
