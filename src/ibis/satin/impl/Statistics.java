@@ -6,7 +6,7 @@ import ibis.ipl.IbisIdentifier;
 import ibis.util.Timer;
 
 public final class Statistics implements java.io.Serializable, Config {
-    /** 
+    /**
      * Generated
      */
     private static final long serialVersionUID = 7954856934035669311L;
@@ -77,7 +77,7 @@ public final class Statistics implements java.io.Serializable, Config {
 
     public long returnRecordBytes;
 
-    //fault tolerance
+    // fault tolerance
     public long tableResultUpdates;
 
     public long tableLockUpdates;
@@ -116,22 +116,22 @@ public final class Statistics implements java.io.Serializable, Config {
 
     // Checkpointing.
     public double requestCheckpointTime;
-    
+
     public double makeCheckpointTime;
-    
+
     public double receiveCheckpointTime;
-    
+
     public double writeCheckpointTime;
-    
+
     public double useCheckpointTime;
-    
+
     public double totalCheckpointTime;
-    
+
     public double createCoordinatorTime;
-    
+
     public int numCheckpointsTaken;
 
-    //shared objects
+    // shared objects
     public long soInvocations;
 
     public long soInvocationsBytes;
@@ -163,7 +163,7 @@ public final class Statistics implements java.io.Serializable, Config {
     public double soGuardTime;
 
     public long soGuards;
-    
+
     public long soRealMessageCount;
 
     public long soBcasts;
@@ -212,15 +212,15 @@ public final class Statistics implements java.io.Serializable, Config {
 
     // Checkpointing.
     public Timer requestCheckpointTimer = Timer.createTimer();
-    
+
     public Timer makeCheckpointTimer = Timer.createTimer();
-    
+
     public Timer receiveCheckpointTimer = Timer.createTimer();
-    
+
     public Timer writeCheckpointTimer = Timer.createTimer();
-    
+
     public Timer useCheckpointTimer = Timer.createTimer();
-    
+
     public Timer createCoordinatorTimer = Timer.createTimer();
     // end Checkpointing.
 
@@ -249,674 +249,677 @@ public final class Statistics implements java.io.Serializable, Config {
     public Timer stealThrottleTimer = Timer.createTimer();
 
     public void add(Statistics s) {
-        spawns += s.spawns;
-        jobsExecuted += s.jobsExecuted;
-        syncs += s.syncs;
-        abortsDone += s.abortsDone;
-        abortMessages += s.abortMessages;
-        abortedJobs += s.abortedJobs;
+	spawns += s.spawns;
+	jobsExecuted += s.jobsExecuted;
+	syncs += s.syncs;
+	abortsDone += s.abortsDone;
+	abortMessages += s.abortMessages;
+	abortedJobs += s.abortedJobs;
 
-        stealAttempts += s.stealAttempts;
-        stealSuccess += s.stealSuccess;
-        asyncStealAttempts += s.asyncStealAttempts;
-        asyncStealSuccess += s.asyncStealSuccess;
-        stolenJobs += s.stolenJobs;
-        stealRequests += s.stealRequests;
-        interClusterMessages += s.interClusterMessages;
-        intraClusterMessages += s.intraClusterMessages;
-        interClusterBytes += s.interClusterBytes;
-        intraClusterBytes += s.intraClusterBytes;
+	stealAttempts += s.stealAttempts;
+	stealSuccess += s.stealSuccess;
+	asyncStealAttempts += s.asyncStealAttempts;
+	asyncStealSuccess += s.asyncStealSuccess;
+	stolenJobs += s.stolenJobs;
+	stealRequests += s.stealRequests;
+	interClusterMessages += s.interClusterMessages;
+	intraClusterMessages += s.intraClusterMessages;
+	interClusterBytes += s.interClusterBytes;
+	intraClusterBytes += s.intraClusterBytes;
 
-        stealTime += s.stealTime;
-        throttleStealTime += s.throttleStealTime;
-        stealThrottles+= s.stealThrottles;
-        
-        handleStealTime += s.handleStealTime;
-        abortTime += s.abortTime;
-        idleTime += s.idleTime;
-        idleCount += s.idleCount;
-        pollCount += s.pollCount;
-        invocationRecordWriteTime += s.invocationRecordWriteTime;
-        invocationRecordWriteCount += s.invocationRecordWriteCount;
-        invocationRecordReadTime += s.invocationRecordReadTime;
-        invocationRecordReadCount += s.invocationRecordReadCount;
-        returnRecordWriteTime += s.returnRecordWriteTime;
-        returnRecordWriteCount += s.returnRecordWriteCount;
-        returnRecordReadTime += s.returnRecordReadTime;
-        returnRecordReadCount += s.returnRecordReadCount;
-        returnRecordBytes += s.returnRecordBytes;
+	stealTime += s.stealTime;
+	throttleStealTime += s.throttleStealTime;
+	stealThrottles += s.stealThrottles;
 
-        //fault tolerance
-        tableResultUpdates += s.tableResultUpdates;
-        tableLockUpdates += s.tableLockUpdates;
-        tableUpdateMessages += s.tableUpdateMessages;
-        tableLookups += s.tableLookups;
-        tableSuccessfulLookups += s.tableSuccessfulLookups;
-        tableRemoteLookups += s.tableRemoteLookups;
-        killedOrphans += s.killedOrphans;
-        restartedJobs += s.restartedJobs;
+	handleStealTime += s.handleStealTime;
+	abortTime += s.abortTime;
+	idleTime += s.idleTime;
+	idleCount += s.idleCount;
+	pollCount += s.pollCount;
+	invocationRecordWriteTime += s.invocationRecordWriteTime;
+	invocationRecordWriteCount += s.invocationRecordWriteCount;
+	invocationRecordReadTime += s.invocationRecordReadTime;
+	invocationRecordReadCount += s.invocationRecordReadCount;
+	returnRecordWriteTime += s.returnRecordWriteTime;
+	returnRecordWriteCount += s.returnRecordWriteCount;
+	returnRecordReadTime += s.returnRecordReadTime;
+	returnRecordReadCount += s.returnRecordReadCount;
+	returnRecordBytes += s.returnRecordBytes;
 
-        tableLookupTime += s.tableLookupTime;
-        tableUpdateTime += s.tableUpdateTime;
-        tableHandleUpdateTime += s.tableHandleUpdateTime;
-        tableHandleLookupTime += s.tableHandleLookupTime;
-        tableSerializationTime += s.tableSerializationTime;
-        tableDeserializationTime += s.tableDeserializationTime;
-        tableCheckTime += s.tableCheckTime;
-        tableMaxEntries += s.tableMaxEntries;
-        crashHandlingTime += s.crashHandlingTime;
-        numCrashesHandled += s.numCrashesHandled;
+	// fault tolerance
+	tableResultUpdates += s.tableResultUpdates;
+	tableLockUpdates += s.tableLockUpdates;
+	tableUpdateMessages += s.tableUpdateMessages;
+	tableLookups += s.tableLookups;
+	tableSuccessfulLookups += s.tableSuccessfulLookups;
+	tableRemoteLookups += s.tableRemoteLookups;
+	killedOrphans += s.killedOrphans;
+	restartedJobs += s.restartedJobs;
 
-        // Checkpointing.
-        requestCheckpointTime += s.requestCheckpointTime;
-        makeCheckpointTime += s.makeCheckpointTime;
-        receiveCheckpointTime += s.receiveCheckpointTime;
-        writeCheckpointTime += s.writeCheckpointTime;
-        useCheckpointTime += s.useCheckpointTime;
-        createCoordinatorTime += s.createCoordinatorTime;
-        totalCheckpointTime += (s.requestCheckpointTime + s.makeCheckpointTime + s.writeCheckpointTime + s.useCheckpointTime + s.receiveCheckpointTime + s.createCoordinatorTime);
-        numCheckpointsTaken += s.numCheckpointsTaken;
+	tableLookupTime += s.tableLookupTime;
+	tableUpdateTime += s.tableUpdateTime;
+	tableHandleUpdateTime += s.tableHandleUpdateTime;
+	tableHandleLookupTime += s.tableHandleLookupTime;
+	tableSerializationTime += s.tableSerializationTime;
+	tableDeserializationTime += s.tableDeserializationTime;
+	tableCheckTime += s.tableCheckTime;
+	tableMaxEntries += s.tableMaxEntries;
+	crashHandlingTime += s.crashHandlingTime;
+	numCrashesHandled += s.numCrashesHandled;
 
-        //shared objects
-        soInvocations += s.soInvocations;
-        soInvocationsBytes += s.soInvocationsBytes;
-        soTransfers += s.soTransfers;
-        soTransfersBytes += s.soTransfersBytes;
-        broadcastSOInvocationsTime += s.broadcastSOInvocationsTime;
-        handleSOInvocationsTime += s.handleSOInvocationsTime;
-        handleSOInvocations += s.handleSOInvocations;
-        getSOReferencesTime += s.getSOReferencesTime;
-        getSOReferences += s.getSOReferences;
-        soInvocationDeserializationTime += s.soInvocationDeserializationTime;
-        soTransferTime += s.soTransferTime;
-        soSerializationTime += s.soSerializationTime;
-        soDeserializationTime += s.soDeserializationTime;
-        soBcastTime += s.soBcastTime;
-        soBcastSerializationTime += s.soBcastSerializationTime;
-        soBcastDeserializationTime += s.soBcastDeserializationTime;
-        soRealMessageCount += s.soRealMessageCount;
-        soBcasts += s.soBcasts;
-        soBcastBytes += s.soBcastBytes;
-        soGuards += s.soGuards;
-        soGuardTime += s.soGuardTime;
+	// Checkpointing.
+	requestCheckpointTime += s.requestCheckpointTime;
+	makeCheckpointTime += s.makeCheckpointTime;
+	receiveCheckpointTime += s.receiveCheckpointTime;
+	writeCheckpointTime += s.writeCheckpointTime;
+	useCheckpointTime += s.useCheckpointTime;
+	createCoordinatorTime += s.createCoordinatorTime;
+	totalCheckpointTime += (s.requestCheckpointTime + s.makeCheckpointTime
+		+ s.writeCheckpointTime + s.useCheckpointTime
+		+ s.receiveCheckpointTime + s.createCoordinatorTime);
+	numCheckpointsTaken += s.numCheckpointsTaken;
+
+	// shared objects
+	soInvocations += s.soInvocations;
+	soInvocationsBytes += s.soInvocationsBytes;
+	soTransfers += s.soTransfers;
+	soTransfersBytes += s.soTransfersBytes;
+	broadcastSOInvocationsTime += s.broadcastSOInvocationsTime;
+	handleSOInvocationsTime += s.handleSOInvocationsTime;
+	handleSOInvocations += s.handleSOInvocations;
+	getSOReferencesTime += s.getSOReferencesTime;
+	getSOReferences += s.getSOReferences;
+	soInvocationDeserializationTime += s.soInvocationDeserializationTime;
+	soTransferTime += s.soTransferTime;
+	soSerializationTime += s.soSerializationTime;
+	soDeserializationTime += s.soDeserializationTime;
+	soBcastTime += s.soBcastTime;
+	soBcastSerializationTime += s.soBcastSerializationTime;
+	soBcastDeserializationTime += s.soBcastDeserializationTime;
+	soRealMessageCount += s.soRealMessageCount;
+	soBcasts += s.soBcasts;
+	soBcastBytes += s.soBcastBytes;
+	soGuards += s.soGuards;
+	soGuardTime += s.soGuardTime;
     }
 
     public void fillInStats() {
-        stealTime = stealTimer.totalTimeVal();
-        handleStealTime = handleStealTimer.totalTimeVal();
-        abortTime = abortTimer.totalTimeVal();
-        idleTime = idleTimer.totalTimeVal();
-        idleCount = idleTimer.nrTimes();
-        pollCount = pollTimer.nrTimes();
-        throttleStealTime = stealThrottleTimer.totalTimeVal();
-        stealThrottles = stealThrottleTimer.nrTimes();
-        
-        invocationRecordWriteTime = invocationRecordWriteTimer.totalTimeVal();
-        invocationRecordWriteCount = invocationRecordWriteTimer.nrTimes();
-        invocationRecordReadTime = invocationRecordReadTimer.totalTimeVal();
-        invocationRecordReadCount = invocationRecordReadTimer.nrTimes();
+	stealTime = stealTimer.totalTimeVal();
+	handleStealTime = handleStealTimer.totalTimeVal();
+	abortTime = abortTimer.totalTimeVal();
+	idleTime = idleTimer.totalTimeVal();
+	idleCount = idleTimer.nrTimes();
+	pollCount = pollTimer.nrTimes();
+	throttleStealTime = stealThrottleTimer.totalTimeVal();
+	stealThrottles = stealThrottleTimer.nrTimes();
 
-        returnRecordWriteTime = returnRecordWriteTimer.totalTimeVal();
-        returnRecordWriteCount = returnRecordWriteTimer.nrTimes();
-        returnRecordReadTime = returnRecordReadTimer.totalTimeVal();
-        returnRecordReadCount = returnRecordReadTimer.nrTimes();
+	invocationRecordWriteTime = invocationRecordWriteTimer.totalTimeVal();
+	invocationRecordWriteCount = invocationRecordWriteTimer.nrTimes();
+	invocationRecordReadTime = invocationRecordReadTimer.totalTimeVal();
+	invocationRecordReadCount = invocationRecordReadTimer.nrTimes();
 
-        tableLookupTime = lookupTimer.totalTimeVal();
-        tableUpdateTime = updateTimer.totalTimeVal();
-        tableHandleUpdateTime = handleUpdateTimer.totalTimeVal();
-        tableHandleLookupTime = handleLookupTimer.totalTimeVal();
-        tableSerializationTime = tableSerializationTimer.totalTimeVal();
-        tableDeserializationTime = tableDeserializationTimer.totalTimeVal();
-        tableCheckTime = redoTimer.totalTimeVal();
-        crashHandlingTime = crashTimer.totalTimeVal();
+	returnRecordWriteTime = returnRecordWriteTimer.totalTimeVal();
+	returnRecordWriteCount = returnRecordWriteTimer.nrTimes();
+	returnRecordReadTime = returnRecordReadTimer.totalTimeVal();
+	returnRecordReadCount = returnRecordReadTimer.nrTimes();
 
-        // Checkpointing.
-        if (CHECKPOINTING){
-            requestCheckpointTime = requestCheckpointTimer.totalTimeVal();
-            makeCheckpointTime = makeCheckpointTimer.totalTimeVal();
-            receiveCheckpointTime = receiveCheckpointTimer.totalTimeVal();
-            writeCheckpointTime = writeCheckpointTimer.totalTimeVal();
-            useCheckpointTime = useCheckpointTimer.totalTimeVal();
-            createCoordinatorTime = createCoordinatorTimer.totalTimeVal();
-            numCheckpointsTaken = makeCheckpointTimer.nrTimes();
-        }
+	tableLookupTime = lookupTimer.totalTimeVal();
+	tableUpdateTime = updateTimer.totalTimeVal();
+	tableHandleUpdateTime = handleUpdateTimer.totalTimeVal();
+	tableHandleLookupTime = handleLookupTimer.totalTimeVal();
+	tableSerializationTime = tableSerializationTimer.totalTimeVal();
+	tableDeserializationTime = tableDeserializationTimer.totalTimeVal();
+	tableCheckTime = redoTimer.totalTimeVal();
+	crashHandlingTime = crashTimer.totalTimeVal();
 
+	// Checkpointing.
+	if (CHECKPOINTING) {
+	    requestCheckpointTime = requestCheckpointTimer.totalTimeVal();
+	    makeCheckpointTime = makeCheckpointTimer.totalTimeVal();
+	    receiveCheckpointTime = receiveCheckpointTimer.totalTimeVal();
+	    writeCheckpointTime = writeCheckpointTimer.totalTimeVal();
+	    useCheckpointTime = useCheckpointTimer.totalTimeVal();
+	    createCoordinatorTime = createCoordinatorTimer.totalTimeVal();
+	    numCheckpointsTaken = makeCheckpointTimer.nrTimes();
+	}
 
-        handleSOInvocations = handleSOInvocationsTimer.nrTimes();
+	handleSOInvocations = handleSOInvocationsTimer.nrTimes();
 
-        handleSOInvocationsTime = handleSOInvocationsTimer.totalTimeVal();
-        getSOReferences = getSOReferencesTimer.nrTimes();
+	handleSOInvocationsTime = handleSOInvocationsTimer.totalTimeVal();
+	getSOReferences = getSOReferencesTimer.nrTimes();
 
-        getSOReferencesTime = getSOReferencesTimer.totalTimeVal();
-        soInvocationDeserializationTime = soInvocationDeserializationTimer
-            .totalTimeVal();
-        broadcastSOInvocationsTime = broadcastSOInvocationsTimer.totalTimeVal();
-        soTransferTime = soTransferTimer.totalTimeVal();
-        soSerializationTime = soSerializationTimer.totalTimeVal();
-        soDeserializationTime = soDeserializationTimer.totalTimeVal();
-        soBcastTime = soBroadcastTransferTimer.totalTimeVal();
-        soBcastSerializationTime = soBroadcastSerializationTimer.totalTimeVal();
-        soBcastDeserializationTime = soBroadcastDeserializationTimer
-            .totalTimeVal();
-        soGuardTime = soGuardTimer.totalTimeVal();
-        soGuards = soGuardTimer.nrTimes();
+	getSOReferencesTime = getSOReferencesTimer.totalTimeVal();
+	soInvocationDeserializationTime = soInvocationDeserializationTimer
+		.totalTimeVal();
+	broadcastSOInvocationsTime = broadcastSOInvocationsTimer.totalTimeVal();
+	soTransferTime = soTransferTimer.totalTimeVal();
+	soSerializationTime = soSerializationTimer.totalTimeVal();
+	soDeserializationTime = soDeserializationTimer.totalTimeVal();
+	soBcastTime = soBroadcastTransferTimer.totalTimeVal();
+	soBcastSerializationTime = soBroadcastSerializationTimer.totalTimeVal();
+	soBcastDeserializationTime = soBroadcastDeserializationTimer
+		.totalTimeVal();
+	soGuardTime = soGuardTimer.totalTimeVal();
+	soGuards = soGuardTimer.nrTimes();
     }
 
     protected void printStats(int size, double totalTime) {
-        java.io.PrintStream out = System.out;
-        java.text.NumberFormat nf = java.text.NumberFormat.getInstance();
+	java.io.PrintStream out = System.out;
+	java.text.NumberFormat nf = java.text.NumberFormat.getInstance();
 
-        // for percentages
-        java.text.NumberFormat pf = java.text.NumberFormat.getInstance();
-        pf.setMaximumFractionDigits(3);
-        pf.setMinimumFractionDigits(3);
-        pf.setGroupingUsed(false);
+	// for percentages
+	java.text.NumberFormat pf = java.text.NumberFormat.getInstance();
+	pf.setMaximumFractionDigits(3);
+	pf.setMinimumFractionDigits(3);
+	pf.setGroupingUsed(false);
 
-        boolean haveAborts = abortsDone > 0 || abortedJobs > 0;
-        boolean haveSteals = stealAttempts > 0 || asyncStealAttempts > 0;
-        boolean haveCrashes = tableResultUpdates > 0 || tableLookups > 0
-            || restartedJobs > 0;
-        boolean haveSO = soInvocations > 0 || soTransfers > 0 || soBcasts > 0;
+	boolean haveAborts = abortsDone > 0 || abortedJobs > 0;
+	boolean haveSteals = stealAttempts > 0 || asyncStealAttempts > 0;
+	boolean haveCrashes = tableResultUpdates > 0 || tableLookups > 0
+		|| restartedJobs > 0;
+	boolean haveSO = soInvocations > 0 || soTransfers > 0 || soBcasts > 0;
 
-        out.println("-------------------------------SATIN STATISTICS------"
-            + "--------------------------");
-        out.println("SATIN: SPAWN:       " + nf.format(spawns) + " spawns, "
-            + nf.format(jobsExecuted) + " executed, " + nf.format(syncs)
-            + " syncs");
-        if (haveAborts) {
-            out.println("SATIN: ABORT:       " + nf.format(abortsDone)
-                + " aborts, " + nf.format(abortMessages) + " abort msgs, "
-                + nf.format(abortedJobs) + " aborted jobs");
-        }
-        if (haveSteals) {
-            out.println("SATIN: STEAL:       " + nf.format(stealAttempts)
-                + " attempts, " + nf.format(stealSuccess) + " successes ("
-                + pf.format(perStats(stealSuccess, stealAttempts) * 100.0)
-                + " %)");
+	out.println("-------------------------------SATIN STATISTICS------"
+		+ "--------------------------");
+	out.println("SATIN: SPAWN:       " + nf.format(spawns) + " spawns, "
+		+ nf.format(jobsExecuted) + " executed, " + nf.format(syncs)
+		+ " syncs");
+	if (haveAborts) {
+	    out.println("SATIN: ABORT:       " + nf.format(abortsDone)
+		    + " aborts, " + nf.format(abortMessages) + " abort msgs, "
+		    + nf.format(abortedJobs) + " aborted jobs");
+	}
+	if (haveSteals) {
+	    out.println("SATIN: STEAL:       " + nf.format(stealAttempts)
+		    + " attempts, " + nf.format(stealSuccess) + " successes ("
+		    + pf.format(perStats(stealSuccess, stealAttempts) * 100.0)
+		    + " %)");
 
-            if (asyncStealAttempts != 0) {
-                out
-                    .println("SATIN: ASYNCSTEAL:   "
-                        + nf.format(asyncStealAttempts)
-                        + " attempts, "
-                        + nf.format(asyncStealSuccess)
-                        + " successes ("
-                        + pf.format(perStats(asyncStealSuccess,
-                            asyncStealAttempts) * 100.0) + " %)");
-            }
+	    if (asyncStealAttempts != 0) {
+		out.println("SATIN: ASYNCSTEAL:   "
+			+ nf.format(asyncStealAttempts)
+			+ " attempts, "
+			+ nf.format(asyncStealSuccess)
+			+ " successes ("
+			+ pf.format(perStats(asyncStealSuccess,
+				asyncStealAttempts) * 100.0) + " %)");
+	    }
 
-            out.println("SATIN: MESSAGES:    intra "
-                + nf.format(intraClusterMessages) + " msgs, "
-                + nf.format(intraClusterBytes) + " bytes; inter "
-                + nf.format(interClusterMessages) + " msgs, "
-                + nf.format(interClusterBytes) + " bytes");
-        }
+	    out.println("SATIN: MESSAGES:    intra "
+		    + nf.format(intraClusterMessages) + " msgs, "
+		    + nf.format(intraClusterBytes) + " bytes; inter "
+		    + nf.format(interClusterMessages) + " msgs, "
+		    + nf.format(interClusterBytes) + " bytes");
+	}
 
-        if (haveCrashes) {
-            out.println("SATIN: GLOBAL_RESULT_TABLE: result updates "
-                + nf.format(tableResultUpdates) + ",update messages "
-                + nf.format(tableUpdateMessages) + ", lock updates "
-                + nf.format(tableLockUpdates) + ",lookups "
-                + nf.format(tableLookups) + ",successful "
-                + nf.format(tableSuccessfulLookups) + ",remote "
-                + nf.format(tableRemoteLookups));
-            out.println("SATIN: FAULT_TOLERANCE: killed orphans "
-                + nf.format(killedOrphans));
-            out.println("SATIN: FAULT_TOLERANCE: restarted jobs "
-                + nf.format(restartedJobs));
-        }
+	if (haveCrashes) {
+	    out.println("SATIN: GLOBAL_RESULT_TABLE: result updates "
+		    + nf.format(tableResultUpdates) + ",update messages "
+		    + nf.format(tableUpdateMessages) + ", lock updates "
+		    + nf.format(tableLockUpdates) + ",lookups "
+		    + nf.format(tableLookups) + ",successful "
+		    + nf.format(tableSuccessfulLookups) + ",remote "
+		    + nf.format(tableRemoteLookups));
+	    out.println("SATIN: FAULT_TOLERANCE: killed orphans "
+		    + nf.format(killedOrphans));
+	    out.println("SATIN: FAULT_TOLERANCE: restarted jobs "
+		    + nf.format(restartedJobs));
+	}
 
-        if (haveSO) {
-            out.println("SATIN: SO_CALLS:    " + nf.format(soInvocations)
-                + " invocations, " + nf.format(soInvocationsBytes) + " bytes, "
-                + nf.format(soRealMessageCount) + " messages");
-            out.println("SATIN: SO_TRANSFER: " + nf.format(soTransfers)
-                + " transfers, " + nf.format(soTransfersBytes) + " bytes ");
-            out.println("SATIN: SO_BCAST:    " + nf.format(soBcasts)
-                + " bcasts, " + nf.format(soBcastBytes) + " bytes ");
-            out.println("SATIN: SO_GUARDS:    " + nf.format(soGuards)
-                + " guards executed");
-        }
+	if (haveSO) {
+	    out.println("SATIN: SO_CALLS:    " + nf.format(soInvocations)
+		    + " invocations, " + nf.format(soInvocationsBytes)
+		    + " bytes, " + nf.format(soRealMessageCount) + " messages");
+	    out.println("SATIN: SO_TRANSFER: " + nf.format(soTransfers)
+		    + " transfers, " + nf.format(soTransfersBytes) + " bytes ");
+	    out.println("SATIN: SO_BCAST:    " + nf.format(soBcasts)
+		    + " bcasts, " + nf.format(soBcastBytes) + " bytes ");
+	    out.println("SATIN: SO_GUARDS:    " + nf.format(soGuards)
+		    + " guards executed");
+	}
 
-        if (haveAborts || haveSteals || haveCrashes || haveSO) {
-            out.println("-------------------------------SATIN TOTAL TIMES"
-                + "-------------------------------");
-        }
+	if (haveAborts || haveSteals || haveCrashes || haveSO) {
+	    out.println("-------------------------------SATIN TOTAL TIMES"
+		    + "-------------------------------");
+	}
 
-        if (haveSteals) {
-            out.println("SATIN: STEAL_TIME:                 total "
-                + Timer.format(stealTime) + " time/req    "
-                + Timer.format(perStats(stealTime, stealAttempts)));
-            out.println("SATIN: HANDLE_STEAL_TIME:          total "
-                + Timer.format(handleStealTime) + " time/handle "
-                + Timer.format(perStats(handleStealTime, stealAttempts)));
+	if (haveSteals) {
+	    out.println("SATIN: STEAL_TIME:                 total "
+		    + Timer.format(stealTime) + " time/req    "
+		    + Timer.format(perStats(stealTime, stealAttempts)));
+	    out.println("SATIN: HANDLE_STEAL_TIME:          total "
+		    + Timer.format(handleStealTime) + " time/handle "
+		    + Timer.format(perStats(handleStealTime, stealAttempts)));
 
-            out.println("SATIN: THROTTLE_STEAL_TIME:        total "
-                    + Timer.format(throttleStealTime) + " time/req    "
-                    + Timer.format(perStats(throttleStealTime, stealThrottles)));
+	    out.println("SATIN: THROTTLE_STEAL_TIME:        total "
+		    + Timer.format(throttleStealTime) + " time/req    "
+		    + Timer.format(perStats(throttleStealTime, stealThrottles)));
 
-            out.println("SATIN: INV SERIALIZATION_TIME:     total "
-                + Timer.format(invocationRecordWriteTime)
-                + " time/write  "
-                + Timer
-                    .format(perStats(invocationRecordWriteTime, stealSuccess)));
-            out.println("SATIN: INV DESERIALIZATION_TIME:   total "
-                + Timer.format(invocationRecordReadTime)
-                + " time/read   "
-                + Timer
-                    .format(perStats(invocationRecordReadTime, stealSuccess)));
-            out.println("SATIN: RET SERIALIZATION_TIME:     total "
-                + Timer.format(returnRecordWriteTime)
-                + " time/write  "
-                + Timer.format(perStats(returnRecordWriteTime,
-                    returnRecordWriteCount)));
-            out.println("SATIN: RET DESERIALIZATION_TIME:   total "
-                + Timer.format(returnRecordReadTime)
-                + " time/read   "
-                + Timer.format(perStats(returnRecordReadTime,
-                    returnRecordReadCount)));
-        }
+	    out.println("SATIN: INV SERIALIZATION_TIME:     total "
+		    + Timer.format(invocationRecordWriteTime)
+		    + " time/write  "
+		    + Timer.format(perStats(invocationRecordWriteTime,
+			    stealSuccess)));
+	    out.println("SATIN: INV DESERIALIZATION_TIME:   total "
+		    + Timer.format(invocationRecordReadTime)
+		    + " time/read   "
+		    + Timer.format(perStats(invocationRecordReadTime,
+			    stealSuccess)));
+	    out.println("SATIN: RET SERIALIZATION_TIME:     total "
+		    + Timer.format(returnRecordWriteTime)
+		    + " time/write  "
+		    + Timer.format(perStats(returnRecordWriteTime,
+			    returnRecordWriteCount)));
+	    out.println("SATIN: RET DESERIALIZATION_TIME:   total "
+		    + Timer.format(returnRecordReadTime)
+		    + " time/read   "
+		    + Timer.format(perStats(returnRecordReadTime,
+			    returnRecordReadCount)));
+	}
 
-        if (haveAborts) {
-            out.println("SATIN: ABORT_TIME:                 total "
-                + Timer.format(abortTime) + " time/abort  "
-                + Timer.format(perStats(abortTime, abortsDone)));
-        }
+	if (haveAborts) {
+	    out.println("SATIN: ABORT_TIME:                 total "
+		    + Timer.format(abortTime) + " time/abort  "
+		    + Timer.format(perStats(abortTime, abortsDone)));
+	}
 
-        if (haveCrashes) {
-            out.println("SATIN: GRT_UPDATE_TIME:            total "
-                + Timer.format(tableUpdateTime)
-                + " time/update "
-                + Timer.format(perStats(tableUpdateTime,
-                    (tableResultUpdates + tableLockUpdates))));
-            out.println("SATIN: GRT_LOOKUP_TIME:            total "
-                + Timer.format(tableLookupTime) + " time/lookup "
-                + Timer.format(perStats(tableLookupTime, tableLookups)));
-            out.println("SATIN: GRT_HANDLE_UPDATE_TIME:     total "
-                + Timer.format(tableHandleUpdateTime)
-                + " time/handle "
-                + Timer.format(perStats(tableHandleUpdateTime,
-                    tableResultUpdates * (size - 1))));
-            out.println("SATIN: GRT_HANDLE_LOOKUP_TIME:     total "
-                + Timer.format(tableHandleLookupTime)
-                + " time/handle "
-                + Timer.format(perStats(tableHandleLookupTime,
-                    tableRemoteLookups)));
-            out.println("SATIN: GRT_SERIALIZATION_TIME:     total "
-                + Timer.format(tableSerializationTime));
-            out.println("SATIN: GRT_DESERIALIZATION_TIME:   total "
-                + Timer.format(tableDeserializationTime));
-            out.println("SATIN: GRT_CHECK_TIME:             total "
-                + Timer.format(tableCheckTime) + " time/check "
-                + Timer.format(perStats(tableCheckTime, tableLookups)));
-            out.println("SATIN: CRASH_HANDLING_TIME:        total "
-                + Timer.format(crashHandlingTime));
-        }
+	if (haveCrashes) {
+	    out.println("SATIN: GRT_UPDATE_TIME:            total "
+		    + Timer.format(tableUpdateTime)
+		    + " time/update "
+		    + Timer.format(perStats(tableUpdateTime,
+			    (tableResultUpdates + tableLockUpdates))));
+	    out.println("SATIN: GRT_LOOKUP_TIME:            total "
+		    + Timer.format(tableLookupTime) + " time/lookup "
+		    + Timer.format(perStats(tableLookupTime, tableLookups)));
+	    out.println("SATIN: GRT_HANDLE_UPDATE_TIME:     total "
+		    + Timer.format(tableHandleUpdateTime)
+		    + " time/handle "
+		    + Timer.format(perStats(tableHandleUpdateTime,
+			    tableResultUpdates * (size - 1))));
+	    out.println("SATIN: GRT_HANDLE_LOOKUP_TIME:     total "
+		    + Timer.format(tableHandleLookupTime)
+		    + " time/handle "
+		    + Timer.format(perStats(tableHandleLookupTime,
+			    tableRemoteLookups)));
+	    out.println("SATIN: GRT_SERIALIZATION_TIME:     total "
+		    + Timer.format(tableSerializationTime));
+	    out.println("SATIN: GRT_DESERIALIZATION_TIME:   total "
+		    + Timer.format(tableDeserializationTime));
+	    out.println("SATIN: GRT_CHECK_TIME:             total "
+		    + Timer.format(tableCheckTime) + " time/check "
+		    + Timer.format(perStats(tableCheckTime, tableLookups)));
+	    out.println("SATIN: CRASH_HANDLING_TIME:        total "
+		    + Timer.format(crashHandlingTime));
+	}
 
-        // Checkpointing.
-        if (CHECKPOINTING) {
-            out.println("SATIN: REQUEST_CHECKPOINT_TIME:    total "
-                    + Timer.format(requestCheckpointTime)
-                    + " time/checkpoint "
-                    + Timer.format(perStats(requestCheckpointTime,
-                            numCheckpointsTaken)));
-            out.println("SATIN: MAKE_CHECKPOINT_TIME:       total "
-                    + Timer.format(makeCheckpointTime)
-                    + " time/checkpoint "
-                    + Timer.format(perStats(makeCheckpointTime,
-                            numCheckpointsTaken)));
-            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    total "
-                    + Timer.format(receiveCheckpointTime)
-                    + " time/checkpoint "
-                    + Timer.format(perStats(receiveCheckpointTime,
-                            numCheckpointsTaken)));
-            out.println("SATIN: WRITE_CHECKPOINT_TIME:      total "
-                    + Timer.format(writeCheckpointTime)
-                    + " time/checkpoint "
-                    + Timer.format(perStats(writeCheckpointTime,
-                            numCheckpointsTaken)));
-            out.println("SATIN: USE_CHECKPOINT_TIME:        total "
-                        + Timer.format(useCheckpointTime));
-            out.println("SATIN: CREATE_COORDINATOR_TIME:    total "
-                        + Timer.format(createCoordinatorTime));
-            out.println("SATIN: TOTAL_CHECKPOINT_TIME:      total "
-                        + Timer.format(totalCheckpointTime));
-            out.println("SATIN: NUM_CHECKPOINTS_TAKEN:    "
-                        + nf.format(numCheckpointsTaken));
-        }
+	// Checkpointing.
+	if (CHECKPOINTING) {
+	    out.println("SATIN: REQUEST_CHECKPOINT_TIME:    total "
+		    + Timer.format(requestCheckpointTime)
+		    + " time/checkpoint "
+		    + Timer.format(perStats(requestCheckpointTime,
+			    numCheckpointsTaken)));
+	    out.println("SATIN: MAKE_CHECKPOINT_TIME:       total "
+		    + Timer.format(makeCheckpointTime)
+		    + " time/checkpoint "
+		    + Timer.format(perStats(makeCheckpointTime,
+			    numCheckpointsTaken)));
+	    out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    total "
+		    + Timer.format(receiveCheckpointTime)
+		    + " time/checkpoint "
+		    + Timer.format(perStats(receiveCheckpointTime,
+			    numCheckpointsTaken)));
+	    out.println("SATIN: WRITE_CHECKPOINT_TIME:      total "
+		    + Timer.format(writeCheckpointTime)
+		    + " time/checkpoint "
+		    + Timer.format(perStats(writeCheckpointTime,
+			    numCheckpointsTaken)));
+	    out.println("SATIN: USE_CHECKPOINT_TIME:        total "
+		    + Timer.format(useCheckpointTime));
+	    out.println("SATIN: CREATE_COORDINATOR_TIME:    total "
+		    + Timer.format(createCoordinatorTime));
+	    out.println("SATIN: TOTAL_CHECKPOINT_TIME:      total "
+		    + Timer.format(totalCheckpointTime));
+	    out.println("SATIN: NUM_CHECKPOINTS_TAKEN:    "
+		    + nf.format(numCheckpointsTaken));
+	}
 
+	if (haveSO) {
+	    out.println("SATIN: BROADCAST_SO_INVOCATIONS:   total "
+		    + Timer.format(broadcastSOInvocationsTime)
+		    + " time/inv    "
+		    + Timer.format(perStats(broadcastSOInvocationsTime,
+			    soInvocations)));
+	    out.println("SATIN: DESERIALIZE_SO_INVOCATIONS: total "
+		    + Timer.format(soInvocationDeserializationTime)
+		    + " time/inv    "
+		    + Timer.format(perStats(soInvocationDeserializationTime,
+			    handleSOInvocations)));
+	    out.println("SATIN: HANDLE_SO_INVOCATIONS:      total "
+		    + Timer.format(handleSOInvocationsTime)
+		    + " time/inv    "
+		    + Timer.format(perStats(handleSOInvocationsTime,
+			    handleSOInvocations)));
+	    out.println("SATIN: GET_SO_REFERENCES:          total "
+		    + Timer.format(getSOReferencesTime)
+		    + " time/inv    "
+		    + Timer.format(perStats(getSOReferencesTime,
+			    getSOReferences)));
+	    out.println("SATIN: SO_TRANSFERS:               total "
+		    + Timer.format(soTransferTime) + " time/transf "
+		    + Timer.format(perStats(soTransferTime, soTransfers)));
+	    out.println("SATIN: SO_SERIALIZATION:           total "
+		    + Timer.format(soSerializationTime) + " time/transf "
+		    + Timer.format(perStats(soSerializationTime, soTransfers)));
+	    out.println("SATIN: SO_DESERIALIZATION:         total "
+		    + Timer.format(soDeserializationTime)
+		    + " time/transf "
+		    + Timer.format(perStats(soDeserializationTime, soTransfers)));
+	    out.println("SATIN: SO_BCASTS:                  total "
+		    + Timer.format(soBcastTime) + " time/bcast  "
+		    + Timer.format(perStats(soBcastTime, soBcasts)));
+	    out.println("SATIN: SO_BCAST_SERIALIZATION:     total "
+		    + Timer.format(soBcastSerializationTime)
+		    + " time/bcast  "
+		    + Timer.format(perStats(soBcastSerializationTime, soBcasts)));
+	    out.println("SATIN: SO_BCAST_DESERIALIZATION:   total "
+		    + Timer.format(soBcastDeserializationTime)
+		    + " time/bcast  "
+		    + Timer.format(perStats(soBcastDeserializationTime,
+			    soBcasts)));
+	    out.println("SATIN: SO_GUARDS:                  total "
+		    + Timer.format(soGuardTime) + " time/guard  "
+		    + Timer.format(perStats(soGuardTime, soGuards)));
+	}
 
-        if (haveSO) {
-            out.println("SATIN: BROADCAST_SO_INVOCATIONS:   total "
-                + Timer.format(broadcastSOInvocationsTime)
-                + " time/inv    "
-                + Timer.format(perStats(broadcastSOInvocationsTime,
-                    soInvocations)));
-            out.println("SATIN: DESERIALIZE_SO_INVOCATIONS: total "
-                + Timer.format(soInvocationDeserializationTime)
-                + " time/inv    "
-                + Timer.format(perStats(soInvocationDeserializationTime,
-                    handleSOInvocations)));
-            out.println("SATIN: HANDLE_SO_INVOCATIONS:      total "
-                + Timer.format(handleSOInvocationsTime)
-                + " time/inv    "
-                + Timer.format(perStats(handleSOInvocationsTime,
-                    handleSOInvocations)));
-            out.println("SATIN: GET_SO_REFERENCES:          total "
-                + Timer.format(getSOReferencesTime)
-                + " time/inv    "
-                + Timer.format(perStats(getSOReferencesTime,
-                    getSOReferences)));
-            out.println("SATIN: SO_TRANSFERS:               total "
-                + Timer.format(soTransferTime) + " time/transf "
-                + Timer.format(perStats(soTransferTime, soTransfers)));
-            out.println("SATIN: SO_SERIALIZATION:           total "
-                + Timer.format(soSerializationTime) + " time/transf "
-                + Timer.format(perStats(soSerializationTime, soTransfers)));
-            out.println("SATIN: SO_DESERIALIZATION:         total "
-                + Timer.format(soDeserializationTime) + " time/transf "
-                + Timer.format(perStats(soDeserializationTime, soTransfers)));
-            out.println("SATIN: SO_BCASTS:                  total "
-                + Timer.format(soBcastTime) + " time/bcast  "
-                + Timer.format(perStats(soBcastTime, soBcasts)));
-            out.println("SATIN: SO_BCAST_SERIALIZATION:     total "
-                + Timer.format(soBcastSerializationTime) + " time/bcast  "
-                + Timer.format(perStats(soBcastSerializationTime, soBcasts)));
-            out.println("SATIN: SO_BCAST_DESERIALIZATION:   total "
-                + Timer.format(soBcastDeserializationTime) + " time/bcast  "
-                + Timer.format(perStats(soBcastDeserializationTime, soBcasts)));
-            out.println("SATIN: SO_GUARDS:                  total "
-                + Timer.format(soGuardTime) + " time/guard  "
-                + Timer.format(perStats(soGuardTime, soGuards)));
-        }
+	out.println("-------------------------------SATIN RUN TIME "
+		+ "BREAKDOWN------------------------");
+	out.println("SATIN: TOTAL_RUN_TIME:                              "
+		+ Timer.format(totalTime));
 
-        out.println("-------------------------------SATIN RUN TIME "
-            + "BREAKDOWN------------------------");
-        out.println("SATIN: TOTAL_RUN_TIME:                              "
-            + Timer.format(totalTime));
+	double lbTime = (stealTime + throttleStealTime
+		- invocationRecordReadTime - invocationRecordWriteTime
+		- returnRecordReadTime - returnRecordWriteTime)
+		/ size;
+	if (lbTime < 0.0) {
+	    lbTime = 0.0;
+	}
+	double lbPerc = lbTime / totalTime * 100.0;
+	double stealTimeAvg = stealTime / size;
+	double throttleTimeAvg = throttleStealTime / size;
+	double throttlePerc = throttleTimeAvg / totalTime * 100.0;
+	double serTimeAvg = (invocationRecordWriteTime
+		+ invocationRecordReadTime + returnRecordWriteTime + returnRecordReadTime)
+		/ size;
 
-        
-        double lbTime = (stealTime + throttleStealTime - invocationRecordReadTime
-            - invocationRecordWriteTime - returnRecordReadTime - returnRecordWriteTime)
-            / size;
-        if (lbTime < 0.0) {
-            lbTime = 0.0;
-        }
-        double lbPerc = lbTime / totalTime * 100.0;
-        double stealTimeAvg = stealTime / size;
-        double throttleTimeAvg = throttleStealTime / size;        
-        double throttlePerc = throttleTimeAvg / totalTime * 100.0;
-        double serTimeAvg = (invocationRecordWriteTime
-            + invocationRecordReadTime + returnRecordWriteTime + returnRecordReadTime)
-            / size;
-        
-        double serPerc = serTimeAvg / totalTime * 100.0;
-        double abortTimeAvg = abortTime / size;
-        double abortPerc = abortTimeAvg / totalTime * 100.0;
+	double serPerc = serTimeAvg / totalTime * 100.0;
+	double abortTimeAvg = abortTime / size;
+	double abortPerc = abortTimeAvg / totalTime * 100.0;
 
-        double tableUpdateTimeAvg = tableUpdateTime / size;
-        double tableUpdatePerc = tableUpdateTimeAvg / totalTime * 100.0;
-        double tableLookupTimeAvg = tableLookupTime / size;
-        double tableLookupPerc = tableLookupTimeAvg / totalTime * 100.0;
-        double tableHandleUpdateTimeAvg = tableHandleUpdateTime / size;
-        double tableHandleUpdatePerc = tableHandleUpdateTimeAvg / totalTime
-            * 100.0;
-        double tableHandleLookupTimeAvg = tableHandleLookupTime / size;
-        double tableHandleLookupPerc = tableHandleLookupTimeAvg / totalTime
-            * 100.0;
-        double tableSerializationTimeAvg = tableSerializationTime / size;
-        double tableSerializationPerc = tableSerializationTimeAvg / totalTime
-            * 100;
-        double tableDeserializationTimeAvg = tableDeserializationTime / size;
-        double tableDeserializationPerc = tableDeserializationTimeAvg
-            / totalTime * 100;
-        double crashHandlingTimeAvg = crashHandlingTime / size;
-        double crashHandlingPerc = crashHandlingTimeAvg / totalTime * 100.0;
-        
-        // Checkpointing.
-        double requestCheckpointTimeAvg = requestCheckpointTime / size;
-        double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime * 100.0;
-        double makeCheckpointTimeAvg = makeCheckpointTime / size;
-        double makeCheckpointPerc = makeCheckpointTimeAvg / totalTime * 100.0;
-        double receiveCheckpointTimeAvg = receiveCheckpointTime / size;
-        double receiveCheckpointPerc = receiveCheckpointTimeAvg / totalTime * 100.0;
-        double writeCheckpointTimeAvg = writeCheckpointTime / size;
-        double writeCheckpointPerc = writeCheckpointTimeAvg / totalTime * 100.0;
-        double useCheckpointTimeAvg = useCheckpointTime / size;
-        double useCheckpointPerc = useCheckpointTimeAvg / totalTime * 100.0;
-        double createCoordinatorTimeAvg = createCoordinatorTime /size;
-        double createCoordinatorPerc = createCoordinatorTimeAvg / totalTime * 100.0;
-        double totalCheckpointTimeAvg = totalCheckpointTime / size;
-        double totalCheckpointPerc = totalCheckpointTimeAvg / totalTime * 100.0;
+	double tableUpdateTimeAvg = tableUpdateTime / size;
+	double tableUpdatePerc = tableUpdateTimeAvg / totalTime * 100.0;
+	double tableLookupTimeAvg = tableLookupTime / size;
+	double tableLookupPerc = tableLookupTimeAvg / totalTime * 100.0;
+	double tableHandleUpdateTimeAvg = tableHandleUpdateTime / size;
+	double tableHandleUpdatePerc = tableHandleUpdateTimeAvg / totalTime
+		* 100.0;
+	double tableHandleLookupTimeAvg = tableHandleLookupTime / size;
+	double tableHandleLookupPerc = tableHandleLookupTimeAvg / totalTime
+		* 100.0;
+	double tableSerializationTimeAvg = tableSerializationTime / size;
+	double tableSerializationPerc = tableSerializationTimeAvg / totalTime
+		* 100;
+	double tableDeserializationTimeAvg = tableDeserializationTime / size;
+	double tableDeserializationPerc = tableDeserializationTimeAvg
+		/ totalTime * 100;
+	double crashHandlingTimeAvg = crashHandlingTime / size;
+	double crashHandlingPerc = crashHandlingTimeAvg / totalTime * 100.0;
 
-        double broadcastSOInvocationsTimeAvg = broadcastSOInvocationsTime
-            / size;
-        double broadcastSOInvocationsPerc = broadcastSOInvocationsTimeAvg
-            / totalTime * 100;
-        double handleSOInvocationsTimeAvg = handleSOInvocationsTime / size;
-        double handleSOInvocationsPerc = handleSOInvocationsTimeAvg / totalTime
-            * 100;
-        double soInvocationDeserializationTimeAvg = soInvocationDeserializationTime
-            / size;
-        double soInvocationDeserializationPerc = soInvocationDeserializationTimeAvg
-            / totalTime * 100;
-        double soTransferTimeAvg = soTransferTime / size;
-        double soTransferPerc = soTransferTimeAvg / totalTime * 100;
-        double soSerializationTimeAvg = soSerializationTime / size;
-        double soSerializationPerc = soSerializationTimeAvg / totalTime * 100;
-        double soDeserializationTimeAvg = soDeserializationTime / size;
-        double soDeserializationPerc = soDeserializationTimeAvg / totalTime
-            * 100;
+	// Checkpointing.
+	double requestCheckpointTimeAvg = requestCheckpointTime / size;
+	double requestCheckpointPerc = requestCheckpointTimeAvg / totalTime
+		* 100.0;
+	double makeCheckpointTimeAvg = makeCheckpointTime / size;
+	double makeCheckpointPerc = makeCheckpointTimeAvg / totalTime * 100.0;
+	double receiveCheckpointTimeAvg = receiveCheckpointTime / size;
+	double receiveCheckpointPerc = receiveCheckpointTimeAvg / totalTime
+		* 100.0;
+	double writeCheckpointTimeAvg = writeCheckpointTime / size;
+	double writeCheckpointPerc = writeCheckpointTimeAvg / totalTime * 100.0;
+	double useCheckpointTimeAvg = useCheckpointTime / size;
+	double useCheckpointPerc = useCheckpointTimeAvg / totalTime * 100.0;
+	double createCoordinatorTimeAvg = createCoordinatorTime / size;
+	double createCoordinatorPerc = createCoordinatorTimeAvg / totalTime
+		* 100.0;
+	double totalCheckpointTimeAvg = totalCheckpointTime / size;
+	double totalCheckpointPerc = totalCheckpointTimeAvg / totalTime * 100.0;
 
-        double soBcastTimeAvg = soBcastTime / size;
-        double soBcastPerc = soBcastTimeAvg / totalTime * 100;
-        double soBcastSerializationTimeAvg = soBcastSerializationTime / size;
-        double soBcastSerializationPerc = soBcastSerializationTimeAvg
-            / totalTime * 100;
-        double soBcastDeserializationTimeAvg = soBcastDeserializationTime
-            / size;
-        double soBcastDeserializationPerc = soBcastDeserializationTimeAvg
-            / totalTime * 100;
-        double soGuardTimeAvg = soGuardTime / size;
-        double soGuardPerc = soGuardTimeAvg / totalTime * 100;
-        
-        double totalOverheadAvg = abortTimeAvg + tableUpdateTimeAvg
-            + tableLookupTimeAvg + tableHandleUpdateTimeAvg
-            + tableHandleLookupTimeAvg + handleSOInvocationsTimeAvg
-            + broadcastSOInvocationsTimeAvg + soTransferTimeAvg
-            + soBcastTimeAvg + soBcastDeserializationTimeAvg + stealTimeAvg + throttleTimeAvg + soGuardTimeAvg;
-        double totalPerc = totalOverheadAvg / totalTime * 100.0;
-        double appTime = totalTime - totalOverheadAvg;
-        if (appTime < 0.0) {
-            appTime = 0.0;
-        }
-        double appPerc = appTime / totalTime * 100.0;
+	double broadcastSOInvocationsTimeAvg = broadcastSOInvocationsTime
+		/ size;
+	double broadcastSOInvocationsPerc = broadcastSOInvocationsTimeAvg
+		/ totalTime * 100;
+	double handleSOInvocationsTimeAvg = handleSOInvocationsTime / size;
+	double handleSOInvocationsPerc = handleSOInvocationsTimeAvg / totalTime
+		* 100;
+	double soInvocationDeserializationTimeAvg = soInvocationDeserializationTime
+		/ size;
+	double soInvocationDeserializationPerc = soInvocationDeserializationTimeAvg
+		/ totalTime * 100;
+	double soTransferTimeAvg = soTransferTime / size;
+	double soTransferPerc = soTransferTimeAvg / totalTime * 100;
+	double soSerializationTimeAvg = soSerializationTime / size;
+	double soSerializationPerc = soSerializationTimeAvg / totalTime * 100;
+	double soDeserializationTimeAvg = soDeserializationTime / size;
+	double soDeserializationPerc = soDeserializationTimeAvg / totalTime
+		* 100;
 
-        if (haveSteals) {
-            out.println("SATIN: STEAL_THROTTLE_TIME:        agv. per machine "
-                    + Timer.format(throttleTimeAvg) + " (" + (throttlePerc < 10 ? " " : "")
-                    + pf.format(throttlePerc) + " %)");
-            out.println("SATIN: (DE)SERIALIZATION_TIME:     agv. per machine "
-                + Timer.format(serTimeAvg) + " (" + (serPerc < 10 ? " " : "")
-                + pf.format(serPerc) + " %)");
-            out.println("SATIN: LOAD_BALANCING_TIME:        agv. per machine "
-                    + Timer.format(lbTime) + " (" + (lbPerc < 10 ? " " : "")
-                    + pf.format(lbPerc) + " %)");
-        }
+	double soBcastTimeAvg = soBcastTime / size;
+	double soBcastPerc = soBcastTimeAvg / totalTime * 100;
+	double soBcastSerializationTimeAvg = soBcastSerializationTime / size;
+	double soBcastSerializationPerc = soBcastSerializationTimeAvg
+		/ totalTime * 100;
+	double soBcastDeserializationTimeAvg = soBcastDeserializationTime
+		/ size;
+	double soBcastDeserializationPerc = soBcastDeserializationTimeAvg
+		/ totalTime * 100;
+	double soGuardTimeAvg = soGuardTime / size;
+	double soGuardPerc = soGuardTimeAvg / totalTime * 100;
 
-        if (haveAborts) {
-            out.println("SATIN: ABORT_TIME:                 agv. per machine "
-                + Timer.format(abortTimeAvg) + " ("
-                + (abortPerc < 10 ? " " : "") + pf.format(abortPerc) + " %)");
-        }
+	double totalOverheadAvg = abortTimeAvg + tableUpdateTimeAvg
+		+ tableLookupTimeAvg + tableHandleUpdateTimeAvg
+		+ tableHandleLookupTimeAvg + handleSOInvocationsTimeAvg
+		+ broadcastSOInvocationsTimeAvg + soTransferTimeAvg
+		+ soBcastTimeAvg + soBcastDeserializationTimeAvg + stealTimeAvg
+		+ throttleTimeAvg + soGuardTimeAvg;
+	double totalPerc = totalOverheadAvg / totalTime * 100.0;
+	double appTime = totalTime - totalOverheadAvg;
+	if (appTime < 0.0) {
+	    appTime = 0.0;
+	}
+	double appPerc = appTime / totalTime * 100.0;
 
-        if (haveCrashes) {
-            out.println("SATIN: GRT_UPDATE_TIME:            agv. per machine "
-                + Timer.format(tableUpdateTimeAvg) + " ("
-                + pf.format(tableUpdatePerc) + " %)");
-            out.println("SATIN: GRT_LOOKUP_TIME:            agv. per machine "
-                + Timer.format(tableLookupTimeAvg) + " ("
-                + pf.format(tableLookupPerc) + " %)");
-            out.println("SATIN: GRT_HANDLE_UPDATE_TIME:     agv. per machine "
-                + Timer.format(tableHandleUpdateTimeAvg) + " ("
-                + pf.format(tableHandleUpdatePerc) + " %)");
-            out.println("SATIN: GRT_HANDLE_LOOKUP_TIME:     agv. per machine "
-                + Timer.format(tableHandleLookupTimeAvg) + " ("
-                + pf.format(tableHandleLookupPerc) + " %)");
-            out.println("SATIN: GRT_SERIALIZATION_TIME:     agv. per machine "
-                + Timer.format(tableSerializationTimeAvg) + " ("
-                + pf.format(tableSerializationPerc) + " %)");
-            out.println("SATIN: GRT_DESERIALIZATION_TIME:   agv. per machine "
-                + Timer.format(tableDeserializationTimeAvg) + " ("
-                + pf.format(tableDeserializationPerc) + " %)");
-            out.println("SATIN: CRASH_HANDLING_TIME:        agv. per machine "
-                + Timer.format(crashHandlingTimeAvg) + " ("
-                + pf.format(crashHandlingPerc) + " %)");
-        }
+	if (haveSteals) {
+	    out.println("SATIN: STEAL_THROTTLE_TIME:        agv. per machine "
+		    + Timer.format(throttleTimeAvg) + " ("
+		    + (throttlePerc < 10 ? " " : "") + pf.format(throttlePerc)
+		    + " %)");
+	    out.println("SATIN: (DE)SERIALIZATION_TIME:     agv. per machine "
+		    + Timer.format(serTimeAvg) + " ("
+		    + (serPerc < 10 ? " " : "") + pf.format(serPerc) + " %)");
+	    out.println("SATIN: LOAD_BALANCING_TIME:        agv. per machine "
+		    + Timer.format(lbTime) + " (" + (lbPerc < 10 ? " " : "")
+		    + pf.format(lbPerc) + " %)");
+	}
 
-        if (CHECKPOINTING) {
-            out.println("SATIN: REQUEST_CHECKPOINT_TIME:    avg. per machine "
-                    + Timer.format(requestCheckpointTimeAvg) + " ("
-                    + pf.format(requestCheckpointPerc) + " %)");            
-            out.println("SATIN: MAKE_CHECKPOINT_TIME:       avg. per machine "
-                    + Timer.format(makeCheckpointTimeAvg) + " ("
-                    + pf.format(makeCheckpointPerc) + " %)");
-            out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    avg. per machine "
-                    + Timer.format(receiveCheckpointTimeAvg) + " ("
-                    + pf.format(receiveCheckpointPerc) + " %)");
-            out.println("SATIN: WRITE_CHECKPOINT_TIME:      avg. per machine "
-                    + Timer.format(writeCheckpointTimeAvg) + " ("
-                    + pf.format(writeCheckpointPerc) + " %)");
-            out.println("SATIN: USE_CHECKPOINT_TIME:        avg. per machine "
-                    + Timer.format(useCheckpointTimeAvg) + " ("
-                    + pf.format(useCheckpointPerc) + " %)");
-            out.println("SATIN: CREATE_COORDINATOR_TIME:    avg. per machine "
-                    + Timer.format(createCoordinatorTimeAvg) + " ("
-                    + pf.format(createCoordinatorPerc) + " %)");
-            out.println("SATIN: TOTAL_CHECKPOINT_TIME:      avg. per machine "
-                    + Timer.format(totalCheckpointTimeAvg) + " ("
-                    + pf.format(totalCheckpointPerc) + " %)");
-        }   
+	if (haveAborts) {
+	    out.println("SATIN: ABORT_TIME:                 agv. per machine "
+		    + Timer.format(abortTimeAvg) + " ("
+		    + (abortPerc < 10 ? " " : "") + pf.format(abortPerc)
+		    + " %)");
+	}
 
-        if (haveSO) {
-            out.println("SATIN: BROADCAST_SO_INVOCATIONS:   agv. per machine "
-                + Timer.format(broadcastSOInvocationsTimeAvg) + " ("
-                + pf.format(broadcastSOInvocationsPerc) + " %)");
-            out.println("SATIN: HANDLE_SO_INVOCATIONS:      agv. per machine "
-                + Timer.format(handleSOInvocationsTimeAvg) + " ("
-                + pf.format(handleSOInvocationsPerc) + " %)");
-            out.println("SATIN: DESERIALIZE_SO_INVOCATIONS: agv. per machine "
-                + Timer.format(soInvocationDeserializationTimeAvg) + " ( "
-                + pf.format(soInvocationDeserializationPerc) + " %)");
-            out.println("SATIN: SO_TRANSFERS:               agv. per machine "
-                + Timer.format(soTransferTimeAvg) + " ("
-                + pf.format(soTransferPerc) + " %)");
-            out.println("SATIN: SO_SERIALIZATION:           agv. per machine "
-                + Timer.format(soSerializationTimeAvg) + " ("
-                + pf.format(soSerializationPerc) + " %)");
-            out.println("SATIN: SO_DESERIALIZATION:         agv. per machine "
-                + Timer.format(soDeserializationTimeAvg) + " ("
-                + pf.format(soDeserializationPerc) + " %)");
-            out.println("SATIN: SO_BCASTS:                  agv. per machine "
-                + Timer.format(soBcastTimeAvg) + " (" + pf.format(soBcastPerc)
-                + " %)");
-            out.println("SATIN: SO_BCAST_SERIALIZATION:     agv. per machine "
-                + Timer.format(soBcastSerializationTimeAvg) + " ("
-                + pf.format(soBcastSerializationPerc) + " %)");
-            out.println("SATIN: SO_BCAST_DESERIALIZATION:   agv. per machine "
-                + Timer.format(soBcastDeserializationTimeAvg) + " ("
-                + pf.format(soBcastDeserializationPerc) + " %)");
-            out.println("SATIN: SO_GUARD:                   agv. per machine "
-                + Timer.format(soGuardTimeAvg) + " ("
-                + pf.format(soGuardPerc) + " %)");
-        }
+	if (haveCrashes) {
+	    out.println("SATIN: GRT_UPDATE_TIME:            agv. per machine "
+		    + Timer.format(tableUpdateTimeAvg) + " ("
+		    + pf.format(tableUpdatePerc) + " %)");
+	    out.println("SATIN: GRT_LOOKUP_TIME:            agv. per machine "
+		    + Timer.format(tableLookupTimeAvg) + " ("
+		    + pf.format(tableLookupPerc) + " %)");
+	    out.println("SATIN: GRT_HANDLE_UPDATE_TIME:     agv. per machine "
+		    + Timer.format(tableHandleUpdateTimeAvg) + " ("
+		    + pf.format(tableHandleUpdatePerc) + " %)");
+	    out.println("SATIN: GRT_HANDLE_LOOKUP_TIME:     agv. per machine "
+		    + Timer.format(tableHandleLookupTimeAvg) + " ("
+		    + pf.format(tableHandleLookupPerc) + " %)");
+	    out.println("SATIN: GRT_SERIALIZATION_TIME:     agv. per machine "
+		    + Timer.format(tableSerializationTimeAvg) + " ("
+		    + pf.format(tableSerializationPerc) + " %)");
+	    out.println("SATIN: GRT_DESERIALIZATION_TIME:   agv. per machine "
+		    + Timer.format(tableDeserializationTimeAvg) + " ("
+		    + pf.format(tableDeserializationPerc) + " %)");
+	    out.println("SATIN: CRASH_HANDLING_TIME:        agv. per machine "
+		    + Timer.format(crashHandlingTimeAvg) + " ("
+		    + pf.format(crashHandlingPerc) + " %)");
+	}
 
-        out.println("\nSATIN: TOTAL_PARALLEL_OVERHEAD:    agv. per machine "
-            + Timer.format(totalOverheadAvg) + " ("
-            + (totalPerc < 10 ? " " : "") + pf.format(totalPerc) + " %)");
+	if (CHECKPOINTING) {
+	    out.println("SATIN: REQUEST_CHECKPOINT_TIME:    avg. per machine "
+		    + Timer.format(requestCheckpointTimeAvg) + " ("
+		    + pf.format(requestCheckpointPerc) + " %)");
+	    out.println("SATIN: MAKE_CHECKPOINT_TIME:       avg. per machine "
+		    + Timer.format(makeCheckpointTimeAvg) + " ("
+		    + pf.format(makeCheckpointPerc) + " %)");
+	    out.println("SATIN: RECEIVE_CHECKPOINT_TIME:    avg. per machine "
+		    + Timer.format(receiveCheckpointTimeAvg) + " ("
+		    + pf.format(receiveCheckpointPerc) + " %)");
+	    out.println("SATIN: WRITE_CHECKPOINT_TIME:      avg. per machine "
+		    + Timer.format(writeCheckpointTimeAvg) + " ("
+		    + pf.format(writeCheckpointPerc) + " %)");
+	    out.println("SATIN: USE_CHECKPOINT_TIME:        avg. per machine "
+		    + Timer.format(useCheckpointTimeAvg) + " ("
+		    + pf.format(useCheckpointPerc) + " %)");
+	    out.println("SATIN: CREATE_COORDINATOR_TIME:    avg. per machine "
+		    + Timer.format(createCoordinatorTimeAvg) + " ("
+		    + pf.format(createCoordinatorPerc) + " %)");
+	    out.println("SATIN: TOTAL_CHECKPOINT_TIME:      avg. per machine "
+		    + Timer.format(totalCheckpointTimeAvg) + " ("
+		    + pf.format(totalCheckpointPerc) + " %)");
+	}
 
-        out.println("SATIN: USEFUL_APP_TIME:            agv. per machine "
-            + Timer.format(appTime) + " (" + (appPerc < 10 ? " " : "")
-            + pf.format(appPerc) + " %)");
+	if (haveSO) {
+	    out.println("SATIN: BROADCAST_SO_INVOCATIONS:   agv. per machine "
+		    + Timer.format(broadcastSOInvocationsTimeAvg) + " ("
+		    + pf.format(broadcastSOInvocationsPerc) + " %)");
+	    out.println("SATIN: HANDLE_SO_INVOCATIONS:      agv. per machine "
+		    + Timer.format(handleSOInvocationsTimeAvg) + " ("
+		    + pf.format(handleSOInvocationsPerc) + " %)");
+	    out.println("SATIN: DESERIALIZE_SO_INVOCATIONS: agv. per machine "
+		    + Timer.format(soInvocationDeserializationTimeAvg) + " ( "
+		    + pf.format(soInvocationDeserializationPerc) + " %)");
+	    out.println("SATIN: SO_TRANSFERS:               agv. per machine "
+		    + Timer.format(soTransferTimeAvg) + " ("
+		    + pf.format(soTransferPerc) + " %)");
+	    out.println("SATIN: SO_SERIALIZATION:           agv. per machine "
+		    + Timer.format(soSerializationTimeAvg) + " ("
+		    + pf.format(soSerializationPerc) + " %)");
+	    out.println("SATIN: SO_DESERIALIZATION:         agv. per machine "
+		    + Timer.format(soDeserializationTimeAvg) + " ("
+		    + pf.format(soDeserializationPerc) + " %)");
+	    out.println("SATIN: SO_BCASTS:                  agv. per machine "
+		    + Timer.format(soBcastTimeAvg) + " ("
+		    + pf.format(soBcastPerc) + " %)");
+	    out.println("SATIN: SO_BCAST_SERIALIZATION:     agv. per machine "
+		    + Timer.format(soBcastSerializationTimeAvg) + " ("
+		    + pf.format(soBcastSerializationPerc) + " %)");
+	    out.println("SATIN: SO_BCAST_DESERIALIZATION:   agv. per machine "
+		    + Timer.format(soBcastDeserializationTimeAvg) + " ("
+		    + pf.format(soBcastDeserializationPerc) + " %)");
+	    out.println("SATIN: SO_GUARD:                   agv. per machine "
+		    + Timer.format(soGuardTimeAvg) + " ("
+		    + pf.format(soGuardPerc) + " %)");
+	}
+
+	out.println("\nSATIN: TOTAL_PARALLEL_OVERHEAD:    agv. per machine "
+		+ Timer.format(totalOverheadAvg) + " ("
+		+ (totalPerc < 10 ? " " : "") + pf.format(totalPerc) + " %)");
+
+	out.println("SATIN: USEFUL_APP_TIME:            agv. per machine "
+		+ Timer.format(appTime) + " (" + (appPerc < 10 ? " " : "")
+		+ pf.format(appPerc) + " %)");
     }
 
     public void printDetailedStats(IbisIdentifier ident) {
-        java.text.NumberFormat nf = java.text.NumberFormat.getInstance();
-        java.io.PrintStream out = System.out;
+	java.text.NumberFormat nf = java.text.NumberFormat.getInstance();
+	java.io.PrintStream out = System.out;
 
-        out.println("SATIN '" + ident + "': SPAWN_STATS: spawns = " + spawns
-            + " executed = " + jobsExecuted + " syncs = " + syncs + " aborts = "
-                + abortsDone + " abort msgs = " + abortMessages
-                + " aborted jobs = " + abortedJobs + " total time = " + abortTimer.totalTime());
+	out.println("SATIN '" + ident + "': SPAWN_STATS: spawns = " + spawns
+		+ " executed = " + jobsExecuted + " syncs = " + syncs
+		+ " aborts = " + abortsDone + " abort msgs = " + abortMessages
+		+ " aborted jobs = " + abortedJobs + " total time = "
+		+ abortTimer.totalTime());
 
-        out.println("SATIN '" + ident + "': MSG_STATS: intra = "
-            + intraClusterMessages + ", bytes = "
-            + nf.format(intraClusterBytes) +
-            " inter = "
-            + interClusterMessages + ", bytes = "
-            + nf.format(interClusterBytes));
+	out.println("SATIN '" + ident + "': MSG_STATS: intra = "
+		+ intraClusterMessages + ", bytes = "
+		+ nf.format(intraClusterBytes) + " inter = "
+		+ interClusterMessages + ", bytes = "
+		+ nf.format(interClusterBytes));
 
-        out.println("SATIN '" + ident + "': STEAL_STATS: attempts = "
-            + stealAttempts + " success = " + stealSuccess + " ("
-            + (perStats(stealSuccess, stealAttempts) * 100.0) + " %)" 
-            + " time = " + stealTimer.totalTime()
-            + " requests = " + stealRequests + " jobs stolen = " + stolenJobs
-            + " time = "
-            + handleStealTimer.totalTime());
-        out.println("SATIN '" + ident + "': ASYNCSTEAL_STATS: attempts = "
-            + asyncStealAttempts + " success = " + asyncStealSuccess + " ("
-            + (perStats(asyncStealSuccess, asyncStealAttempts) * 100.0) + " %)");        
-       
-        out.println("SATIN '" + ident + "': STEAL_THROTTLE_STATS: throttles = "
-                + stealThrottleTimer.nrTimes()  
-                + " time = " + stealThrottleTimer.totalTime());
+	out.println("SATIN '" + ident + "': STEAL_STATS: attempts = "
+		+ stealAttempts + " success = " + stealSuccess + " ("
+		+ (perStats(stealSuccess, stealAttempts) * 100.0) + " %)"
+		+ " time = " + stealTimer.totalTime() + " requests = "
+		+ stealRequests + " jobs stolen = " + stolenJobs + " time = "
+		+ handleStealTimer.totalTime());
+	out.println("SATIN '" + ident + "': ASYNCSTEAL_STATS: attempts = "
+		+ asyncStealAttempts + " success = " + asyncStealSuccess + " ("
+		+ (perStats(asyncStealSuccess, asyncStealAttempts) * 100.0)
+		+ " %)");
 
-        out.println("SATIN '" + ident
-            + "': SERIALIZATION_STATS: invocationRecordWrites = "
-            + invocationRecordWriteTimer.nrTimes() + " total time = "
-            + invocationRecordWriteTimer.totalTime()
-            + " invocationRecordReads = "
-            + invocationRecordReadTimer.nrTimes() + " total time = "
-            + invocationRecordReadTimer.totalTime() 
-            + " returnRecordWrites = "
-            + returnRecordWriteTimer.nrTimes() + " total time = "
-            + returnRecordWriteTimer.totalTime() 
-            + " returnRecordReads = "
-            + returnRecordReadTimer.nrTimes() + " total time = "
-            + returnRecordReadTimer.totalTime() );
+	out.println("SATIN '" + ident + "': STEAL_THROTTLE_STATS: throttles = "
+		+ stealThrottleTimer.nrTimes() + " time = "
+		+ stealThrottleTimer.totalTime());
 
-        out.println("SATIN '" + ident + 
-        		"': GRT_STATS: updates = " + tableResultUpdates
-        		+ " lock updates = " + tableLockUpdates
-        		+ " update time = " + updateTimer.totalTime()
-        		+ " handle update time = " + handleUpdateTimer.totalTime()
-        		+ " msgs = " + tableUpdateMessages
-        		+ " lookups = " + tableLookups  
-        		+ " lookup time = " + lookupTimer.totalTime()
-        		+ " handle lookup time = " + lookupTimer.totalTime()
-        		+ " remote lookups = " + tableRemoteLookups 
-        		+ " successful lookups = " + tableSuccessfulLookups
-        		+ " max size = " + tableMaxEntries);
+	out.println("SATIN '" + ident
+		+ "': SERIALIZATION_STATS: invocationRecordWrites = "
+		+ invocationRecordWriteTimer.nrTimes() + " total time = "
+		+ invocationRecordWriteTimer.totalTime()
+		+ " invocationRecordReads = "
+		+ invocationRecordReadTimer.nrTimes() + " total time = "
+		+ invocationRecordReadTimer.totalTime()
+		+ " returnRecordWrites = " + returnRecordWriteTimer.nrTimes()
+		+ " total time = " + returnRecordWriteTimer.totalTime()
+		+ " returnRecordReads = " + returnRecordReadTimer.nrTimes()
+		+ " total time = " + returnRecordReadTimer.totalTime());
 
-        out.println("SATIN '" + ident + "': FT_STATS:" 
-        		+ " handle crash time = " + crashTimer.totalTime()
-        		+ " redo time = " + redoTimer.totalTime()
-        		+ " orphans killed = " + killedOrphans
-        		+ " jobs restarted = " + restartedJobs);
+	out.println("SATIN '" + ident + "': GRT_STATS: updates = "
+		+ tableResultUpdates + " lock updates = " + tableLockUpdates
+		+ " update time = " + updateTimer.totalTime()
+		+ " handle update time = " + handleUpdateTimer.totalTime()
+		+ " msgs = " + tableUpdateMessages + " lookups = "
+		+ tableLookups + " lookup time = " + lookupTimer.totalTime()
+		+ " handle lookup time = " + lookupTimer.totalTime()
+		+ " remote lookups = " + tableRemoteLookups
+		+ " successful lookups = " + tableSuccessfulLookups
+		+ " max size = " + tableMaxEntries);
 
-        out.println("SATIN '" + ident + "': SO_STATS: "
-        		+ " invocations = " + soInvocations
-        		+ " size = " + soInvocationsBytes
-        		+ " time = " + broadcastSOInvocationsTimer.totalTime()
-        		+ " transfers = " + soTransfers 
-        		+ " size = " + soTransfersBytes 
-        		+ " time = " + soTransferTimer.totalTime());
+	out.println("SATIN '" + ident + "': FT_STATS:"
+		+ " handle crash time = " + crashTimer.totalTime()
+		+ " redo time = " + redoTimer.totalTime()
+		+ " orphans killed = " + killedOrphans + " jobs restarted = "
+		+ restartedJobs);
+
+	out.println("SATIN '" + ident + "': SO_STATS: " + " invocations = "
+		+ soInvocations + " size = " + soInvocationsBytes + " time = "
+		+ broadcastSOInvocationsTimer.totalTime() + " transfers = "
+		+ soTransfers + " size = " + soTransfersBytes + " time = "
+		+ soTransferTimer.totalTime());
     }
 
     private double perStats(double tm, long cnt) {
-        if (cnt == 0) {
-            return 0.0;
-        }
-        return tm / cnt;
+	if (cnt == 0) {
+	    return 0.0;
+	}
+	return tm / cnt;
     }
 }

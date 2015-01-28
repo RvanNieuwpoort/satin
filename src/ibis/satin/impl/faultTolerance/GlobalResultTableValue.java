@@ -10,7 +10,7 @@ import ibis.satin.impl.spawnSync.InvocationRecord;
 import ibis.satin.impl.spawnSync.ReturnRecord;
 
 public class GlobalResultTableValue implements java.io.Serializable, Config {
-    /** 
+    /**
      * Generated
      */
     private static final long serialVersionUID = 4797223605264498290L;
@@ -28,41 +28,41 @@ public class GlobalResultTableValue implements java.io.Serializable, Config {
     protected IbisIdentifier owner;
 
     public GlobalResultTableValue(int type, InvocationRecord r) {
-        this.type = type;
-        this.owner = Satin.getSatin().ident;
-        if (type == TYPE_RESULT) {
-            result = r.getReturnRecord();
-        }
-    }
-        
-    // this new function solves the ambiguity of Value(type, null)
-    // so always use Value(int type) instead of Value(int type, null)
-    public GlobalResultTableValue(int type){
-        this.type = type;
-        this.owner = Satin.getSatin().ident;
+	this.type = type;
+	this.owner = Satin.getSatin().ident;
+	if (type == TYPE_RESULT) {
+	    result = r.getReturnRecord();
+	}
     }
 
-    public GlobalResultTableValue(int type, ReturnRecord rr){
-        this.type = type;
-        this.owner = Satin.getSatin().ident;
-        if (type == TYPE_RESULT){
-            result = rr;
-        }
+    // this new function solves the ambiguity of Value(type, null)
+    // so always use Value(int type) instead of Value(int type, null)
+    public GlobalResultTableValue(int type) {
+	this.type = type;
+	this.owner = Satin.getSatin().ident;
+    }
+
+    public GlobalResultTableValue(int type, ReturnRecord rr) {
+	this.type = type;
+	this.owner = Satin.getSatin().ident;
+	if (type == TYPE_RESULT) {
+	    result = rr;
+	}
     }
 
     public String toString() {
-        String str = "";
-        switch (type) {
-        case TYPE_RESULT:
-            str += "(RESULT,result:" + result + ")";
-            break;
-        case TYPE_POINTER:
-            str += "(POINTER,owner:" + owner + ")";
-            break;
-        default:
-            grtLogger.error("SATIN '" + Satin.getSatin().ident
-                + "': illegal type in value");
-        }
-        return str;
+	String str = "";
+	switch (type) {
+	case TYPE_RESULT:
+	    str += "(RESULT,result:" + result + ")";
+	    break;
+	case TYPE_POINTER:
+	    str += "(POINTER,owner:" + owner + ")";
+	    break;
+	default:
+	    grtLogger.error("SATIN '" + Satin.getSatin().ident
+		    + "': illegal type in value");
+	}
+	return str;
     }
 }

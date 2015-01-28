@@ -9,7 +9,7 @@ package ibis.satin;
  */
 public class Inlet extends Throwable {
 
-    /** 
+    /**
      * Generated
      */
     private static final long serialVersionUID = 5167746747259483619L;
@@ -18,16 +18,17 @@ public class Inlet extends Throwable {
      * Constructs an <code>Inlet</code>.
      */
     public Inlet() {
-        /* do nothing */
+	/* do nothing */
     }
 
     /**
      * Overrides the <code>fillInStackTrace</code> from <code>Throwable</code>.
      * This version does not actually create a stack trace, which are useless
      * for inlets which in Satin are usually used for returning results.
+     * 
      * @return this inlet.
      */
     public Throwable fillInStackTrace() {
-        return this;
+	return this;
     }
 }

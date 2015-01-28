@@ -12,7 +12,7 @@ public abstract class LoadBalancingAlgorithm implements Config {
     protected Satin satin;
 
     protected LoadBalancingAlgorithm(Satin s) {
-        satin = s;
+	satin = s;
     }
 
     /**
@@ -20,7 +20,7 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * implementation does nothing.
      */
     public void jobAdded() {
-        // do nothing
+	// do nothing
     }
 
     /**
@@ -36,8 +36,8 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * communication)
      */
     public void stealReplyHandler(InvocationRecord ir, IbisIdentifier sender,
-            int opcode) {
-        satin.lb.gotJobResult(ir, sender);
+	    int opcode) {
+	satin.lb.gotJobResult(ir, sender);
     }
 
     /**
@@ -46,46 +46,46 @@ public abstract class LoadBalancingAlgorithm implements Config {
      * nothing.
      */
     public void exit() {
-        synchronized (satin) {
-            satin.notifyAll();
-        }
+	synchronized (satin) {
+	    satin.notifyAll();
+	}
     }
 
     public void handleCrash(IbisIdentifier ident) {
-        // by default, do nothing
+	// by default, do nothing
     }
 
     protected void throttle(long count) {
-        if (!THROTTLE_STEALS) {
-            return;
-        }
+	if (!THROTTLE_STEALS) {
+	    return;
+	}
 
-        int participants;
-        synchronized (satin) {
-            participants = satin.victims.size();
-        }
+	int participants;
+	synchronized (satin) {
+	    participants = satin.victims.size();
+	}
 
-        long time = 1;
-        long throttleSteps = count / participants;
-        
-        for (long i = 0; i < throttleSteps; i++) {
-            time *= 2;
-            if (time >= MAX_STEAL_THROTTLE) {
-                time = MAX_STEAL_THROTTLE;
-                break;
-            }
-        }
+	long time = 1;
+	long throttleSteps = count / participants;
 
-        if (time > 0) {
-            satin.stats.stealThrottleTimer.start();
+	for (long i = 0; i < throttleSteps; i++) {
+	    time *= 2;
+	    if (time >= MAX_STEAL_THROTTLE) {
+		time = MAX_STEAL_THROTTLE;
+		break;
+	    }
+	}
 
-            try {
-                Thread.sleep(time);
-            } catch (InterruptedException e) {
-                // ignore
-            } finally {
-                satin.stats.stealThrottleTimer.stop();
-            }
-        }
+	if (time > 0) {
+	    satin.stats.stealThrottleTimer.start();
+
+	    try {
+		Thread.sleep(time);
+	    } catch (InterruptedException e) {
+		// ignore
+	    } finally {
+		satin.stats.stealThrottleTimer.stop();
+	    }
+	}
     }
 }

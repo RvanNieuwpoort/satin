@@ -19,84 +19,83 @@ import java.util.ArrayList;
 final class AbortsCommunication implements Config {
 
     static final class StampListElement {
-        Stamp stamp;
+	Stamp stamp;
 
-        IbisIdentifier stealer;
+	IbisIdentifier stealer;
     }
 
     final class AbortMessageSender extends Thread {
-        AbortMessageSender() {
-            setDaemon(true);
-            setName("Satin AbortRequestHandler");
-        }
+	AbortMessageSender() {
+	    setDaemon(true);
+	    setName("Satin AbortRequestHandler");
+	}
 
-        public void run() {
-            for (;;) {
-                StampListElement e;
-                synchronized(stampsToAbortList) {
-                    while (stampsToAbortList.size() == 0) {
-                        try {
-                            stampsToAbortList.wait();
-                        } catch (Exception x) {
-                            // ignore
-                        }
-                    }
-                    e = stampsToAbortList.get(0);
-                    // Don't remove it yet! Remove it after the send,
-                    // otherwise a steal reply message may overtake
-                    // an abort message.
-                }
-                soRealSendAbortMessage(e);
-                synchronized(stampsToAbortList) {
-                    stampsToAbortList.remove(0);
-                    if (stampsToAbortList.size() == 0) {
-                        stampsToAbortList.notifyAll();
-                    }
-                }
-            }
-        }
+	public void run() {
+	    for (;;) {
+		StampListElement e;
+		synchronized (stampsToAbortList) {
+		    while (stampsToAbortList.size() == 0) {
+			try {
+			    stampsToAbortList.wait();
+			} catch (Exception x) {
+			    // ignore
+			}
+		    }
+		    e = stampsToAbortList.get(0);
+		    // Don't remove it yet! Remove it after the send,
+		    // otherwise a steal reply message may overtake
+		    // an abort message.
+		}
+		soRealSendAbortMessage(e);
+		synchronized (stampsToAbortList) {
+		    stampsToAbortList.remove(0);
+		    if (stampsToAbortList.size() == 0) {
+			stampsToAbortList.notifyAll();
+		    }
+		}
+	    }
+	}
     }
 
     private Satin s;
 
-    private ArrayList<StampListElement> stampsToAbortList =
-            new ArrayList<StampListElement>();
+    private ArrayList<StampListElement> stampsToAbortList = new ArrayList<StampListElement>();
 
     AbortsCommunication(Satin s) {
-        this.s = s;
-        new AbortMessageSender().start();
+	this.s = s;
+	new AbortMessageSender().start();
     }
 
     protected void sendAbortMessage(InvocationRecord r) {
-        if (s.deadIbises.contains(r.getStealer())) {
-            /* don't send abort and store messages to crashed ibises */
-            return;
-        }
+	if (s.deadIbises.contains(r.getStealer())) {
+	    /* don't send abort and store messages to crashed ibises */
+	    return;
+	}
 
-        abortLogger.debug("SATIN '" + s.ident + ": sending abort message to: "
-                + r.getStealer() + " for job " + r.getStamp() + ", parent = "
-                + r.getParentStamp());
+	abortLogger.debug("SATIN '" + s.ident + ": sending abort message to: "
+		+ r.getStealer() + " for job " + r.getStamp() + ", parent = "
+		+ r.getParentStamp());
 
-        StampListElement e = new StampListElement();
-        e.stamp = r.getParentStamp();
-        e.stealer = r.getStealer();
+	StampListElement e = new StampListElement();
+	e.stamp = r.getParentStamp();
+	e.stealer = r.getStealer();
 
-        synchronized (stampsToAbortList) {
-            stampsToAbortList.add(e);
-            stampsToAbortList.notifyAll();
-        }
+	synchronized (stampsToAbortList) {
+	    stampsToAbortList.add(e);
+	    stampsToAbortList.notifyAll();
+	}
     }
 
     protected void waitForAborts() {
-        synchronized (stampsToAbortList) {
-            while (stampsToAbortList.size() != 0) {
-                try {
-                    stampsToAbortList.wait();
-                } catch(Exception e) {
-                    // ignored
-                }
-            }
-        }
+	synchronized (stampsToAbortList) {
+	    while (stampsToAbortList.size() != 0) {
+		try {
+		    stampsToAbortList.wait();
+		} catch (Exception e) {
+		    // ignored
+		}
+	    }
+	}
     }
 
     /*
@@ -104,43 +103,46 @@ final class AbortsCommunication implements Config {
      * unlikely that one node stole more than one job from me
      */
     protected void soRealSendAbortMessage(StampListElement e) {
-        WriteMessage writeMessage = null;
-        try {
-            Victim v = null;
-            synchronized (s) {
-                v = s.victims.getVictim(e.stealer);
-                if (v == null)
-                    return; // node might have crashed
-            }
+	WriteMessage writeMessage = null;
+	try {
+	    Victim v = null;
+	    synchronized (s) {
+		v = s.victims.getVictim(e.stealer);
+		if (v == null)
+		    return; // node might have crashed
+	    }
 
-            writeMessage = v.newMessage();
-            writeMessage.writeByte(Protocol.ABORT);
-            writeMessage.writeObject(e.stamp);
-            v.finish(writeMessage);
-        } catch (IOException x) {
-            if (writeMessage != null) {
-                writeMessage.finish(x);
-            }
-            abortLogger.warn("SATIN '" + s.ident
-                    + "': Got Exception while sending abort message (continuing): " + x, x);
-            // This should not be a real problem, it is just inefficient.
-            // Let's continue...
-        }
+	    writeMessage = v.newMessage();
+	    writeMessage.writeByte(Protocol.ABORT);
+	    writeMessage.writeObject(e.stamp);
+	    v.finish(writeMessage);
+	} catch (IOException x) {
+	    if (writeMessage != null) {
+		writeMessage.finish(x);
+	    }
+	    abortLogger
+		    .warn("SATIN '"
+			    + s.ident
+			    + "': Got Exception while sending abort message (continuing): "
+			    + x, x);
+	    // This should not be a real problem, it is just inefficient.
+	    // Let's continue...
+	}
     }
 
     protected void handleAbort(ReadMessage m) {
-        try {
-            Stamp stamp = (Stamp) m.readObject();
-            synchronized (s) {
-                s.aborts.addToAbortList(stamp);
-            }
-            // m.finish();
-        } catch (IOException e) {
-            abortLogger.error("SATIN '" + s.ident
-                    + "': got exception while reading job result: " + e, e);
-        } catch (ClassNotFoundException e1) {
-            abortLogger.error("SATIN '" + s.ident
-                    + "': got exception while reading job result: " + e1, e1);
-        }
+	try {
+	    Stamp stamp = (Stamp) m.readObject();
+	    synchronized (s) {
+		s.aborts.addToAbortList(stamp);
+	    }
+	    // m.finish();
+	} catch (IOException e) {
+	    abortLogger.error("SATIN '" + s.ident
+		    + "': got exception while reading job result: " + e, e);
+	} catch (ClassNotFoundException e1) {
+	    abortLogger.error("SATIN '" + s.ident
+		    + "': got exception while reading job result: " + e1, e1);
+	}
     }
 }
