@@ -1,0 +1,8 @@
+// Apply the java plugin to add support for Java
+apply plugin: 'java-library'
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+	compile fileTree(dir: 'external/ipl', include: '*.jar')
+	compile fileTree(dir: 'external/javagat', include: '*.jar')
+}
