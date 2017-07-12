@@ -28,7 +28,7 @@ import org.apache.bcel.generic.Type;
 
 final class MethodTable {
 
-    static final String SPAWNABLE_TYPE = "Libis/satin/Spawn;";
+    static final String SPAWNABLE_ANNOTATION_TYPE = "Libis/satin/Spawnable;";
     
     static class SpawnTableEntry {
 
@@ -517,7 +517,7 @@ final class MethodTable {
         AnnotationEntry[] annotationEntries = m.getAnnotationEntries();
         for(AnnotationEntry entry : annotationEntries ) {
 //            System.err.println("isSpawnable: method = " + m + ", entry = " + entry + ", type = " + entry.getAnnotationType());
-            if(entry.getAnnotationType().equals((SPAWNABLE_TYPE))) {
+            if(entry.getAnnotationType().equals((SPAWNABLE_ANNOTATION_TYPE))) {
                 if(verbose) {
                     System.err.println("isSpawnable: method = " + m + " IS SPAWNABLE!");
                 }

@@ -15,7 +15,7 @@ public class FibWithoutSync extends ibis.satin.SatinObject {
 
         long x = fib(n - 1);
         long y = fib(n - 2);
-        // Sync should be inserted here.
+        // Sync should be inserted here automatically.
         return x + y;
     }
 
@@ -37,7 +37,7 @@ public class FibWithoutSync extends ibis.satin.SatinObject {
 
         long start = System.currentTimeMillis();
         long result = f.fib(n);
-        // Sync should be inserted here.
+        // Sync should be inserted here automatically.
         // Note that the order of the statements here is changed with respect
         // to the original Fib, because the sync-rewriter does not understand
         // that the time should be measured after the sync. Therefore, the
@@ -45,7 +45,6 @@ public class FibWithoutSync extends ibis.satin.SatinObject {
         System.out.println("application result fib (" + n + ") = " + result);
         double time = (System.currentTimeMillis() - start) / 1000.0;
 
-        System.out.println("application time fib (" + n + ") took " + time
-                + " s");
+        System.out.println("application time fib (" + n + ") took " + time + " s");
     }
 }
