@@ -1,13 +1,15 @@
 package fib;
 
+import ibis.satin.Spawnable;
+
 /**
  * Only here for demonstration purposes: demonstrates the sync-rewriter.
  */
-public class FibWithoutSync extends ibis.satin.SatinObject implements FibInterface {
+public class FibWithoutSync extends ibis.satin.SatinObject {
 
     private static final long serialVersionUID = -2084766268168809118L;
 
-    public long fib(int n) {
+    @Spawnable public long fib(int n) {
         if (n < 2)
             return n;
 

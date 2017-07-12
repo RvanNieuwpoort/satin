@@ -5,7 +5,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 
-public class KMeans extends ibis.satin.SatinObject implements KMeansInterface {
+import ibis.satin.Spawnable;
+
+public class KMeans extends ibis.satin.SatinObject {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
     public static final double THRESHOLD = 0.01;
     public static final int MAXITER = 500;
 
@@ -53,8 +59,7 @@ public class KMeans extends ibis.satin.SatinObject implements KMeansInterface {
     }
 
     // A single iteration of the clustering algorithm.
-    @Override
-    public KMeansResult kMeanCluster(double[][] centers, Points points, int lo,
+    @Spawnable public KMeansResult kMeanCluster(double[][] centers, Points points, int lo,
 	    int high) {
 	int[] counts = new int[centers.length];
 	double[][] newCenters = new double[centers.length][];

@@ -1,12 +1,13 @@
 package search;
 
 import ibis.satin.SatinObject;
+import ibis.satin.Spawnable;
 
-class SearchImpl1 extends SatinObject implements Searcher {
+class SearchImpl1 extends SatinObject {
 
     private static final long serialVersionUID = 1L;
 
-    public int search(int a[], int from, int to, int val) {
+    @Spawnable public int search(int a[], int from, int to, int val) {
         for (int i = from; i < to; i++) {
             if (a[i] == val)
                 return i;
