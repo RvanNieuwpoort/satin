@@ -80,7 +80,7 @@
 		</java>
 
 		<!-- Extract ibis.io.Serializable, so that applications don't
-             need ibis-io-2.2.jar to compile.
+             need ibis-io-2.3.jar to compile.
         -->
 		<unjar src="${lib}/ibis-io-2.3.jar" dest="${tmp}">
 			<patternset>

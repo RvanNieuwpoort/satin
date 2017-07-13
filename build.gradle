@@ -1,8 +1,30 @@
-// Apply the java plugin to add support for Java
 apply plugin: 'java-library'
 
-// In this section you declare the dependencies for your production and test code
+defaultTasks 'build'
+
 dependencies {
 	compile fileTree(dir: 'external/ipl', include: '*.jar')
 	compile fileTree(dir: 'external/javagat', include: '*.jar')
+}
+
+task ibisc(type:JavaExec) {
+   main = "ibis.compile.Ibisc"
+   classpath = sourceSets.main.runtimeClasspath
+   workingDir = "build/classes/java/main"
+   args "."
+}
+
+task unjarIbisSerializable(type: Copy) {
+    from zipTree("external/ipl/ibis-io-2.3.jar")
+    into "build/classes/java/main"
+    include 'ibis/io/Serializable.class'
+}
+
+jar.dependsOn(ibisc)
+jar.dependsOn(unjarIbisSerializable)
+
+jar {
+	 manifest {
+        attributes("Ibisc-Component": "ibis.satin.impl.rewriter.Satinc,ibis.satin.impl.syncrewriter.SyncAdviser,ibis.satin.impl.syncrewriter.SyncRewriter")
+    }
 }
