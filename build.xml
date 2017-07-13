@@ -1,172 +1,142 @@
 <project name="satin" default="build" basedir=".">
-    <description>
+	<description>
         Build file for Satin
     </description>
 
-    <property name="version" value="-2.2" />
+	<property name="version" value="-3.0-alpha" />
 
-    <property name="dist-name" value="${ant.project.name}${version}" />
+	<property name="dist-name" value="${ant.project.name}${version}" />
 
-    <property name="sources-filename" value="${ant.project.name}${version}-sources" />
+	<property name="sources-filename" value="${ant.project.name}${version}-sources" />
 
-    <property name="external" location="external" />
-    <property name="javagat" value="${external}/javagat"/>
-    <property name="ipl" value="${external}/ipl"/>
+	<property name="external" location="external" />
+	<property name="javagat" value="${external}/javagat" />
+	<property name="ipl" value="${external}/ipl" />
 
-    <target name="build"
-            description="Build Satin"
-            depends="clean,copy-included-ipl,compile,javadoc" />
+	<target name="build" description="Build Satin" depends="clean,copy-included-ipl,compile,javadoc" />
 
-    <target name="build-external-ipl"
-	    description="Build with external IPL"
-	    depends="clean,copy-external-ipl,compile,javadoc" />
+	<target name="build-external-ipl" description="Build with external IPL" depends="clean,copy-external-ipl,compile,javadoc" />
 
-    <property name="src" location="src" />
-    <property name="tmp" location="tmp" />
-    <property name="lib" location="lib" />
-    <property name="javadoc" location="javadoc" />
-    <property name="sources" location="sources" />
+	<property name="src" location="src/main/java" />
+	<property name="tmp" location="tmp" />
+	<property name="lib" location="build/libs" />
+	<property name="javadoc" location="build/docs/javadoc" />
+	<property name="sources" location="sources" />
 
-    <!-- Copy dependancies to lib -->
-    <target name="copy-included-ipl">
-        <mkdir dir="${lib}" />
-        <copy todir="${lib}">
-            <fileset dir="${ipl}" />
-        </copy>
-        <copy todir="${lib}">
-            <fileset dir="${javagat}" />
-        </copy>
-    </target>
+	<!-- Copy dependancies to lib -->
+	<target name="copy-included-ipl">
+		<mkdir dir="${lib}" />
+		<copy todir="${lib}">
+			<fileset dir="${ipl}" />
+		</copy>
+		<copy todir="${lib}">
+			<fileset dir="${javagat}" />
+		</copy>
+	</target>
 
-    <!-- copy external dependancies to lib, including IPL 
+	<!-- copy external dependancies to lib, including IPL 
 	 specified by $IPL_HOME -->
-     <target name="copy-external-ipl">
-	 <mkdir dir="${lib}" />
-	 <!-- Import environment properties -->
-	 <property environment="env" />
-	 <property name="ibis" location="${env.IPL_HOME}" />
-	 <copy todir="${lib}">
-	     <fileset dir="${ibis}/lib" />
-	 </copy>
-        <copy todir="${lib}">
-            <fileset dir="${javagat}" />
-        </copy>
-     </target>
+	<target name="copy-external-ipl">
+		<mkdir dir="${lib}" />
+		<!-- Import environment properties -->
+		<property environment="env" />
+		<property name="ibis" location="${env.IPL_HOME}" />
+		<copy todir="${lib}">
+			<fileset dir="${ibis}/lib" />
+		</copy>
+		<copy todir="${lib}">
+			<fileset dir="${javagat}" />
+		</copy>
+	</target>
 
-    <!-- Compile -->
-    <target name="compile">
+	<!-- Compile -->
+	<target name="compile">
 
-        <mkdir dir="${tmp}" />
-        <mkdir dir="${lib}" />
+		<mkdir dir="${tmp}" />
+		<mkdir dir="${lib}" />
 
-        <!-- copy jars in external directory to lib -->
-        <copy todir="${lib}">
-            <fileset dir="${external}" includes="*.jar" />
-        </copy>
+		<!-- copy jars in external directory to lib -->
+		<copy todir="${lib}">
+			<fileset dir="${external}" includes="*.jar" />
+		</copy>
 
-        <!-- classpath -->
-        <path id="default.classpath">
-            <fileset dir="${lib}">
-                <include name="*.jar" />
-            </fileset>
-            <pathelement path="${tmp}" />
-        </path>
+		<!-- classpath -->
+		<path id="default.classpath">
+			<fileset dir="${lib}">
+				<include name="*.jar" />
+			</fileset>
+			<pathelement path="${tmp}" />
+		</path>
 
-        <!-- Compile the java code from ${src} into ${tmp} -->
-        <javac srcdir="${src}" 
-               destdir="${tmp}" 
-               debug="on"
-               classpathref="default.classpath">
-            <compilerarg value="-Xlint:unchecked" />
-        </javac>
+		<!-- Compile the java code from ${src} into ${tmp} -->
+		<javac srcdir="${src}" destdir="${tmp}" debug="on" classpathref="default.classpath">
+			<compilerarg value="-Xlint:unchecked" />
+		</javac>
 
-        <!-- Run Ibisc -->
-        <java classname="ibis.compile.Ibisc"
-              taskname="Ibisc"
-              failonerror="true"
-              dir="${tmp}"
-              maxmemory="512m"
-              fork="true">
-            <arg line="." />
-            <classpath refid="default.classpath" />
-        </java>
+		<!-- Run Ibisc -->
+		<java classname="ibis.compile.Ibisc" taskname="Ibisc" failonerror="true" dir="${tmp}" maxmemory="512m" fork="true">
+			<arg line="." />
+			<classpath refid="default.classpath" />
+		</java>
 
-        <!-- Extract ibis.io.Serializable, so that applications don't
+		<!-- Extract ibis.io.Serializable, so that applications don't
              need ibis-io-2.2.jar to compile.
         -->
-	<unjar src="${lib}/ibis-io-2.3.jar" dest="${tmp}">
-            <patternset>
-                <include name="**/Serializable.class"/>
-            </patternset>
-        </unjar>
+		<unjar src="${lib}/ibis-io-2.3.jar" dest="${tmp}">
+			<patternset>
+				<include name="**/Serializable.class" />
+			</patternset>
+		</unjar>
 
-        <!-- Create jar file -->
-        <jar destfile="lib/${dist-name}.jar">
-            <fileset dir="${tmp}" includes="**/*.class" />
-            <fileset dir="." includes="LICENSE.txt" />
-            <manifest>
-                <attribute name="Ibisc-Component"
-                    value="ibis.satin.impl.rewriter.Satinc,ibis.satin.impl.syncrewriter.SyncAdviser,ibis.satin.impl.syncrewriter.SyncRewriter" />
-            </manifest>
-        </jar>
-        <delete dir="${tmp}" />
-    </target>
+		<!-- Create jar file -->
+		<jar destfile="${lib}/${dist-name}.jar">
+			<fileset dir="${tmp}" includes="**/*.class" />
+			<fileset dir="." includes="LICENSE.txt" />
+			<manifest>
+				<attribute name="Ibisc-Component" value="ibis.satin.impl.rewriter.Satinc,ibis.satin.impl.syncrewriter.SyncAdviser,ibis.satin.impl.syncrewriter.SyncRewriter" />
+			</manifest>
+		</jar>
+		<delete dir="${tmp}" />
+	</target>
 
-    <!-- Generate javadoc -->
-    <target name="javadoc" description="generate all javadocs">
-        <javadoc destdir="${javadoc}"
-                 access="public"
-                 classpathref="default.classpath"
-                 packagenames="*"
-                 sourcepath="${src}"
-                 windowtitle="Ibis ${ant.project.name} Documentation"
-                 doctitle="Ibis ${ant.project.name} Documentation"
-                 bottom="The Ibis project">
-		 <link href="http://download.oracle.com/javase/1.5.0/docs/api/" />
-        </javadoc>
-    </target>
+	<!-- Generate javadoc -->
+	<target name="javadoc" description="generate all javadocs">
+		<javadoc destdir="${javadoc}" access="public" classpathref="default.classpath" packagenames="*" sourcepath="${src}" windowtitle="Ibis ${ant.project.name} Documentation" doctitle="Ibis ${ant.project.name} Documentation" bottom="The Ibis project">
+			<link href="http://download.oracle.com/javase/1.5.0/docs/api/" />
+		</javadoc>
+	</target>
 
-    <target name="docs" description="Create manuals">
-        <ant dir="docs" inheritAll="false" />
-    </target>
+	<target name="docs" description="Create manuals">
+		<ant dir="docs" inheritAll="false" />
+	</target>
 
-    <!-- Clean up everything -->
-    <target name="clean" description="Clean up">
-        <delete dir="${tmp}" />
-        <delete dir="${lib}" />
-        <delete dir="${javadoc}" />
-        <delete dir="${sources}" />
-        <ant dir="examples" inheritAll="false" target="clean" />
-        <ant dir="docs" inheritAll="false" target="clean" />
-    </target>
+	<!-- Clean up everything -->
+	<target name="clean" description="Clean up">
+		<delete dir="${tmp}" />
+		<delete dir="${lib}" />
+		<delete dir="${javadoc}" />
+		<delete dir="${sources}" />
+		<ant dir="examples" inheritAll="false" target="clean" />
+		<ant dir="docs" inheritAll="false" target="clean" />
+	</target>
 
-    <target name="dist" depends="build,docs">
-        <ant dir="examples" inheritAll="false" />
-        <delete file="${dist-name}.zip" />
-        <delete dir="${sources}" />
+	<target name="dist" depends="build,docs">
+		<ant dir="examples" inheritAll="false" />
+		<delete file="${dist-name}.zip" />
+		<delete dir="${sources}" />
 
-        <mkdir dir="${sources}" />
+		<mkdir dir="${sources}" />
 
-	<zip destfile="${sources}/${sources-filename}.zip">
-            <zipfileset dir="src"
-                        includes="**/*.java"
-                        prefix="${sources-filename}" />
+		<zip destfile="${sources}/${sources-filename}.zip">
+			<zipfileset dir="src" includes="**/*.java" prefix="${sources-filename}" />
+			<zipfileset dir="." includes="LICENSE.txt" prefix="${sources-filename}" />
+		</zip>
 
-            <zipfileset dir="."
-                        includes="LICENSE.txt"
-                        prefix="${sources-filename}" />
-        </zip>
+		<zip destfile="${dist-name}.zip">
+			<zipfileset dir="." prefix="${dist-name}" includes="${javadoc}/**,docs/*.pdf,${lib}/**,notices/**,sources/**,BUGS.txt,LICENSE.txt,HISTORY.txt,README.txt,INSTALL.txt,ibis.properties.example,log4j.properties,smartsockets.properties.example,examples/**,benchmarks/**" />
+			<zipfileset dir="." prefix="${dist-name}" filemode="755" includes="scripts/**" />
+		</zip>
 
-        <zip destfile="${dist-name}.zip">
-            <zipfileset dir="."
-                        prefix="${dist-name}"
-                        includes="javadoc/**,docs/*.pdf,lib/**,notices/**,sources/**,BUGS.txt,LICENSE.txt,HISTORY.txt,README.txt,INSTALL.txt,ibis.properties.example,log4j.properties,smartsockets.properties.example,examples/**,benchmarks/**"/>
-            <zipfileset dir="."
-                        prefix="${dist-name}"
-                        filemode="755"
-                        includes="scripts/**" />
-        </zip>
-
-    </target>
+	</target>
 
 </project>

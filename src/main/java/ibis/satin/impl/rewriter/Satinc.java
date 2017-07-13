@@ -254,20 +254,24 @@ public final class Satinc extends IbiscComponent {
         }
     }
 
+    /** the no-args constructor is used by the Ibis compiler. Do not remove. **/ 
+    public Satinc() {
+        satinObjectClass = lookupClass("ibis.satin.SatinObject");
+        spawnCounterType = new ObjectType("ibis.satin.impl.spawnSync.SpawnCounter");
+        irType = new ObjectType("ibis.satin.impl.spawnSync.InvocationRecord");
+        satinType = new ObjectType("ibis.satin.impl.Satin");
+        writeMethodsInterface = lookupClass("ibis.satin.WriteMethodsInterface");        
+    }
+    
     public Satinc(boolean verbose, boolean local, boolean keep, boolean invocationRecordCache, boolean inletOpt, boolean spawnCounterOpt) {
+        this();
+        
         this.verbose = verbose;
         this.keep = keep;
         this.local = local;
         this.invocationRecordCache = invocationRecordCache;
         this.inletOpt = inletOpt;
         this.spawnCounterOpt = spawnCounterOpt;
-
-        satinObjectClass = lookupClass("ibis.satin.SatinObject");
-        spawnCounterType = new ObjectType("ibis.satin.impl.spawnSync.SpawnCounter");
-        irType = new ObjectType("ibis.satin.impl.spawnSync.InvocationRecord");
-        satinType = new ObjectType("ibis.satin.impl.Satin");
-        writeMethodsInterface = lookupClass("ibis.satin.WriteMethodsInterface");
-
     }
 
     public String getFileBase(String pkg, String name, String pre, String post) {

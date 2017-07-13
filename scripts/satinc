@@ -3,8 +3,8 @@
 # Utility script to run the Satin frontend on the specified arguments.
 
 if [ -z "$SATIN_HOME" ];  then
-    echo "please set SATIN_HOME to the location of your Ibis installation" 1>&2
+    echo "please set SATIN_HOME to the location of your Satin installation" 1>&2
     exit 1
 fi
 
-java -classpath "$CLASSPATH:$SATIN_HOME/lib/"'*' ibis.compile.Ibisc "$@"
+exec "$SATIN_HOME"/scripts/satin-run -Xmx256M ibis.compile.Ibisc "$@"

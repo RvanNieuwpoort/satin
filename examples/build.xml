@@ -12,7 +12,7 @@
 
     <property environment="env"/>
     <property name="satin"       location=".."/>
-
+    <property name="satin-lib"   value="${satin}/build/libs"/>
     <property name="tmp"         value="tmp"/>
     <property name="lib"         value="lib"/>
 
@@ -22,7 +22,7 @@
         <mkdir dir="${lib}" />
 	<path id="default.classpath">
 	    <pathelement path="${tmp}"/>
-	    <fileset dir="${satin}/lib">
+	    <fileset dir="${satin-lib}">
 		<include name="*.jar"/>
 	    </fileset>
 	</path>
